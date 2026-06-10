@@ -1,6 +1,6 @@
-# validation_ext - PHP Extension
+# Attributes Validation Extension
 
-A PHP extension providing validation functionality under the `Attributes\Validation` namespace.
+**Attributes Validation Extension** is the Pydantic validation library for PHP which allows you to validate data via type hints at speed of light ⚡️
 
 ## Prerequisites
 
@@ -49,4 +49,12 @@ php -d extension=modules/validation_ext.so -r "Attributes\Validation\hello_world
 php -d extension=modules/validation_ext.so -r "var_dump(function_exists('Attributes\Validation\hello_world'));"
 ```
 
-Attributes Validation extension was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.
+## Clean
+
+To clean all configure and build files:
+
+```bash
+make distclean
+```
+
+Validation extension was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.
