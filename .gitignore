@@ -39,3 +39,6 @@ run-tests.php
 
 # macOS
 .DS_Store
+
+# Editor backup files
+*~
