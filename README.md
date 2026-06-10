@@ -44,9 +44,17 @@ sudo make install
 
 ## Testing
 
+### Basic Functionality
+
 ```bash
-php -d extension=modules/validation_ext.so -r "Attributes\Validation\hello_world();"
-php -d extension=modules/validation_ext.so -r "var_dump(function_exists('Attributes\Validation\hello_world'));"
+php -d extension=modules/validation_ext.so -r "var_dump(class_exists('Attributes\Validation\Validator'));"
+```
+
+### PHPT Tests
+
+Run the complete PHPT test suite:
+```bash
+php tests/phpt/run-tests.php
 ```
 
 ## Clean

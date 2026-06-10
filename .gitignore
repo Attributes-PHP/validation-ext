@@ -42,3 +42,7 @@ run-tests.php
 
 # Editor backup files
 *~
+
+# PHPT artifacts
+tests/phpt/*
+!tests/phpt/*.phpt
