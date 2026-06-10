@@ -1,0 +1,41 @@
+# Build products
+*.so
+*.lo
+*.la
+*.dep
+
+# Build directories
+.libs/
+build/
+
+# Configuration files
+config.h
+config.h.in
+config.log
+config.nice
+config.status
+configure
+configure.ac
+
+# Makefiles
+Makefile
+Makefile.fragments
+Makefile.objects
+
+# Autom4te cache
+autom4te.cache/
+
+# Libtool files
+libtool
+
+# Test files
+run-tests.php
+
+# IDE/Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
