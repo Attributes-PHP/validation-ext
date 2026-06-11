@@ -6,6 +6,8 @@
 #include "Zend/zend_API.h"
 #include "Zend/zend_interfaces.h"
 #include "Zend/zend_exceptions.h"
+#include "Zend/zend_inheritance.h"
+#include "ext/standard/info.h"
 
 /* Class entries */
 zend_class_entry *validation_ext_Validator_ce;
@@ -17,6 +19,10 @@ typedef struct {
     zval context;
     zval validator;
 } validation_ext_Validator_object;
+
+static inline validation_ext_Validator_object *validation_ext_Validator_fetch_object(zend_object *obj) {
+    return (validation_ext_Validator_object *)((char *)obj - XtOffsetOf(validation_ext_Validator_object, std));
+}
 
 /* Object handlers */
 static zend_object_handlers validation_ext_Validator_handlers;
@@ -32,10 +38,10 @@ PHP_METHOD(Validation_Validator, isToValidate);
 
 /* Argument info */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_Validation_Validator___construct, 0, 0, 0)
-    ZEND_ARG_OBJ_INFO(0, validator, Attributes\\Validation\\Validators\\PropertyValidator, 1)
+    ZEND_ARG_INFO(0, validator)
     ZEND_ARG_INFO(0, stopFirstError)
     ZEND_ARG_INFO(0, strict)
-    ZEND_ARG_OBJ_INFO(0, context, Attributes\\Validation\\Context, 1)
+    ZEND_ARG_INFO(0, context)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_Validation_Validator_validate, 0, 0, 2)
@@ -79,12 +85,10 @@ static zend_function_entry validation_ext_Validator_methods[] = {
 /* Object creation and destruction */
 static zend_object *validation_ext_Validator_create_object(zend_class_entry *ce)
 {
-    validation_ext_Validator_object *obj = (validation_ext_Validator_object *)zend_objects_new(ce);
+    validation_ext_Validator_object *obj = (validation_ext_Validator_object *)zend_object_alloc(sizeof(validation_ext_Validator_object), ce);
 
     zend_object_std_init(&obj->std, ce);
     object_properties_init(&obj->std, ce);
-
-    obj->handlers = &validation_ext_Validator_handlers;
 
     ZVAL_NULL(&obj->context);
     ZVAL_NULL(&obj->validator);
@@ -94,7 +98,7 @@ static zend_object *validation_ext_Validator_create_object(zend_class_entry *ce)
 
 static void validation_ext_Validator_free_object(zend_object *object)
 {
-    validation_ext_Validator_object *obj = (validation_ext_Validator_object *)object;
+    validation_ext_Validator_object *obj = validation_ext_Validator_fetch_object(object);
 
     zval_ptr_dtor(&obj->context);
     zval_ptr_dtor(&obj->validator);
@@ -111,13 +115,14 @@ PHP_METHOD(Validation_Validator, __construct)
     zval *context = NULL;
     
     ZEND_PARSE_PARAMETERS_START(0, 4)
-        ZEND_ARG_OBJ_INFO(0, validator, Attributes\\Validation\\Validators\\PropertyValidator, 1)
-        ZEND_ARG_INFO(0, stopFirstError)
-        ZEND_ARG_INFO(0, strict)
-        ZEND_ARG_OBJ_INFO(0, context, Attributes\\Validation\\Context, 1)
+        Z_PARAM_OPTIONAL
+        Z_PARAM_ZVAL(validator)
+        Z_PARAM_BOOL(stopFirstError)
+        Z_PARAM_BOOL(strict)
+        Z_PARAM_ZVAL(context)
     ZEND_PARSE_PARAMETERS_END();
 
-    validation_ext_Validator_object *obj = (validation_ext_Validator_object *)Z_OBJ_P(getThis());
+    validation_ext_Validator_object *obj = validation_ext_Validator_fetch_object(Z_OBJ_P(getThis()));
 
     if (validator) {
         ZVAL_COPY(&obj->validator, validator);
@@ -166,16 +171,13 @@ PHP_MINIT_FUNCTION(validation_ext)
     /* Register Validatable interface */
     INIT_CLASS_ENTRY(ce, "Attributes\\Validation\\Validatable", NULL);
     validation_ext_Validatable_ce = zend_register_internal_interface(&ce);
-    
-    zend_class_implements(validation_ext_Validatable_ce, 1, zend_ce_traversable);
 
     /* Register Validator class */
     INIT_CLASS_ENTRY(ce, "Attributes\\Validation\\Validator", validation_ext_Validator_methods);
     ce.create_object = validation_ext_Validator_create_object;
     
     validation_ext_Validator_ce = zend_register_internal_class(&ce);
-    validation_ext_Validator_ce->create_object = validation_ext_Validator_create_object;
-
+    
     /* Setup object handlers */
     memcpy(&validation_ext_Validator_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     validation_ext_Validator_handlers.offset = XtOffsetOf(validation_ext_Validator_object, std);
@@ -216,6 +218,8 @@ PHP_MINFO_FUNCTION(validation_ext)
     php_info_print_table_start();
     php_info_print_table_header(2, "validation_ext", "enabled");
     php_info_print_table_end();
+    
+    DISPLAY_INI_ENTRIES();
 }
 
 /* Module entry */
