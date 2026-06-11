@@ -8,6 +8,7 @@
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_inheritance.h"
 #include "ext/standard/info.h"
+#include "validation_ext.h"
 
 /* Class entries */
 zend_class_entry *validation_ext_Validator_ce;
@@ -225,14 +226,14 @@ PHP_MINFO_FUNCTION(validation_ext)
 /* Module entry */
 zend_module_entry validation_ext_module_entry = {
     STANDARD_MODULE_HEADER,
-    "validation_ext",
+    VALIDATION_EXT_NAME,
     NULL, /* Function entries */
     PHP_MINIT(validation_ext),
     PHP_MSHUTDOWN(validation_ext),
     PHP_RINIT(validation_ext),
     PHP_RSHUTDOWN(validation_ext),
     PHP_MINFO(validation_ext),
-    "1.0",
+    VALIDATION_EXT_VERSION,
     STANDARD_MODULE_PROPERTIES
 };
 

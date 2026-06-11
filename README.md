@@ -54,7 +54,7 @@ php -d extension=modules/validation_ext.so -r "var_dump(class_exists('Attributes
 
 Run the complete PHPT test suite:
 ```bash
-php tests/phpt/run-tests.php
+php run-tests.php
 ```
 
 ## Clean
