@@ -6,7 +6,7 @@ extension=modules/validation_ext.so
 <?php
 
 try {
-    $validator = new Attributes\Validation\Validator(null, true, false, null);
+    $validator = new Attributes\Validation\Validator(false, true);
     var_dump(true);
 } catch (Exception $e) {
     var_dump(false);
