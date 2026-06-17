@@ -33,10 +33,8 @@ PHP_METHOD(Validation_Validator, validateCallable);
 
 /* Argument info */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_Validation_Validator___construct, 0, 0, 0)
-    ZEND_ARG_INFO(0, validator)
     ZEND_ARG_INFO(0, stopFirstError)
     ZEND_ARG_INFO(0, strict)
-    ZEND_ARG_INFO(0, context)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_Validation_Validator_validate, 0, 0, 2)
