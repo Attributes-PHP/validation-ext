@@ -14,19 +14,19 @@
 ### macOS
 
 ```bash
-brew install php autoconf libtool
+brew install php autoconf libtool zig
 ```
 
 ### Ubuntu/Debian
 
 ```bash
-sudo apt-get install php-dev phpize autoconf libtool build-essential
+sudo apt-get install php-dev phpize autoconf libtool build-essential zig
 ```
 
 ### Fedora/RHEL
 
 ```bash
-sudo dnf install php-devel autoconf libtool gcc gcc-c++
+sudo dnf install php-devel autoconf libtool gcc gcc-c++ zig
 ```
 
 ## Manual Build

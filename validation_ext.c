@@ -9,6 +9,7 @@
 #include "Zend/zend_inheritance.h"
 #include "ext/standard/info.h"
 #include "validation_ext.h"
+#include "src/validation_zig.h"
 
 /* Class entries */
 zend_class_entry *validation_ext_Validator_ce;
@@ -90,12 +91,46 @@ PHP_METHOD(Validation_Validator, __construct)
 
 PHP_METHOD(Validation_Validator, validate)
 {
-    // Empty implementation as requested
+    zval *data, *model;
+    
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_ZVAL(data)
+        Z_PARAM_ZVAL(model)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    // Call Zig implementation for validation
+    // For now, we pass the zval pointers directly
+    // In a production implementation, you might want to extract the actual data
+    int result = zig_validate((void *)data, (void *)model);
+    
+    if (result != 0) {
+        // Validation failed - could throw exception or return error
+        zend_throw_exception(NULL, "Validation failed", 0);
+        RETURN_FALSE;
+    }
+    
+    RETURN_TRUE;
 }
 
 PHP_METHOD(Validation_Validator, validateCallable)
 {
-    // Empty implementation as requested
+    zval *data, *call;
+    
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_ZVAL(data)
+        Z_PARAM_ZVAL(call)
+    ZEND_PARSE_PARAMETERS_END();
+    
+    // Call Zig implementation for callable validation
+    int result = zig_validate_callable((void *)data, (void *)call);
+    
+    if (result != 0) {
+        // Validation failed - could throw exception or return error
+        zend_throw_exception(NULL, "Callable validation failed", 0);
+        RETURN_FALSE;
+    }
+    
+    RETURN_TRUE;
 }
 
 /* Module startup */
