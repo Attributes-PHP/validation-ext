@@ -1,3 +1,8 @@
+# Zephir
+.zephir/*
+compile*
+ext/
+
 # Build products
 *.so
 *.lo
