@@ -6,11 +6,6 @@
 /* Class entry */
 extern zend_class_entry *validation_ext_BaseModel_ce;
 
-/* Object definition */
-typedef struct {
-    zend_object std;
-} validation_ext_BaseModel_object;
-
 /* Method declarations */
 PHP_METHOD(BaseModel, beforeValidation);
 PHP_METHOD(BaseModel, afterValidation);
