@@ -23,7 +23,7 @@ object(Attributes\Validation\BaseException)#1 (7) {
   ["code":protected]=>
   int(0)
   ["file":protected]=>
-  string(78) "/Users/andregil/Desktop/others/validation-ext/tests/phpt/006_baseexception.php"
+  string(78) "/Users/andregil/Desktop/others/validation-ext/tests/phpt/007_baseexception.php"
   ["line":protected]=>
   int(6)
   ["trace":"Exception":private]=>

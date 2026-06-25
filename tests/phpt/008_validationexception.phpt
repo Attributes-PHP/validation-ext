@@ -25,7 +25,7 @@ object(Attributes\Validation\ValidationException)#1 (8) {
   ["code":protected]=>
   int(0)
   ["file":protected]=>
-  string(84) "/Users/andregil/Desktop/others/validation-ext/tests/phpt/007_validationexception.php"
+  string(84) "/Users/andregil/Desktop/others/validation-ext/tests/phpt/008_validationexception.php"
   ["line":protected]=>
   int(7)
   ["trace":"Exception":private]=>

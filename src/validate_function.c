@@ -1,6 +1,7 @@
 #include "src/validate_function.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
+#include "src/base_model.h"
 
 /* Function implementation for validate */
 PHP_FUNCTION(validate)
@@ -12,7 +13,7 @@ PHP_FUNCTION(validate)
     
     ZEND_PARSE_PARAMETERS_START(2, 4)
         Z_PARAM_ARRAY(rawData)
-        Z_PARAM_OBJECT(model)
+        Z_PARAM_OBJECT_OF_CLASS(model, validation_ext_BaseModel_ce)
         Z_PARAM_OPTIONAL
         Z_PARAM_BOOL(strict)
         Z_PARAM_BOOL(stopAtFirstError)
