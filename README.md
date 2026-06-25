@@ -1,6 +1,6 @@
 # Attributes Validation Extension
 
-**Attributes Validation Extension** is the Pydantic validation library for PHP which allows you to validate data via type hints at speed of light ⚡️
+**Attributes Validation Extension** is a Pydantic-inspired PHP library for validating data via type hints at lightning speed ⚡️
 
 ## Prerequisites
 
