@@ -21,7 +21,7 @@ ZEND_END_ARG_INFO()
 
 /* Registration functions */
 void register_all_exception_classes();
-void register_BaseException_class();
-void register_ValidationException_class();
+static void register_BaseException_class();
+static void register_ValidationException_class();
 
 #endif /* VALIDATION_EXT_EXCEPTION_H */

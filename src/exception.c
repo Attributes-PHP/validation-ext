@@ -19,12 +19,23 @@ void register_all_exception_classes()
     register_ValidationException_class();
 }
 
-void register_BaseException_class()
+static void register_BaseException_class()
 {
     zend_class_entry ce;
     INIT_CLASS_ENTRY(ce, "Attributes\\Validation\\BaseException", NULL);
     
     validation_ext_BaseException_ce = zend_register_internal_class_ex(&ce, zend_ce_exception);
+}
+
+static void register_ValidationException_class()
+{
+    zend_class_entry ce;
+    INIT_CLASS_ENTRY(ce, "Attributes\\Validation\\ValidationException", validation_ext_ValidationException_methods);
+    
+    validation_ext_ValidationException_ce = zend_register_internal_class_ex(&ce, validation_ext_BaseException_ce);
+    
+    /* Declare the private $allErrors property */
+    zend_declare_property_null(validation_ext_ValidationException_ce, "allErrors", sizeof("allErrors") - 1, ZEND_ACC_PRIVATE);
 }
 
 PHP_METHOD(ValidationException, __construct)
@@ -46,24 +57,13 @@ PHP_METHOD(ValidationException, __construct)
 PHP_METHOD(ValidationException, getErrors)
 {
     zval *allErrors;
-    
+
     allErrors = zend_read_property(validation_ext_ValidationException_ce, Z_OBJ_P(getThis()), "allErrors", sizeof("allErrors") - 1, 0, NULL);
-    
+
     if (Z_TYPE_P(allErrors) == IS_NULL) {
         array_init(return_value);
         return;
     }
-    
-    RETURN_ZVAL(allErrors, 1, 0);
-}
 
-void register_ValidationException_class()
-{
-    zend_class_entry ce;
-    INIT_CLASS_ENTRY(ce, "Attributes\\Validation\\ValidationException", validation_ext_ValidationException_methods);
-    
-    validation_ext_ValidationException_ce = zend_register_internal_class_ex(&ce, validation_ext_BaseException_ce);
-    
-    /* Declare the private $allErrors property */
-    zend_declare_property_null(validation_ext_ValidationException_ce, "allErrors", sizeof("allErrors") - 1, ZEND_ACC_PRIVATE);
+    RETURN_ZVAL(allErrors, 1, 0);
 }
