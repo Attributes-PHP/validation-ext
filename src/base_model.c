@@ -1,5 +1,6 @@
 #include "src/base_model.h"
 #include "Zend/zend_API.h"
+#include "src/options.h"
 
 zend_class_entry *validation_ext_BaseModel_ce;
 
@@ -13,12 +14,29 @@ static zend_function_entry validation_ext_BaseModel_methods[] = {
 /* Method implementations */
 PHP_METHOD(BaseModel, beforeValidation)
 {
-    // Empty implementation for now
+    zval *rawData;
+    zval *options;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_ARRAY(rawData)
+        Z_PARAM_OBJECT_OF_CLASS(options, validation_ext_Options_ce)
+    ZEND_PARSE_PARAMETERS_END();
+
+    // Return rawData by default
+    RETURN_ZVAL(rawData, 1, 0);
 }
 
 PHP_METHOD(BaseModel, afterValidation)
 {
-    // Empty implementation for now
+    zval *rawData;
+    zval *options;
+
+    ZEND_PARSE_PARAMETERS_START(2, 2)
+        Z_PARAM_ARRAY(rawData)
+        Z_PARAM_OBJECT_OF_CLASS(options, validation_ext_Options_ce)
+    ZEND_PARSE_PARAMETERS_END();
+
+    // Void method - does not return anything
 }
 
 /* Registration function */

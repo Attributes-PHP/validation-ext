@@ -3,6 +3,7 @@
 #include "Zend/zend_exceptions.h"
 #include "src/base_model.h"
 #include "src/options.h"
+#include "src/exception.h"
 #include "Zend/zend_interfaces.h"
 
 /* Function implementation for validate */
@@ -12,7 +13,7 @@ PHP_FUNCTION(validate)
     zval *model;
     zend_bool strict = 0;
     zend_bool stopAtFirstError = 0;
-    
+
     ZEND_PARSE_PARAMETERS_START(2, 4)
         Z_PARAM_ARRAY(rawData)
         Z_PARAM_OBJECT_OF_CLASS(model, validation_ext_BaseModel_ce)
@@ -21,16 +22,19 @@ PHP_FUNCTION(validate)
         Z_PARAM_BOOL(stopAtFirstError)
     ZEND_PARSE_PARAMETERS_END();
 
-    // Create validation options from strict and stopAtFirstError parameters
+    // Create validation options with: 1) strict and 2) stopAtFirstError
     zval options_obj;
     create_options(&options_obj, strict, stopAtFirstError);
+    if (EG(exception)) {
+        return;
+    }
 
-    // TODO: 2. Call beforeValidation hook on the model
-    // - Call beforeValidation method with rawData and options
-    // - The hook can modify the rawData before validation begins
-    // - Example: $rawData = $model->beforeValidation($rawData, $options);
+    call_before_validation_hook(&rawData, model, &options_obj);
+    if (EG(exception)) {
+        return;
+    }
 
-    // TODO: 3. Get model-level configurations via reflection
+    // TODO: 3. Get model-level configurations attributes
     // - Check for #[AliasGenerator] attribute on the model class
     // - Apply alias transformation to all property names when looking them up in rawData
     // - Example: snake_case to camelCase conversion
@@ -91,10 +95,10 @@ PHP_FUNCTION(validate)
     //   * Provide getAllErrors() method to retrieve the full error array
     //   * Throw the exception
 
-    // TODO: 10. Call afterValidation hook on the model if it exists
-    // - Check if model extends Base class
-    // - If afterValidation method exists, call it with validated rawData and options
-    // - Example: $model->afterValidation($validatedData, $options);
+    call_after_validation_hook(&rawData, model, &options_obj);
+    if (EG(exception)) {
+        return;
+    }
 
     // TODO: 11. Populate the model instance with validated data
     // - For each validated property, set the value on the model object
@@ -111,7 +115,9 @@ PHP_FUNCTION(validate)
     RETURN_ZVAL(&clone, 0, 1);
 }
 
-/* Instantiates an Options class with all required properties for validation */
+/**
+* Instantiates an Options class with all required properties for validation
+**/
 static void create_options(zval *options, zend_bool strict, zend_bool stop_at_first_error)
 {
     zval strict_zval;
@@ -122,4 +128,30 @@ static void create_options(zval *options, zend_bool strict, zend_bool stop_at_fi
 
     object_init_ex(options, validation_ext_Options_ce);
     zend_call_method_with_2_params(Z_OBJ_P(options), validation_ext_Options_ce, NULL, "__construct", NULL, &strict_zval, &stop_zval);
+}
+
+/**
+ * Calls beforeValidation hook of BaseModel e.g. $rawData = $model->beforeValidation($rawData, $options)
+ * This hook can modify the rawData before validation begins
+ **/
+static void call_before_validation_hook(zval **raw_data, zval *model, zval *options)
+{
+    zval *before_validation_result = emalloc(sizeof(zval));
+    ZVAL_UNDEF(before_validation_result);
+    zend_class_entry *model_ce = Z_OBJCE_P(model);
+
+    zend_call_method_with_2_params(Z_OBJ_P(model), model_ce, NULL, "beforeValidation", before_validation_result, *raw_data, options);
+    if (Z_TYPE_P(before_validation_result) != IS_ARRAY) {
+        zval_ptr_dtor(before_validation_result);
+        return;
+    }
+
+    zval_ptr_dtor(*raw_data);
+    *raw_data = before_validation_result;
+}
+
+/** Calls afterValidation hook of BaseModel e.g. $model->afterValidation($rawData, $options) **/
+static void call_after_validation_hook(zval **raw_data, zval *model, zval *options)
+{
+    zend_call_method_with_2_params(Z_OBJ_P(model), Z_OBJCE_P(model), NULL, "afterValidation", NULL, *raw_data, options);
 }
