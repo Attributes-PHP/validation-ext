@@ -14,8 +14,8 @@
 #include "src/call_function.h"
 #include "src/base_model.h"
 #include "src/arrayof.h"
-#include "src/options.h"
 #include "src/exception.h"
+#include "src/model_configs.h"
 
 /* Function entries for the module */
 const zend_function_entry validation_ext_functions[] = {
@@ -30,7 +30,7 @@ PHP_MINIT_FUNCTION(validation_ext)
     // Register classes
     register_BaseModel_class();
     register_ArrayOf_class();
-    register_Options_class();
+    register_ModelConfigs_class();
     register_all_exception_classes();
     return SUCCESS;
 }

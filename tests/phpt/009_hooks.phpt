@@ -7,33 +7,34 @@ extension=modules/validation_ext.so
 
 use function Attributes\Validation\validate;
 use Attributes\Validation\BaseModel;
-use Attributes\Validation\Options;
+use Attributes\Validation\ModelConfigs;
 
+#[ModelConfigs(extra: 'forbid')]
 class NoHooks extends BaseModel
 {
     public float $number;
 }
 
 class WithBeforeHook extends NoHooks {
-    public function beforeValidation(array $rawData, Options $options) {
+    public function beforeValidation(array $rawData, ModelConfigs $configs) {
         var_dump($this::class . '->beforeValidation(...) - no return value');
     }
 }
 
 class WithAfterHook extends NoHooks {
-    public function afterValidation(array $rawData, Options $options) {
+    public function afterValidation(array $rawData, ModelConfigs $configs) {
         var_dump($this::class . '->afterValidation(...)');
     }
 }
 
 class WithBothHooks extends NoHooks {
-    public function beforeValidation(array $rawData, Options $options) {
+    public function beforeValidation(array $rawData, ModelConfigs $configs) {
         var_dump($this::class . '->beforeValidation(...)');
         var_dump($rawData);
         return ['number' => 'invalid-value'];
     }
 
-    public function afterValidation(array $rawData, Options $options) {
+    public function afterValidation(array $rawData, ModelConfigs $configs) {
         var_dump($this::class . '->afterValidation(...)');
         var_dump($rawData);
     }
