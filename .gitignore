@@ -1,3 +1,6 @@
+# Stubs
+stubs/*.h
+
 # Build products
 *.so
 *.lo

@@ -4,24 +4,34 @@
 #include "php.h"
 
 /* Class entries */
-extern zend_class_entry *validation_ext_BaseException_ce;
-extern zend_class_entry *validation_ext_ValidationException_ce;
+extern zend_class_entry *class_Attributes_Validation_Exceptions_BaseException;
+extern zend_class_entry *class_Attributes_Validation_Exceptions_ValidationException;
 
 /* Method declaration */
-PHP_METHOD(ValidationException, __construct);
-PHP_METHOD(ValidationException, getErrors);
+ZEND_METHOD(Attributes_Validation_Exceptions_ValidationException, __construct);
+ZEND_METHOD(Attributes_Validation_Exceptions_ValidationException, getErrors);
 
 /* Argument info for ValidationException methods */
-ZEND_BEGIN_ARG_INFO_EX(arginfo_ValidationException___construct, 0, 0, 1)
-    ZEND_ARG_INFO(0, allErrors)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_Attributes_Validation_Exceptions_ValidationException___construct, 0, 0, 1)
+    ZEND_ARG_TYPE_INFO(0, allErrors, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_ValidationException_getErrors, 0, 0, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_class_Attributes_Validation_Exceptions_ValidationException_getErrors, 0, 0, IS_ARRAY, 0)
 ZEND_END_ARG_INFO()
+
+static const zend_function_entry class_Attributes_Validation_Exceptions_BaseException_methods[] = {
+    ZEND_FE_END
+};
+
+static const zend_function_entry class_Attributes_Validation_Exceptions_ValidationException_methods[] = {
+    ZEND_ME(Attributes_Validation_Exceptions_ValidationException, __construct, arginfo_class_Attributes_Validation_Exceptions_ValidationException___construct, ZEND_ACC_PUBLIC)
+    ZEND_ME(Attributes_Validation_Exceptions_ValidationException, getErrors, arginfo_class_Attributes_Validation_Exceptions_ValidationException_getErrors, ZEND_ACC_PUBLIC)
+    ZEND_FE_END
+};
 
 /* Registration functions */
-void register_all_exception_classes();
-static void register_BaseException_class();
-static void register_ValidationException_class();
+void register_all_exception_classes(void);
+static void register_BaseException_class(void);
+static void register_ValidationException_class(void);
 
 #endif /* VALIDATION_EXT_EXCEPTION_H */

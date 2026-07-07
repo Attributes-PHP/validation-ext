@@ -1,34 +1,30 @@
-#include "src/validate_function.h"
+#include "validate_function.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
-#include "src/base_model.h"
-#include "src/model_configs.h"
-#include "src/exception.h"
+#include "base_model.h"
+#include "model_configs.h"
+#include "exception.h"
 #include "Zend/zend_interfaces.h"
+#include "php.h"
 
 /* Function implementation for validate */
-PHP_FUNCTION(validate)
+ZEND_FUNCTION(validate)
 {
     zval *rawData;
     zval *model;
-    bool strict = false, is_strict_null = true;
-    bool stop_first_error = false, is_stop_first_error_null = true;
 
-    ZEND_PARSE_PARAMETERS_START(2, 4)
+    ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_ARRAY(rawData)
-        Z_PARAM_OBJECT_OF_CLASS(model, validation_ext_BaseModel_ce)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_BOOL_OR_NULL(strict, is_strict_null)
-        Z_PARAM_BOOL_OR_NULL(stop_first_error, is_stop_first_error_null)
+        Z_PARAM_OBJECT_OF_CLASS(model, Attributes_Validation_BaseModel_ce)
     ZEND_PARSE_PARAMETERS_END();
 
     zval configs_obj;
-    create_model_configs(&configs_obj, strict, is_strict_null, stop_first_error, is_stop_first_error_null);
+    create_model_configs(&configs_obj);
     if (EG(exception)) {
         return;
     }
 
-    call_before_validation_hook(model, rawData, &configs_obj);
+    call_before_validation_hook(model, rawData);
     if (EG(exception)) {
         return;
     }
@@ -94,7 +90,7 @@ PHP_FUNCTION(validate)
     //   * Provide getAllErrors() method to retrieve the full error array
     //   * Throw the exception
 
-    call_after_validation_hook(model, rawData, &configs_obj);
+    call_after_validation_hook(model, rawData);
     if (EG(exception)) {
         return;
     }

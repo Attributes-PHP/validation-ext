@@ -17,13 +17,6 @@
 #include "src/exception.h"
 #include "src/model_configs.h"
 
-/* Function entries for the module */
-const zend_function_entry validation_ext_functions[] = {
-    ZEND_NS_FE("Attributes\\Validation", validate, arginfo_validate)
-    ZEND_NS_FE("Attributes\\Validation", call, arginfo_call)
-    PHP_FE_END
-};
-
 /* Module startup */
 PHP_MINIT_FUNCTION(validation_ext)
 {
@@ -67,7 +60,7 @@ PHP_MINFO_FUNCTION(validation_ext)
 zend_module_entry validation_ext_module_entry = {
     STANDARD_MODULE_HEADER,
     VALIDATION_EXT_NAME,
-    validation_ext_functions,
+    ext_functions,
     PHP_MINIT(validation_ext),
     PHP_MSHUTDOWN(validation_ext),
     PHP_RINIT(validation_ext),

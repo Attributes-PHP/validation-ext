@@ -3,14 +3,12 @@
 
 #include "php.h"
 
-PHP_FUNCTION(call);
-
-/* Argument info for call function */
-ZEND_BEGIN_ARG_INFO_EX(arginfo_call, 0, 0, 2)
-    ZEND_ARG_INFO(0, function)
-    ZEND_ARG_ARRAY_INFO(0, params, 0)
-    ZEND_ARG_ARRAY_INFO(0, dependencies, 1)
-    ZEND_ARG_INFO(0, strict)
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_Attributes_Validation_call, 0, 2, IS_MIXED, 0)
+    ZEND_ARG_TYPE_MASK(0, function, MAY_BE_STRING|MAY_BE_CALLABLE, NULL)
+    ZEND_ARG_TYPE_INFO(0, params, IS_ARRAY, 0)
+    ZEND_ARG_TYPE_INFO_WITH_DEFAULT_VALUE(0, dependencies, IS_ARRAY, 0, "[]")
 ZEND_END_ARG_INFO()
+
+ZEND_FUNCTION(call);
 
 #endif /* VALIDATION_EXT_CALL_FUNCTION_H */

@@ -1,44 +1,38 @@
-#include "src/exception.h"
+#include "exception.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_interfaces.h"
 
-zend_class_entry *validation_ext_BaseException_ce;
-zend_class_entry *validation_ext_ValidationException_ce;
+zend_class_entry *class_Attributes_Validation_Exceptions_BaseException;
+zend_class_entry *class_Attributes_Validation_Exceptions_ValidationException;
 
-/* Method declarations for ValidationException */
-static zend_function_entry validation_ext_ValidationException_methods[] = {
-    ZEND_ME(ValidationException, __construct, arginfo_ValidationException___construct, ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
-    ZEND_ME(ValidationException, getErrors, arginfo_ValidationException_getErrors, ZEND_ACC_PUBLIC)
-    ZEND_FE_END
-};
-
-void register_all_exception_classes()
+void register_all_exception_classes(void)
 {
     register_BaseException_class();
     register_ValidationException_class();
 }
 
-static void register_BaseException_class()
+static void register_BaseException_class(void)
 {
     zend_class_entry ce;
-    INIT_CLASS_ENTRY(ce, "Attributes\\Validation\\BaseException", NULL);
-    
-    validation_ext_BaseException_ce = zend_register_internal_class_ex(&ce, zend_ce_exception);
+    INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation\\Exceptions", "BaseException", class_Attributes_Validation_Exceptions_BaseException_methods);
+    class_Attributes_Validation_Exceptions_BaseException = zend_register_internal_class_ex(&ce, zend_ce_exception);
 }
 
-static void register_ValidationException_class()
+static void register_ValidationException_class(void)
 {
     zend_class_entry ce;
-    INIT_CLASS_ENTRY(ce, "Attributes\\Validation\\ValidationException", validation_ext_ValidationException_methods);
-    
-    validation_ext_ValidationException_ce = zend_register_internal_class_ex(&ce, validation_ext_BaseException_ce);
-    
-    /* Declare the private $allErrors property */
-    zend_declare_property_null(validation_ext_ValidationException_ce, "allErrors", sizeof("allErrors") - 1, ZEND_ACC_PRIVATE);
+    INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation\\Exceptions", "ValidationException", class_Attributes_Validation_Exceptions_ValidationException_methods);
+    class_Attributes_Validation_Exceptions_ValidationException = zend_register_internal_class_ex(&ce, class_Attributes_Validation_Exceptions_BaseException);
+
+    zval property_allErrors_default_value;
+    ZVAL_UNDEF(&property_allErrors_default_value);
+    zend_string *property_allErrors_name = zend_string_init("allErrors", sizeof("allErrors") - 1, 1);
+    zend_declare_typed_property(class_Attributes_Validation_Exceptions_ValidationException, property_allErrors_name, &property_allErrors_default_value, ZEND_ACC_PRIVATE, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_ARRAY));
+    zend_string_release(property_allErrors_name);
 }
 
-PHP_METHOD(ValidationException, __construct)
+ZEND_METHOD(Attributes_Validation_Exceptions_ValidationException, __construct)
 {
     zval *allErrors;
 
@@ -48,17 +42,17 @@ PHP_METHOD(ValidationException, __construct)
 
     zval message;
     ZVAL_STRING(&message, "Invalid data");
-    zend_call_method_with_1_params(Z_OBJ_P(getThis()), validation_ext_BaseException_ce, NULL, "__construct", NULL, &message);
+    zend_call_method_with_1_params(Z_OBJ_P(getThis()), class_Attributes_Validation_Exceptions_BaseException, NULL, "__construct", NULL, &message);
     zval_dtor(&message);
 
-    zend_update_property(validation_ext_ValidationException_ce, Z_OBJ_P(getThis()), "allErrors", sizeof("allErrors") - 1, allErrors);
+    zend_update_property(class_Attributes_Validation_Exceptions_ValidationException, Z_OBJ_P(getThis()), "allErrors", sizeof("allErrors") - 1, allErrors);
 }
 
-PHP_METHOD(ValidationException, getErrors)
+ZEND_METHOD(Attributes_Validation_Exceptions_ValidationException, getErrors)
 {
     zval *allErrors;
 
-    allErrors = zend_read_property(validation_ext_ValidationException_ce, Z_OBJ_P(getThis()), "allErrors", sizeof("allErrors") - 1, 0, NULL);
+    allErrors = zend_read_property(class_Attributes_Validation_Exceptions_ValidationException, Z_OBJ_P(getThis()), "allErrors", sizeof("allErrors") - 1, 0, NULL);
 
     if (Z_TYPE_P(allErrors) == IS_NULL) {
         array_init(return_value);
