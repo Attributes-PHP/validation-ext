@@ -1,6 +1,5 @@
 #include "base_model.h"
 #include "Zend/zend_API.h"
-#include "model_configs.h"
 #include "Zend/zend_interfaces.h"
 
 zend_class_entry *Attributes_Validation_BaseModel_ce;

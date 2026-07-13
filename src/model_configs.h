@@ -26,27 +26,22 @@ static const zend_function_entry class_Attributes_Validation_ModelConfigs_method
 };
 
 // Alias
-#define VALIDATION_EXT_PASCAL_CASE "pascal"
-#define VALIDATION_EXT_CAMEL_CASE "camel"
-#define VALIDATION_EXT_SNAKE_CASE "snake"
-#define VALIDATION_EXT_KEBAB_CASE "kebab"
+#define VALIDATION_EXT_PASCAL_CASE 'p'
+#define VALIDATION_EXT_CAMEL_CASE 'c'
+#define VALIDATION_EXT_SNAKE_CASE 's'
+#define VALIDATION_EXT_KEBAB_CASE 'k'
 
 // Extra
-#define VALIDATION_EXT_IGNORE "ignore"
-#define VALIDATION_EXT_FORBID "forbid"
-#define VALIDATION_EXT_ALLOW "allow"
+#define VALIDATION_EXT_IGNORE 'i'
+#define VALIDATION_EXT_FORBID 'f'
+#define VALIDATION_EXT_ALLOW 'a'
 
 typedef struct {
-    char *value;
-    size_t len;
-} validation_ext_string;
-
-typedef struct {
-    validation_ext_string alias_generator;
+    char alias_generator;
     bool str_to_lower;
     bool str_to_upper;
     bool strip_whitespace;
-    validation_ext_string extra;
+    char extra;
     bool strict;
     bool stop_first_error;
 } validation_ext_model_configs_properties;
@@ -54,7 +49,9 @@ typedef struct {
 /* Registration function */
 void register_ModelConfigs_class(void);
 void create_model_configs(zval *configs);
-void update_model_properties(zend_object *this, validation_ext_model_configs_properties *properties);
+void update_model_properties(zend_object *this, validation_ext_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra);
 void set_default_properties(validation_ext_model_configs_properties *properties);
+bool validate_alias_generator(char *pretty_alias_generator);
+bool validate_extra(char *pretty_alias_generator);
 
 #endif /* VALIDATION_EXT_MODEL_CONFIG_H */

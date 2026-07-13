@@ -1,9 +1,7 @@
 #include "model_configs.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_attributes.h"
-#include "zend_alloc.h"
-#include <stddef.h>
-#include <string.h>
+#include "helpers/options.h"
 
 zend_class_entry *Attributes_Validation_ModelConfigs_ce;
 
@@ -11,28 +9,27 @@ zend_class_entry *Attributes_Validation_ModelConfigs_ce;
 ZEND_METHOD(Attributes_Validation_ModelConfigs, __construct)
 {
     bool is_extra_null = false;
+    char *alias_generator, *extra = NULL;
+    size_t alias_generator_len, extra_len = 0
+;
     validation_ext_model_configs_properties properties;
     set_default_properties(&properties);
 
     ZEND_PARSE_PARAMETERS_START(0, 7)
         Z_PARAM_OPTIONAL
-        Z_PARAM_STRING_OR_NULL(properties.alias_generator.value, properties.alias_generator.len)
+        Z_PARAM_STRING_OR_NULL(alias_generator, alias_generator_len)
         Z_PARAM_BOOL(properties.str_to_lower)
         Z_PARAM_BOOL(properties.str_to_upper)
         Z_PARAM_BOOL(properties.strip_whitespace)
-        Z_PARAM_STRING(properties.extra.value, properties.extra.len)
+        Z_PARAM_STRING(extra, extra_len)
         Z_PARAM_BOOL(properties.strict)
         Z_PARAM_BOOL(properties.stop_first_error)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (properties.extra.len <= 0) {
-        properties.extra.value = estrdup(VALIDATION_EXT_ALLOW);
-        properties.extra.len = sizeof(VALIDATION_EXT_ALLOW) - 1;
-        is_extra_null = true;
-    }
+    if (alias_generator_len > 0 && validate_alias_generator(alias_generator)) properties.alias_generator = tolower(alias_generator[0]);
+    if (extra_len > 0 && validate_extra(extra)) properties.extra = tolower(extra[0]);
 
-    update_model_properties(Z_OBJ_P(getThis()), &properties);
-    if (is_extra_null) efree(properties.extra.value);
+    update_model_properties(Z_OBJ_P(getThis()), &properties, alias_generator, extra);
 }
 
 /* Registration function */
@@ -48,7 +45,7 @@ void register_ModelConfigs_class(void)
     zend_declare_property_bool(Attributes_Validation_ModelConfigs_ce, "strToLower", sizeof("strToLower") - 1, 0, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
     zend_declare_property_bool(Attributes_Validation_ModelConfigs_ce, "strToUpper", sizeof("strToUpper") - 1, 0, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
     zend_declare_property_bool(Attributes_Validation_ModelConfigs_ce, "stripWhitespace", sizeof("stripWhitespace") - 1, 0, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
-    zend_declare_property_string(Attributes_Validation_ModelConfigs_ce, "extra", sizeof("extra") - 1, VALIDATION_EXT_ALLOW, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
+    zend_declare_property_string(Attributes_Validation_ModelConfigs_ce, "extra", sizeof("extra") - 1, "ignore", ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
     zend_declare_property_bool(Attributes_Validation_ModelConfigs_ce, "strict", sizeof("strict") - 1, 0, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
     zend_declare_property_bool(Attributes_Validation_ModelConfigs_ce, "stopAtFirstError", sizeof("stopAtFirstError") - 1, 0, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
 
@@ -68,38 +65,56 @@ void create_model_configs(zval *configs)
     validation_ext_model_configs_properties properties;
 
     set_default_properties(&properties);
-    properties.extra.value = estrdup(VALIDATION_EXT_ALLOW);
-    properties.extra.len = sizeof(VALIDATION_EXT_ALLOW) - 1;
-
-    update_model_properties(Z_OBJ_P(configs), &properties);
-    efree(properties.extra.value);
+    update_model_properties(Z_OBJ_P(configs), &properties, NULL, "ignore");
 }
 
-void update_model_properties(zend_object *this, validation_ext_model_configs_properties *properties)
+void update_model_properties(zend_object *this, validation_ext_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra)
 {
-    if (properties->alias_generator.len <= 0) {
+    if (pretty_alias_generator == NULL) {
         zend_update_property_null(Attributes_Validation_ModelConfigs_ce, this, "aliasGenerator", sizeof("aliasGenerator") - 1);
     } else {
-        zend_update_property_string(Attributes_Validation_ModelConfigs_ce, this, "aliasGenerator", sizeof("aliasGenerator") - 1, properties->alias_generator.value);
+        zend_update_property_string(Attributes_Validation_ModelConfigs_ce, this, "aliasGenerator", sizeof("aliasGenerator") - 1, pretty_alias_generator);
     }
 
     zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "strToLower", sizeof("strToLower") - 1, properties->str_to_lower);
     zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "strToUpper", sizeof("strToUpper") - 1, properties->str_to_upper);
     zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "stripWhitespace", sizeof("stripWhitespace") - 1, properties->strip_whitespace);
-    zend_update_property_string(Attributes_Validation_ModelConfigs_ce, this, "extra", sizeof("extra") - 1, properties->extra.value);
+    zend_update_property_string(Attributes_Validation_ModelConfigs_ce, this, "extra", sizeof("extra") - 1, pretty_extra);
     zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "strict", sizeof("strict") - 1, properties->strict);
     zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "stopAtFirstError", sizeof("stopAtFirstError") - 1, properties->stop_first_error);
 }
 
 void set_default_properties(validation_ext_model_configs_properties *properties)
 {
-    properties->alias_generator.value = NULL;
-    properties->alias_generator.len = 0;
+    properties->alias_generator = false;
     properties->str_to_lower = false;
     properties->str_to_upper = false;
     properties->strip_whitespace = false;
-    properties->extra.value = NULL;
-    properties->extra.len = 0;
+    properties->extra = VALIDATION_EXT_IGNORE;
     properties->strict = false;
     properties->stop_first_error = false;
+}
+
+bool validate_alias_generator(char *pretty_alias_generator)
+{
+    char *all_pretty_alias[] = {"pascal", "camel", "snake", "kebab"};
+    validation_ext_invalid_method_parameter invalid_parameter_error = {
+        .class_name = "Attributes\\Validation\\ModelConfigs",
+        .method_name = "__construct()",
+        .parameter_number = 1,
+        .name = "aliasGenerator"
+    };
+    return validate_method_parameter(pretty_alias_generator, all_pretty_alias, 4, &invalid_parameter_error);
+}
+
+bool validate_extra(char *pretty_extra)
+{
+    char *all_pretty_extra[] = {"ignore", "forbid", "allow"};
+    validation_ext_invalid_method_parameter invalid_parameter_error = {
+        .class_name = "Attributes\\Validation\\ModelConfigs",
+        .method_name = "__construct()",
+        .parameter_number = 5,
+        .name = "extra"
+    };
+    return validate_method_parameter(pretty_extra, all_pretty_extra, 3, &invalid_parameter_error);
 }
