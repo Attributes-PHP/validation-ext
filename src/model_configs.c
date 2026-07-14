@@ -6,39 +6,49 @@
 
 zend_class_entry *Attributes_Validation_ModelConfigs_ce;
 
+/**
+ * Reads a property from the current object and returns it.
+ * Used by all getter methods in this class.
+ */
+#define ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN(prop_name) \
+    ZEND_PARSE_PARAMETERS_NONE(); \
+    zval rv; \
+    zend_read_property(Attributes_Validation_ModelConfigs_ce, Z_OBJ_P(getThis()), prop_name, sizeof(prop_name) - 1, 1, &rv); \
+    RETURN_ZVAL(&rv, 0, 0)
+
 ZEND_METHOD(Attributes_Validation_ModelConfigs, getAliasGenerator)
 {
-
+    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("aliasGenerator");
 }
 
 ZEND_METHOD(Attributes_Validation_ModelConfigs, isStrToLower)
 {
-
+    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("strToLower");
 }
 
 ZEND_METHOD(Attributes_Validation_ModelConfigs, isStrToUpper)
 {
-
+    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("strToUpper");
 }
 
 ZEND_METHOD(Attributes_Validation_ModelConfigs, isStripWhitespace)
 {
-
+    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("stripWhitespace");
 }
 
 ZEND_METHOD(Attributes_Validation_ModelConfigs, getExtra)
 {
-
+    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("extra");
 }
 
 ZEND_METHOD(Attributes_Validation_ModelConfigs, isStrict)
 {
-
+    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("strict");
 }
 
 ZEND_METHOD(Attributes_Validation_ModelConfigs, isStopAtFirstError)
 {
-
+    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("stopAtFirstError");
 }
 
 /* Registration function */
@@ -154,3 +164,5 @@ static inline void declare_typed_property(const char *name, zval *default_value,
     zend_declare_typed_property(Attributes_Validation_ModelConfigs_ce, property_name, default_value, ZEND_ACC_PRIVATE, NULL, property_type);
     zend_string_release(property_name);
 }
+
+#undef ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN
