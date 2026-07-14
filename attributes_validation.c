@@ -7,7 +7,7 @@
 #include "Zend/zend_interfaces.h"
 #include "Zend/zend_inheritance.h"
 #include "ext/standard/info.h"
-#include "validation_ext.h"
+#include "attributes_validation.h"
 
 /* Include the component headers */
 #include "src/validate_function.h"
@@ -18,7 +18,7 @@
 #include "src/model_configs.h"
 
 /* Module startup */
-PHP_MINIT_FUNCTION(validation_ext)
+PHP_MINIT_FUNCTION(attributes_validation)
 {
     // Register classes
     attributes_validation_register_BaseModel_class();
@@ -29,47 +29,47 @@ PHP_MINIT_FUNCTION(validation_ext)
 }
 
 /* Module shutdown */
-PHP_MSHUTDOWN_FUNCTION(validation_ext)
+PHP_MSHUTDOWN_FUNCTION(attributes_validation)
 {
     return SUCCESS;
 }
 
 /* Request startup */
-PHP_RINIT_FUNCTION(validation_ext)
+PHP_RINIT_FUNCTION(attributes_validation)
 {
     return SUCCESS;
 }
 
 /* Request shutdown */
-PHP_RSHUTDOWN_FUNCTION(validation_ext)
+PHP_RSHUTDOWN_FUNCTION(attributes_validation)
 {
     return SUCCESS;
 }
 
 /* Module info */
-PHP_MINFO_FUNCTION(validation_ext)
+PHP_MINFO_FUNCTION(attributes_validation)
 {
     php_info_print_table_start();
-    php_info_print_table_header(2, "validation_ext", "enabled");
+    php_info_print_table_header(2, "attributes_validation", "enabled");
     php_info_print_table_end();
     
     DISPLAY_INI_ENTRIES();
 }
 
 /* Module entry */
-zend_module_entry validation_ext_module_entry = {
+zend_module_entry attributes_validation_module_entry = {
     STANDARD_MODULE_HEADER,
-    VALIDATION_EXT_NAME,
+    ATTRIBUTES_VALIDATION_NAME,
     ext_functions,
-    PHP_MINIT(validation_ext),
-    PHP_MSHUTDOWN(validation_ext),
-    PHP_RINIT(validation_ext),
-    PHP_RSHUTDOWN(validation_ext),
-    PHP_MINFO(validation_ext),
-    VALIDATION_EXT_VERSION,
+    PHP_MINIT(attributes_validation),
+    PHP_MSHUTDOWN(attributes_validation),
+    PHP_RINIT(attributes_validation),
+    PHP_RSHUTDOWN(attributes_validation),
+    PHP_MINFO(attributes_validation),
+    ATTRIBUTES_VALIDATION_VERSION,
     STANDARD_MODULE_PROPERTIES
 };
 
-#ifdef COMPILE_DL_VALIDATION_EXT
-ZEND_GET_MODULE(validation_ext)
+#ifdef COMPILE_DL_ATTRIBUTES_VALIDATION
+ZEND_GET_MODULE(attributes_validation)
 #endif

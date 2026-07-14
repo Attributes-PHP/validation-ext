@@ -1,5 +1,5 @@
-#ifndef VALIDATION_EXT_ArrayOf_H
-#define VALIDATION_EXT_ArrayOf_H
+#ifndef ATTRIBUTES_VALIDATION_ArrayOf_H
+#define ATTRIBUTES_VALIDATION_ArrayOf_H
 
 #include "php.h"
 
@@ -23,4 +23,4 @@ static const zend_function_entry class_Attributes_Validation_ArrayOf_methods[] =
 /* Registration function */
 void attributes_validation_register_ArrayOf_class(void);
 
-#endif /* VALIDATION_EXT_ArrayOf_H */
+#endif /* ATTRIBUTES_VALIDATION_ArrayOf_H */

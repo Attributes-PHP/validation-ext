@@ -1,7 +1,7 @@
 --TEST--
 Test that ArrayOf is a valid PHP Attribute for class properties
 --INI--
-extension=modules/validation_ext.so
+extension=modules/attributes_validation.so
 --FILE--
 <?php
 

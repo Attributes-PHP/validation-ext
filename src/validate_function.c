@@ -19,7 +19,7 @@ ZEND_FUNCTION(validate)
     ZEND_PARSE_PARAMETERS_END();
 
     zval configs_obj;
-    validation_ext_model_configs_properties properties;
+    attributes_validation_model_configs_properties properties;
     attributes_validation_create_model_configs(&configs_obj, model, &properties);
     if (EG(exception)) {
         return;

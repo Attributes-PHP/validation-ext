@@ -1,7 +1,7 @@
 --TEST--
 Test that Options is instantiable and holds all needed options for validation
 --INI--
-extension=modules/validation_ext.so
+extension=modules/attributes_validation.so
 --FILE--
 <?php
 

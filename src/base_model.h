@@ -1,5 +1,5 @@
-#ifndef VALIDATION_EXT_BASEMODEL_H
-#define VALIDATION_EXT_BASEMODEL_H
+#ifndef ATTRIBUTES_VALIDATION_BASEMODEL_H
+#define ATTRIBUTES_VALIDATION_BASEMODEL_H
 
 #include "php.h"
 
@@ -31,4 +31,4 @@ void attributes_validation_register_BaseModel_class(void);
 void attributes_validation_call_before_validation_hook(zval *model, zval *raw_data, zval *configs);
 void attributes_validation_call_after_validation_hook(zval *model, zval *raw_data, zval *configs);
 
-#endif /* VALIDATION_EXT_BASEMODEL_H */
+#endif /* ATTRIBUTES_VALIDATION_BASEMODEL_H */

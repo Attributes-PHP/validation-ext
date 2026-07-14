@@ -1,5 +1,5 @@
-#ifndef VALIDATION_EXT_EXCEPTION_H
-#define VALIDATION_EXT_EXCEPTION_H
+#ifndef ATTRIBUTES_VALIDATION_EXCEPTION_H
+#define ATTRIBUTES_VALIDATION_EXCEPTION_H
 
 #include "php.h"
 
@@ -34,4 +34,4 @@ void attributes_validation_register_all_exception_classes(void);
 static void register_BaseException_class(void);
 static void register_ValidationException_class(void);
 
-#endif /* VALIDATION_EXT_EXCEPTION_H */
+#endif /* ATTRIBUTES_VALIDATION_EXCEPTION_H */

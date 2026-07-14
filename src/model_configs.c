@@ -68,7 +68,7 @@ void attributes_validation_register_ModelConfigs_class(void)
 /**
 * Instantiates a ModelConfigs class with all required properties for validation
 **/
-void attributes_validation_create_model_configs(zval *configs, zval *model, validation_ext_model_configs_properties *properties)
+void attributes_validation_create_model_configs(zval *configs, zval *model, attributes_validation_model_configs_properties *properties)
 {
     object_init_ex(configs, Attributes_Validation_ModelConfigs_ce);
 
@@ -76,7 +76,7 @@ void attributes_validation_create_model_configs(zval *configs, zval *model, vali
     update_model_properties(Z_OBJ_P(configs), properties, NULL, "ignore");
 }
 
-static void update_model_properties(zend_object *this, validation_ext_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra)
+static void update_model_properties(zend_object *this, attributes_validation_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra)
 {
     if (pretty_alias_generator == NULL) {
         zend_update_property_null(Attributes_Validation_ModelConfigs_ce, this, "aliasGenerator", sizeof("aliasGenerator") - 1);
@@ -92,13 +92,13 @@ static void update_model_properties(zend_object *this, validation_ext_model_conf
     zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "stopAtFirstError", sizeof("stopAtFirstError") - 1, properties->stop_first_error);
 }
 
-static void set_default_properties(validation_ext_model_configs_properties *properties)
+static void set_default_properties(attributes_validation_model_configs_properties *properties)
 {
     properties->alias_generator = false;
     properties->str_to_lower = false;
     properties->str_to_upper = false;
     properties->strip_whitespace = false;
-    properties->extra = VALIDATION_EXT_IGNORE;
+    properties->extra = ATTRIBUTES_VALIDATION_IGNORE;
     properties->strict = false;
     properties->stop_first_error = false;
 }
@@ -106,7 +106,7 @@ static void set_default_properties(validation_ext_model_configs_properties *prop
 static bool validate_alias_generator(char *pretty_alias_generator)
 {
     char *all_pretty_alias[] = {"pascal", "camel", "snake", "kebab"};
-    validation_ext_invalid_method_parameter invalid_parameter_error = {
+    attributes_validation_invalid_method_parameter invalid_parameter_error = {
         .class_name = "Attributes\\Validation\\ModelConfigs",
         .method_name = "__construct()",
         .parameter_number = 1,
@@ -118,7 +118,7 @@ static bool validate_alias_generator(char *pretty_alias_generator)
 static bool validate_extra(char *pretty_extra)
 {
     char *all_pretty_extra[] = {"ignore", "forbid", "allow"};
-    validation_ext_invalid_method_parameter invalid_parameter_error = {
+    attributes_validation_invalid_method_parameter invalid_parameter_error = {
         .class_name = "Attributes\\Validation\\ModelConfigs",
         .method_name = "__construct()",
         .parameter_number = 5,

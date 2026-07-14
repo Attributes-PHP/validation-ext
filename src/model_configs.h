@@ -1,5 +1,5 @@
-#ifndef VALIDATION_EXT_MODEL_CONFIG_H
-#define VALIDATION_EXT_MODEL_CONFIG_H
+#ifndef ATTRIBUTES_VALIDATION_MODEL_CONFIG_H
+#define ATTRIBUTES_VALIDATION_MODEL_CONFIG_H
 
 #include "php.h"
 
@@ -47,15 +47,15 @@ static const zend_function_entry class_Attributes_Validation_ModelConfigs_method
 };
 
 // Alias
-#define VALIDATION_EXT_PASCAL_CASE 'p'
-#define VALIDATION_EXT_CAMEL_CASE 'c'
-#define VALIDATION_EXT_SNAKE_CASE 's'
-#define VALIDATION_EXT_KEBAB_CASE 'k'
+#define ATTRIBUTES_VALIDATION_PASCAL_CASE 'p'
+#define ATTRIBUTES_VALIDATION_CAMEL_CASE 'c'
+#define ATTRIBUTES_VALIDATION_SNAKE_CASE 's'
+#define ATTRIBUTES_VALIDATION_KEBAB_CASE 'k'
 
 // Extra
-#define VALIDATION_EXT_IGNORE 'i'
-#define VALIDATION_EXT_FORBID 'f'
-#define VALIDATION_EXT_ALLOW 'a'
+#define ATTRIBUTES_VALIDATION_IGNORE 'i'
+#define ATTRIBUTES_VALIDATION_FORBID 'f'
+#define ATTRIBUTES_VALIDATION_ALLOW 'a'
 
 typedef struct {
     char alias_generator;
@@ -65,17 +65,17 @@ typedef struct {
     char extra;
     bool strict;
     bool stop_first_error;
-} validation_ext_model_configs_properties;
+} attributes_validation_model_configs_properties;
 
 /* Registration function */
 void attributes_validation_register_ModelConfigs_class(void);
-void attributes_validation_create_model_configs(zval *configs, zval *model, validation_ext_model_configs_properties *properties);
-static void update_model_properties(zend_object *this, validation_ext_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra);
-static void set_default_properties(validation_ext_model_configs_properties *properties);
+void attributes_validation_create_model_configs(zval *configs, zval *model, attributes_validation_model_configs_properties *properties);
+static void update_model_properties(zend_object *this, attributes_validation_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra);
+static void set_default_properties(attributes_validation_model_configs_properties *properties);
 static bool validate_alias_generator(char *pretty_alias_generator);
 static bool validate_extra(char *pretty_alias_generator);
 static inline void declare_typed_property_bool(const char *name, bool default_value);
 static inline void declare_typed_property_string(const char *name, char *default_value, bool allow_null);
 static inline void declare_typed_property(const char *name, zval *default_value, zend_uchar type);
 
-#endif /* VALIDATION_EXT_MODEL_CONFIG_H */
+#endif /* ATTRIBUTES_VALIDATION_MODEL_CONFIG_H */

@@ -1,7 +1,7 @@
 --TEST--
 Test that BaseModel has all required methods
 --INI--
-extension=modules/validation_ext.so
+extension=modules/attributes_validation.so
 --FILE--
 <?php
 

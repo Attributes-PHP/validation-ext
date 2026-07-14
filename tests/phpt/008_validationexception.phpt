@@ -1,7 +1,7 @@
 --TEST--
 Test that ValidationException exists, can be thrown and has all necessary methods and properties
 --INI--
-extension=modules/validation_ext.so
+extension=modules/attributes_validation.so
 --FILE--
 <?php
 
