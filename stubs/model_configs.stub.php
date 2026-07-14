@@ -4,14 +4,20 @@
 namespace Attributes\Validation {
    #[Attribute(Attribute::TARGET_CLASS)]
    abstract class ModelConfigs {
-      public function __construct(
-         public readonly ?string $aliasGenerator = null,
-         public readonly bool $strToLower = false,
-         public readonly bool $strToUpper = false,
-         public readonly bool $stripWhitespace = false,
-         public readonly string $extra = "ignore",
-         public readonly bool $strict = false,
-         public readonly bool $stopAtFirstError = false,
-      ) {}
+      private ?string $aliasGenerator = null;
+      private bool $strToLower = false;
+      private bool $strToUpper = false;
+      private bool $stripWhitespace = false;
+      private string $extra = "ignore";
+      private bool $strict = false;
+      private bool $stopAtFirstError = false;
+
+      public function getAliasGenerator(): ?string {}
+      public function isStrToLower(): bool {}
+      public function isStrToUpper(): bool {}
+      public function isStripWhitespace(): bool {}
+      public function getExtra(): string {}
+      public function isStrict(): bool {}
+      public function isStopAtFirstError(): bool {}
    }
 }

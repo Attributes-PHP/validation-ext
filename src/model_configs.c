@@ -2,34 +2,43 @@
 #include "Zend/zend_API.h"
 #include "Zend/zend_attributes.h"
 #include "helpers/options.h"
+#include "zend_type_info.h"
 
 zend_class_entry *Attributes_Validation_ModelConfigs_ce;
 
-/* Method implementations */
-ZEND_METHOD(Attributes_Validation_ModelConfigs, __construct)
+ZEND_METHOD(Attributes_Validation_ModelConfigs, getAliasGenerator)
 {
-    bool is_extra_null = false;
-    char *alias_generator, *extra = NULL;
-    size_t alias_generator_len, extra_len = 0
-;
-    validation_ext_model_configs_properties properties;
-    set_default_properties(&properties);
 
-    ZEND_PARSE_PARAMETERS_START(0, 7)
-        Z_PARAM_OPTIONAL
-        Z_PARAM_STRING_OR_NULL(alias_generator, alias_generator_len)
-        Z_PARAM_BOOL(properties.str_to_lower)
-        Z_PARAM_BOOL(properties.str_to_upper)
-        Z_PARAM_BOOL(properties.strip_whitespace)
-        Z_PARAM_STRING(extra, extra_len)
-        Z_PARAM_BOOL(properties.strict)
-        Z_PARAM_BOOL(properties.stop_first_error)
-    ZEND_PARSE_PARAMETERS_END();
+}
 
-    if (alias_generator_len > 0 && validate_alias_generator(alias_generator)) properties.alias_generator = tolower(alias_generator[0]);
-    if (extra_len > 0 && validate_extra(extra)) properties.extra = tolower(extra[0]);
+ZEND_METHOD(Attributes_Validation_ModelConfigs, isStrToLower)
+{
 
-    update_model_properties(Z_OBJ_P(getThis()), &properties, alias_generator, extra);
+}
+
+ZEND_METHOD(Attributes_Validation_ModelConfigs, isStrToUpper)
+{
+
+}
+
+ZEND_METHOD(Attributes_Validation_ModelConfigs, isStripWhitespace)
+{
+
+}
+
+ZEND_METHOD(Attributes_Validation_ModelConfigs, getExtra)
+{
+
+}
+
+ZEND_METHOD(Attributes_Validation_ModelConfigs, isStrict)
+{
+
+}
+
+ZEND_METHOD(Attributes_Validation_ModelConfigs, isStopAtFirstError)
+{
+
 }
 
 /* Registration function */
@@ -41,13 +50,13 @@ void register_ModelConfigs_class(void)
     Attributes_Validation_ModelConfigs_ce->ce_flags |= ZEND_ACC_FINAL;
 
     /* Declare properties */
-    zend_declare_property_null(Attributes_Validation_ModelConfigs_ce, "aliasGenerator", sizeof("aliasGenerator") - 1, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
-    zend_declare_property_bool(Attributes_Validation_ModelConfigs_ce, "strToLower", sizeof("strToLower") - 1, 0, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
-    zend_declare_property_bool(Attributes_Validation_ModelConfigs_ce, "strToUpper", sizeof("strToUpper") - 1, 0, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
-    zend_declare_property_bool(Attributes_Validation_ModelConfigs_ce, "stripWhitespace", sizeof("stripWhitespace") - 1, 0, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
-    zend_declare_property_string(Attributes_Validation_ModelConfigs_ce, "extra", sizeof("extra") - 1, "ignore", ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
-    zend_declare_property_bool(Attributes_Validation_ModelConfigs_ce, "strict", sizeof("strict") - 1, 0, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
-    zend_declare_property_bool(Attributes_Validation_ModelConfigs_ce, "stopAtFirstError", sizeof("stopAtFirstError") - 1, 0, ZEND_ACC_PUBLIC | ZEND_ACC_READONLY);
+    declare_typed_property_string("aliasGenerator", NULL, true);
+    declare_typed_property_bool("strToLower", false);
+    declare_typed_property_bool("strToUpper", false);
+    declare_typed_property_bool("stripWhitespace", false);
+    declare_typed_property_string("extra", "ignore", false);
+    declare_typed_property_bool("strict", false);
+    declare_typed_property_bool("stopAtFirstError", false);
 
     /* Register as an internal attribute that targets classes only */
     zend_internal_attribute_register(
@@ -59,13 +68,12 @@ void register_ModelConfigs_class(void)
 /**
 * Instantiates a ModelConfigs class with all required properties for validation
 **/
-void create_model_configs(zval *configs)
+void create_model_configs(zval *configs, zval *model, validation_ext_model_configs_properties *properties)
 {
     object_init_ex(configs, Attributes_Validation_ModelConfigs_ce);
-    validation_ext_model_configs_properties properties;
 
-    set_default_properties(&properties);
-    update_model_properties(Z_OBJ_P(configs), &properties, NULL, "ignore");
+    set_default_properties(properties);
+    update_model_properties(Z_OBJ_P(configs), properties, NULL, "ignore");
 }
 
 void update_model_properties(zend_object *this, validation_ext_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra)
@@ -117,4 +125,32 @@ bool validate_extra(char *pretty_extra)
         .name = "extra"
     };
     return validate_method_parameter(pretty_extra, all_pretty_extra, 3, &invalid_parameter_error);
+}
+
+static inline void declare_typed_property_bool(const char *name, bool default_value)
+{
+    zval z_default_value;
+    ZVAL_BOOL(&z_default_value, default_value);
+    declare_typed_property(name, &z_default_value, MAY_BE_BOOL);
+}
+
+static inline void declare_typed_property_string(const char *name, char *default_value, bool allow_null)
+{
+    zval z_default_value;
+    if (default_value == NULL) ZVAL_NULL(&z_default_value);
+    else {
+        zend_string *default_string = zend_string_init(default_value, strlen(default_value), 1);
+        ZVAL_STR(&z_default_value, default_string);
+    }
+
+    zend_uchar type = allow_null ? MAY_BE_STRING|MAY_BE_NULL : MAY_BE_STRING;
+    declare_typed_property(name, &z_default_value, type);
+}
+
+static inline void declare_typed_property(const char *name, zval *default_value, zend_uchar type)
+{
+    zend_type property_type = (zend_type) ZEND_TYPE_INIT_MASK(type);
+    zend_string *property_name = zend_string_init(name, strlen(name), 1);
+    zend_declare_typed_property(Attributes_Validation_ModelConfigs_ce, property_name, default_value, ZEND_ACC_PRIVATE, NULL, property_type);
+    zend_string_release(property_name);
 }

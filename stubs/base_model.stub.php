@@ -3,8 +3,7 @@
 
 namespace Attributes\Validation {
    abstract class BaseModel {
-      public function beforeValidation(array $rawData): array {}
-      public function afterValidation(array $rawData): void {}
-      public function getModelConfigs(): ModelConfigs {}
+      protected function beforeValidation(array $rawData, ModelConfigs $configs): array {}
+      protected function afterValidation(array $rawData, ModelConfigs $configs): void {}
    }
 }

@@ -19,12 +19,13 @@ ZEND_FUNCTION(validate)
     ZEND_PARSE_PARAMETERS_END();
 
     zval configs_obj;
-    create_model_configs(&configs_obj);
+    validation_ext_model_configs_properties properties;
+    create_model_configs(&configs_obj, model, &properties);
     if (EG(exception)) {
         return;
     }
 
-    call_before_validation_hook(model, rawData);
+    call_before_validation_hook(model, rawData, &configs_obj);
     if (EG(exception)) {
         return;
     }
@@ -90,7 +91,7 @@ ZEND_FUNCTION(validate)
     //   * Provide getAllErrors() method to retrieve the full error array
     //   * Throw the exception
 
-    call_after_validation_hook(model, rawData);
+    call_after_validation_hook(model, rawData, &configs_obj);
     if (EG(exception)) {
         return;
     }
