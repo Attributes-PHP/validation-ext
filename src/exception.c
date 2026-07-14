@@ -6,7 +6,7 @@
 zend_class_entry *class_Attributes_Validation_Exceptions_BaseException;
 zend_class_entry *class_Attributes_Validation_Exceptions_ValidationException;
 
-void register_all_exception_classes(void)
+void attributes_validation_register_all_exception_classes(void)
 {
     register_BaseException_class();
     register_ValidationException_class();

@@ -21,10 +21,10 @@
 PHP_MINIT_FUNCTION(validation_ext)
 {
     // Register classes
-    register_BaseModel_class();
-    register_ArrayOf_class();
-    register_ModelConfigs_class();
-    register_all_exception_classes();
+    attributes_validation_register_BaseModel_class();
+    attributes_validation_register_ArrayOf_class();
+    attributes_validation_register_ModelConfigs_class();
+    attributes_validation_register_all_exception_classes();
     return SUCCESS;
 }
 

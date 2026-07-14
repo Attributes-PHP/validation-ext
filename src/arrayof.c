@@ -31,7 +31,7 @@ ZEND_METHOD(Attributes_Validation_ArrayOf, __construct)
 }
 
 /* Registration function */
-void register_ArrayOf_class(void)
+void attributes_validation_register_ArrayOf_class(void)
 {
     zend_class_entry ce;
     INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation", "ArrayOf", class_Attributes_Validation_ArrayOf_methods);

@@ -68,12 +68,12 @@ typedef struct {
 } validation_ext_model_configs_properties;
 
 /* Registration function */
-void register_ModelConfigs_class(void);
-void create_model_configs(zval *configs, zval *model, validation_ext_model_configs_properties *properties);
-void update_model_properties(zend_object *this, validation_ext_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra);
-void set_default_properties(validation_ext_model_configs_properties *properties);
-bool validate_alias_generator(char *pretty_alias_generator);
-bool validate_extra(char *pretty_alias_generator);
+void attributes_validation_register_ModelConfigs_class(void);
+void attributes_validation_create_model_configs(zval *configs, zval *model, validation_ext_model_configs_properties *properties);
+static void update_model_properties(zend_object *this, validation_ext_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra);
+static void set_default_properties(validation_ext_model_configs_properties *properties);
+static bool validate_alias_generator(char *pretty_alias_generator);
+static bool validate_extra(char *pretty_alias_generator);
 static inline void declare_typed_property_bool(const char *name, bool default_value);
 static inline void declare_typed_property_string(const char *name, char *default_value, bool allow_null);
 static inline void declare_typed_property(const char *name, zval *default_value, zend_uchar type);

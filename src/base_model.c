@@ -16,7 +16,7 @@ ZEND_METHOD(Attributes_Validation_BaseModel, afterValidation)
 }
 
 /* Registration function */
-void register_BaseModel_class(void)
+void attributes_validation_register_BaseModel_class(void)
 {
     zend_class_entry ce;
     INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation", "BaseModel", class_Attributes_Validation_BaseModel_methods);
@@ -28,7 +28,7 @@ void register_BaseModel_class(void)
  * Calls beforeValidation method from BaseModel e.g. $rawData = $model->beforeValidation($rawData, $configs)
  * This hook can modify the rawData before validation begins
  **/
-void call_before_validation_hook(zval *model, zval *raw_data, zval *configs)
+void attributes_validation_call_before_validation_hook(zval *model, zval *raw_data, zval *configs)
 {
     zval before_validation_result;
     zend_class_entry *model_ce = Z_OBJCE_P(model);
@@ -52,7 +52,7 @@ void call_before_validation_hook(zval *model, zval *raw_data, zval *configs)
 }
 
 /** Calls afterValidation method from BaseModel e.g. $model->afterValidation($rawData) **/
-void call_after_validation_hook(zval *model, zval *raw_data, zval *configs)
+void attributes_validation_call_after_validation_hook(zval *model, zval *raw_data, zval *configs)
 {
     zend_call_method_with_2_params(Z_OBJ_P(model), Z_OBJCE_P(model), NULL, "afterValidation", NULL, raw_data, configs);
 }

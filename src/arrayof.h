@@ -21,6 +21,6 @@ static const zend_function_entry class_Attributes_Validation_ArrayOf_methods[] =
 };
 
 /* Registration function */
-void register_ArrayOf_class(void);
+void attributes_validation_register_ArrayOf_class(void);
 
 #endif /* VALIDATION_EXT_ArrayOf_H */

@@ -5,7 +5,7 @@
 #include "ext/spl/spl_exceptions.h"
 
 
-bool validate_method_parameter(char *option, char **all_valid_options, size_t length, validation_ext_invalid_method_parameter *invalid_parameter_error)
+bool attributes_validation_validate_method_parameter(char *option, char **all_valid_options, size_t length, validation_ext_invalid_method_parameter *invalid_parameter_error)
 {
     for (size_t i = 0; i < length; i++) {
         if (strcasecmp(option, all_valid_options[i]) == 0) {
