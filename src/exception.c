@@ -32,22 +32,6 @@ static void register_ValidationException_class(void)
     zend_string_release(property_allErrors_name);
 }
 
-ZEND_METHOD(Attributes_Validation_Exceptions_ValidationException, __construct)
-{
-    zval *allErrors;
-
-    ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_ZVAL(allErrors)
-    ZEND_PARSE_PARAMETERS_END();
-
-    zval message;
-    ZVAL_STRING(&message, "Invalid data");
-    zend_call_method_with_1_params(Z_OBJ_P(getThis()), class_Attributes_Validation_Exceptions_BaseException, NULL, "__construct", NULL, &message);
-    zval_dtor(&message);
-
-    zend_update_property(class_Attributes_Validation_Exceptions_ValidationException, Z_OBJ_P(getThis()), "allErrors", sizeof("allErrors") - 1, allErrors);
-}
-
 ZEND_METHOD(Attributes_Validation_Exceptions_ValidationException, getErrors)
 {
     zval *allErrors;

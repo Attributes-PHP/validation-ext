@@ -6,8 +6,6 @@ namespace Attributes\Validation\Exceptions {
 
    class ValidationException extends BaseException {
       private array $allErrors;
-
-      public function __construct(array $allErrors) {}
       public function getErrors(): array {}
    }
 }
