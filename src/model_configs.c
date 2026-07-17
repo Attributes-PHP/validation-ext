@@ -1,8 +1,10 @@
 #include "model_configs.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_attributes.h"
+#include "Zend/zend_exceptions.h"
 #include "helpers/options.h"
 #include "zend_type_info.h"
+#include "zend_types.h"
 
 zend_class_entry *Attributes_Validation_ModelConfigs_ce;
 
@@ -76,14 +78,74 @@ void attributes_validation_register_ModelConfigs_class(void)
 }
 
 /**
-* Instantiates a ModelConfigs class with all required properties for validation
-**/
+ * Instantiates a ModelConfigs class with all required properties for validation.
+ * If the model class (or any parent class) has a ModelConfigs attribute, its values
+ * are used. Otherwise, default properties are applied.
+ * Inheritance is supported: if Child extends Parent and Parent has ModelConfigs,
+ * those configs are used for Child unless Child overrides them with its own ModelConfigs.
+ */
 void attributes_validation_create_model_configs(zval *configs, zval *model, attributes_validation_model_configs_properties *properties)
 {
     object_init_ex(configs, Attributes_Validation_ModelConfigs_ce);
 
+    zend_class_entry *base_model_class_entry = Z_OBJCE_P(model);
+    zend_attribute *model_configs_attr = get_model_configs_attribute(base_model_class_entry);
+
     set_default_properties(properties);
-    update_model_properties(Z_OBJ_P(configs), properties, NULL, "ignore");
+
+    if (model_configs_attr == NULL) {
+        update_model_properties(Z_OBJ_P(configs), properties, NULL, "ignore");
+        return;
+    }
+
+    char *pretty_alias_generator = NULL;
+    char *pretty_extra = "ignore";
+
+    /* Parse attribute arguments */
+    for (uint32_t i = 0; i < model_configs_attr->argc; i++) {
+        zval arg_val;
+        if (zend_get_attribute_value(&arg_val, model_configs_attr, i, base_model_class_entry) != SUCCESS) continue;
+
+        zend_attribute_arg argument = model_configs_attr->args[i];
+        int index = argument.name == NULL ? i : get_argument_index_by_name(argument.name);
+
+        switch (index) {
+            case 0: /* aliasGenerator */
+                if (Z_TYPE(arg_val) == IS_STRING) {
+                    pretty_alias_generator = Z_STRVAL(arg_val);
+                    if (!validate_alias_generator(pretty_alias_generator)) return;
+
+                    properties->alias_generator = pretty_alias_generator[0];
+                }
+                break;
+            case 1: /* strToLower */
+                properties->str_to_lower = Z_TYPE(arg_val) == IS_TRUE;
+                break;
+            case 2: /* strToUpper */
+                properties->str_to_upper = Z_TYPE(arg_val) == IS_TRUE;
+                break;
+            case 3: /* stripWhitespace */
+                properties->strip_whitespace = Z_TYPE(arg_val) == IS_TRUE;
+                break;
+            case 4: /* extra */
+                if (Z_TYPE(arg_val) == IS_STRING) {
+                    pretty_extra = Z_STRVAL(arg_val);
+                    if (!validate_extra(pretty_extra)) return;
+
+                    properties->extra = pretty_extra[0];
+                }
+                break;
+            case 5: /* strict */
+                properties->strict = Z_TYPE(arg_val) == IS_TRUE;
+                break;
+            case 6: /* stopAtFirstError */
+                properties->stop_first_error = Z_TYPE(arg_val) == IS_TRUE;
+                break;
+        }
+        zval_ptr_dtor(&arg_val);
+    }
+
+    update_model_properties(Z_OBJ_P(configs), properties, pretty_alias_generator, pretty_extra);
 }
 
 static void update_model_properties(zend_object *this, attributes_validation_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra)
@@ -163,6 +225,52 @@ static inline void declare_typed_property(const char *name, zval *default_value,
     zend_string *property_name = zend_string_init(name, strlen(name), 1);
     zend_declare_typed_property(Attributes_Validation_ModelConfigs_ce, property_name, default_value, ZEND_ACC_PRIVATE, NULL, property_type);
     zend_string_release(property_name);
+}
+
+/**
+ * Walks up the inheritance chain to find the first ModelConfigs attribute
+ */
+static zend_attribute* get_model_configs_attribute(zend_class_entry *base_model_class_entry)
+{
+    zend_class_entry *current_ce = base_model_class_entry;
+    zend_attribute *model_configs_attr = NULL;
+    while (current_ce != NULL) {
+        if (current_ce->attributes != NULL) {
+            model_configs_attr = zend_get_attribute_str(
+                current_ce->attributes,
+                "attributes\\validation\\modelconfigs",
+                sizeof("attributes\\validation\\modelconfigs") - 1
+            );
+            if (model_configs_attr != NULL) {
+                return model_configs_attr;
+            }
+        }
+        current_ce = current_ce->parent;
+    }
+
+    return NULL;
+}
+
+static int get_argument_index_by_name(zend_string *name)
+{
+    if (zend_string_equals_literal(name, "aliasGenerator")) {
+        return 0;
+    } else if (zend_string_equals_literal(name, "strToLower")) {
+        return 1;
+    } else if (zend_string_equals_literal(name, "strToUpper")) {
+        return 2;
+    } else if (zend_string_equals_literal(name, "stripWhitespace")) {
+        return 3;
+    } else if (zend_string_equals_literal(name, "extra")) {
+        return 4;
+    } else if (zend_string_equals_literal(name, "strict")) {
+        return 5;
+    } else if (zend_string_equals_literal(name, "stopAtFirstError")) {
+        return 6;
+    }
+    
+    zend_throw_exception_ex(zend_ce_error, 0, "Unknown named parameter $%s", ZSTR_VAL(name));
+    return -1;
 }
 
 #undef ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN

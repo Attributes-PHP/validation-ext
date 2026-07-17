@@ -2,6 +2,7 @@
 #define ATTRIBUTES_VALIDATION_MODEL_CONFIG_H
 
 #include "php.h"
+#include "Zend/zend_attributes.h"
 
 /* Class entry */
 extern zend_class_entry *Attributes_Validation_ModelConfigs_ce;
@@ -77,5 +78,7 @@ static bool validate_extra(char *pretty_alias_generator);
 static inline void declare_typed_property_bool(const char *name, bool default_value);
 static inline void declare_typed_property_string(const char *name, char *default_value, bool allow_null);
 static inline void declare_typed_property(const char *name, zval *default_value, zend_uchar type);
+static zend_attribute* get_model_configs_attribute(zend_class_entry *base_model_class_entry);
+static int get_argument_index_by_name(zend_string *name);
 
 #endif /* ATTRIBUTES_VALIDATION_MODEL_CONFIG_H */
