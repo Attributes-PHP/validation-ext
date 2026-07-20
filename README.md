@@ -4,65 +4,53 @@
 
 ## Prerequisites
 
-- PHP 8.1 or later
-- PHP development headers and tools (phpize, php-config)
-- GCC or Clang compiler
-- GNU Make
-- autoconf 2.68 or later
-- libtool
+- PHP 8.2 or later
 
-### macOS
+We aim to support versions that haven't reached their end-of-life.
 
-```bash
-brew install php autoconf libtool
+## How it works?
+
+```php
+<?php
+
+use Attributes\Validation\validate;
+use Attributes\Validation\BaseModel;
+
+class User extends BaseModel
+{
+    public float|int $age;
+    public ?DateTime $birthday;
+}
+
+$rawData = [
+    'age' => '30',
+    'birthday' => '1994-01-01T09:00:00+00:00',
+];
+$person = validate($rawData, new Person);
+
+var_dump($person->age);      // int(30)
+var_dump($person->birthday); // object(DateTime) { ["date"] => string(26) "1994-01-01 09:00:00.000000", (...) }
 ```
 
-### Ubuntu/Debian
+### Need to call a function?
 
-```bash
-sudo apt-get install php-dev phpize autoconf libtool build-essential
+```php
+<?php
+
+use Attributes\Validation\call;
+
+function myFunction(User $user) {
+    var_dump($person->age);      // int(30)
+    var_dump($person->birthday); // object(DateTime) { ["date"] => string(26) "1994-01-01 09:00:00.000000", (...) }
+}
+
+call("myFunction", $rawData);
 ```
 
-### Fedora/RHEL
+## Installation
 
 ```bash
-sudo dnf install php-devel autoconf libtool gcc gcc-c++
+pie install attributes-php/validation
 ```
 
-## Manual Build
-
-```bash
-phpize
-./configure --enable-validation_ext
-make
-```
-
-Optionally install:
-```bash
-sudo make install
-```
-
-## Testing
-
-### Basic Functionality
-
-```bash
-php -d extension=modules/validation_ext.so -r "var_dump(class_exists('Attributes\Validation\Validator'));"
-```
-
-### PHPT Tests
-
-Run the complete PHPT test suite:
-```bash
-php run-tests.php
-```
-
-## Clean
-
-To clean all configure and build files:
-
-```bash
-make distclean
-```
-
-Validation extension was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.
+Attributes Validation Extension was created by **[André Gil](https://www.linkedin.com/in/andre-gil/)** and is open-sourced software licensed under the **[MIT license](https://opensource.org/licenses/MIT)**.
