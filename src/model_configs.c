@@ -141,6 +141,9 @@ void attributes_validation_create_model_configs(zval *configs, zval *model, attr
             case 6: /* stopAtFirstError */
                 properties->stop_first_error = Z_TYPE(arg_val) == IS_TRUE;
                 break;
+            default:
+                zval_ptr_dtor(&arg_val);
+                return;
         }
         zval_ptr_dtor(&arg_val);
     }
@@ -253,20 +256,35 @@ static zend_attribute* get_model_configs_attribute(zend_class_entry *base_model_
 
 static int get_argument_index_by_name(zend_string *name)
 {
-    if (zend_string_equals_literal(name, "aliasGenerator")) {
-        return 0;
-    } else if (zend_string_equals_literal(name, "strToLower")) {
-        return 1;
-    } else if (zend_string_equals_literal(name, "strToUpper")) {
-        return 2;
-    } else if (zend_string_equals_literal(name, "stripWhitespace")) {
-        return 3;
-    } else if (zend_string_equals_literal(name, "extra")) {
-        return 4;
-    } else if (zend_string_equals_literal(name, "strict")) {
-        return 5;
-    } else if (zend_string_equals_literal(name, "stopAtFirstError")) {
-        return 6;
+    size_t len = ZSTR_LEN(name);
+    const char *val = ZSTR_VAL(name);
+
+    switch (len) {
+        case 14: // "aliasGenerator"
+            if (memcmp(val, "aliasGenerator", 14) == 0) return 0;
+            break;
+
+        case 10: // "strToLower", "strToUpper"
+            // Both are length 10. Check the 4th character ('T' vs 'U') to differentiate instantly.
+            if (val[3] == 'T' && memcmp(val, "strToLower", 10) == 0) return 1;
+            if (val[3] == 'U' && memcmp(val, "strToUpper", 10) == 0) return 2;
+            break;
+
+        case 15: // "stripWhitespace"
+            if (memcmp(val, "stripWhitespace", 15) == 0) return 3;
+            break;
+
+        case 5: // "extra"
+            if (memcmp(val, "extra", 5) == 0) return 4;
+            break;
+
+        case 6: // "strict"
+            if (memcmp(val, "strict", 6) == 0) return 5;
+            break;
+
+        case 16: // "stopAtFirstError"
+            if (memcmp(val, "stopAtFirstError", 16) == 0) return 6;
+            break;
     }
     
     zend_throw_exception_ex(zend_ce_error, 0, "Unknown named parameter $%s", ZSTR_VAL(name));
