@@ -23,13 +23,13 @@ ZEND_FUNCTION(validate)
     attributes_validation_create_model_configs(&configs_obj, model, &properties);
     if (EG(exception)) {
         zval_ptr_dtor(&configs_obj);
-        return;
+        RETURN_THROWS();
     }
 
     attributes_validation_call_before_validation_hook(model, raw_data, &configs_obj);
     if (EG(exception)) {
         zval_ptr_dtor(&configs_obj);
-        return;
+        RETURN_THROWS();
     }
 
     // TODO: 3. Get model-level configurations attributes
@@ -96,7 +96,7 @@ ZEND_FUNCTION(validate)
     attributes_validation_call_after_validation_hook(model, raw_data, &configs_obj);
     if (EG(exception)) {
         zval_ptr_dtor(&configs_obj);
-        return;
+        RETURN_THROWS();
     }
 
     // TODO: 11. Populate the model instance with validated data
