@@ -14,9 +14,9 @@ zend_class_entry *Attributes_Validation_ModelConfigs_ce;
  */
 #define ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN(prop_name) \
     ZEND_PARSE_PARAMETERS_NONE(); \
-    zval rv; \
-    zend_read_property(Attributes_Validation_ModelConfigs_ce, Z_OBJ_P(getThis()), prop_name, sizeof(prop_name) - 1, 1, &rv); \
-    RETURN_ZVAL(&rv, 0, 0)
+    zval rv, *value; \
+    value = zend_read_property(Attributes_Validation_ModelConfigs_ce, Z_OBJ_P(getThis()), prop_name, sizeof(prop_name) - 1, 1, &rv); \
+    RETURN_COPY_DEREF(value)
 
 ZEND_METHOD(Attributes_Validation_ModelConfigs, getAliasGenerator)
 {
