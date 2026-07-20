@@ -41,11 +41,7 @@ void attributes_validation_call_before_validation_hook(zval *model, zval *raw_da
     }
 
     if (Z_TYPE(before_validation_result) == IS_ARRAY) {
-        zval old_data;
-        ZVAL_COPY(&old_data, raw_data);
-        zval_ptr_dtor(raw_data);
         ZVAL_COPY(raw_data, &before_validation_result);
-        zval_ptr_dtor(&old_data);
     }
 
     zval_ptr_dtor(&before_validation_result);

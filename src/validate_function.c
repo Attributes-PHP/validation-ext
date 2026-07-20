@@ -10,11 +10,11 @@
 /* Function implementation for validate */
 ZEND_FUNCTION(validate)
 {
-    zval *rawData;
+    zval *raw_data;
     zval *model;
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
-        Z_PARAM_ARRAY(rawData)
+        Z_PARAM_ARRAY(raw_data)
         Z_PARAM_OBJECT_OF_CLASS(model, Attributes_Validation_BaseModel_ce)
     ZEND_PARSE_PARAMETERS_END();
 
@@ -22,11 +22,13 @@ ZEND_FUNCTION(validate)
     attributes_validation_model_configs_properties properties;
     attributes_validation_create_model_configs(&configs_obj, model, &properties);
     if (EG(exception)) {
+        zval_ptr_dtor(&configs_obj);
         return;
     }
 
-    attributes_validation_call_before_validation_hook(model, rawData, &configs_obj);
+    attributes_validation_call_before_validation_hook(model, raw_data, &configs_obj);
     if (EG(exception)) {
+        zval_ptr_dtor(&configs_obj);
         return;
     }
 
@@ -91,8 +93,9 @@ ZEND_FUNCTION(validate)
     //   * Provide getAllErrors() method to retrieve the full error array
     //   * Throw the exception
 
-    attributes_validation_call_after_validation_hook(model, rawData, &configs_obj);
+    attributes_validation_call_after_validation_hook(model, raw_data, &configs_obj);
     if (EG(exception)) {
+        zval_ptr_dtor(&configs_obj);
         return;
     }
 
@@ -100,6 +103,6 @@ ZEND_FUNCTION(validate)
     // - For each validated property, set the value on the model object
     // - Handle public properties directly
     // - Handle private/protected properties via reflection or property setting methods
-
-    RETURN_ZVAL(model, 0, 1);
+    zval_ptr_dtor(&configs_obj);
+    RETURN_COPY(model);
 }
