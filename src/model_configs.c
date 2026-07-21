@@ -265,9 +265,9 @@ static int get_argument_index_by_name(zend_string *name)
             break;
 
         case 10: // "strToLower", "strToUpper"
-            // Both are length 10. Check the 4th character ('T' vs 'U') to differentiate instantly.
-            if (val[3] == 'T' && memcmp(val, "strToLower", 10) == 0) return 1;
-            if (val[3] == 'U' && memcmp(val, "strToUpper", 10) == 0) return 2;
+            // Both are length 10. Check the 4th character ('L' vs 'U') to differentiate instantly.
+            if (val[5] == 'L' && memcmp(val, "strToLower", 10) == 0) return 1;
+            if (val[5] == 'U' && memcmp(val, "strToUpper", 10) == 0) return 2;
             break;
 
         case 15: // "stripWhitespace"
