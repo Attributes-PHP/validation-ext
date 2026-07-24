@@ -1,11 +1,11 @@
 --TEST--
 Test that ArrayOf is a valid PHP Attribute for class properties
---INI--
-extension=modules/attributes_validation.so
+--EXTENSIONS--
+attributes_validation
 --FILE--
 <?php
 
-use Attributes\Validation\ArrayOf;
+use Attributes\Validation\Types\ArrayOf;
 
 class TestClass {
     #[ArrayOf('string')]
@@ -22,7 +22,7 @@ var_dump($instance);
 ?>
 --EXPECT--
 bool(true)
-object(Attributes\Validation\ArrayOf)#4 (1) {
+object(Attributes\Validation\Types\ArrayOf)#4 (1) {
   ["type"]=>
   array(1) {
     [0]=>

@@ -1,7 +1,7 @@
 --TEST--
 Test that call function exists in Attributes\Validation namespace
---INI--
-extension=modules/attributes_validation.so
+--EXTENSIONS--
+attributes_validation
 --FILE--
 <?php
 

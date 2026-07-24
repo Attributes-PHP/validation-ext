@@ -2,6 +2,7 @@
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_interfaces.h"
+#include "zend_types.h"
 
 zend_class_entry *class_Attributes_Validation_Exceptions_BaseException;
 zend_class_entry *class_Attributes_Validation_Exceptions_ValidationException;
@@ -32,11 +33,31 @@ static void register_ValidationException_class(void)
     zend_string_release(property_allErrors_name);
 }
 
+ZEND_METHOD(Attributes_Validation_Exceptions_ValidationException, __construct)
+{
+    zval *all_errors;
+    zval ret;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ARRAY(all_errors)
+    ZEND_PARSE_PARAMETERS_END();
+
+    zend_object *this = Z_OBJ_P(getThis());
+
+    zval default_error_message;
+    ZVAL_STRING(&default_error_message, "Invalid data");
+    zend_call_method_with_1_params(this, class_Attributes_Validation_Exceptions_BaseException, NULL, "__construct", NULL, &default_error_message);
+    zval_ptr_dtor(&default_error_message);
+
+    zend_update_property(class_Attributes_Validation_Exceptions_ValidationException, this, "allErrors", sizeof("allErrors") - 1, all_errors);
+}
+
 ZEND_METHOD(Attributes_Validation_Exceptions_ValidationException, getErrors)
 {
     zval *allErrors;
+    zend_object *this = Z_OBJ_P(getThis());
 
-    allErrors = zend_read_property(class_Attributes_Validation_Exceptions_ValidationException, Z_OBJ_P(getThis()), "allErrors", sizeof("allErrors") - 1, 0, NULL);
+    allErrors = zend_read_property(class_Attributes_Validation_Exceptions_ValidationException, this, "allErrors", sizeof("allErrors") - 1, 0, NULL);
 
     if (Z_TYPE_P(allErrors) == IS_NULL) {
         array_init(return_value);

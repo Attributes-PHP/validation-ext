@@ -1,11 +1,11 @@
 --TEST--
 Test that ArrayOf is a valid PHP Attribute for function parameters
---INI--
-extension=modules/attributes_validation.so
+--EXTENSIONS--
+attributes_validation
 --FILE--
 <?php
 
-use Attributes\Validation\ArrayOf;
+use Attributes\Validation\Types\ArrayOf;
 
 function test_function(#[ArrayOf('float', 'int')] array $data) {
     return $data;
@@ -21,7 +21,7 @@ var_dump($instance);
 ?>
 --EXPECT--
 bool(true)
-object(Attributes\Validation\ArrayOf)#4 (1) {
+object(Attributes\Validation\Types\ArrayOf)#4 (1) {
   ["type"]=>
   array(2) {
     [0]=>

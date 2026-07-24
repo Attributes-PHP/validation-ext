@@ -1,12 +1,12 @@
 --TEST--
 Test that ValidationException exists, can be thrown and has all necessary methods and properties
---INI--
-extension=modules/attributes_validation.so
+--EXTENSIONS--
+attributes_validation
 --FILE--
 <?php
 
-use Attributes\Validation\ValidationException;
-use Attributes\Validation\BaseException;
+use Attributes\Validation\Exceptions\ValidationException;
+use Attributes\Validation\Exceptions\BaseException;
 
 try {
   throw new ValidationException(['number' => 'Invalid number']);
@@ -17,7 +17,7 @@ try {
 
 ?>
 --EXPECT--
-object(Attributes\Validation\ValidationException)#1 (8) {
+object(Attributes\Validation\Exceptions\ValidationException)#1 (8) {
   ["message":protected]=>
   string(12) "Invalid data"
   ["string":"Exception":private]=>
@@ -33,7 +33,7 @@ object(Attributes\Validation\ValidationException)#1 (8) {
   }
   ["previous":"Exception":private]=>
   NULL
-  ["allErrors":"Attributes\Validation\ValidationException":private]=>
+  ["allErrors":"Attributes\Validation\Exceptions\ValidationException":private]=>
   array(1) {
     ["number"]=>
     string(14) "Invalid number"

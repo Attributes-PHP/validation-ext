@@ -1,11 +1,11 @@
 --TEST--
 Test that BaseException exists and can be thrown
---INI--
-extension=modules/attributes_validation.so
+--EXTENSIONS--
+attributes_validation
 --FILE--
 <?php
 
-use Attributes\Validation\BaseException;
+use Attributes\Validation\Exceptions\BaseException;
 
 try {
   throw new BaseException('Testing');
@@ -15,7 +15,7 @@ try {
 
 ?>
 --EXPECT--
-object(Attributes\Validation\BaseException)#1 (7) {
+object(Attributes\Validation\Exceptions\BaseException)#1 (7) {
   ["message":protected]=>
   string(7) "Testing"
   ["string":"Exception":private]=>
