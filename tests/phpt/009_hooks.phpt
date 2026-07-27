@@ -16,25 +16,26 @@ class NoHooks extends BaseModel
 }
 
 class WithBeforeHook extends NoHooks {
-    public function beforeValidation(array $rawData, ModelConfigs $configs) {
+    public function beforeValidation(array $rawData, ModelConfigs $configs): array {
         var_dump($this::class . '->beforeValidation(...) - no return value');
+        return $rawData;
     }
 }
 
 class WithAfterHook extends NoHooks {
-    public function afterValidation(array $rawData, ModelConfigs $configs) {
+    public function afterValidation(array $rawData, ModelConfigs $configs): void {
         var_dump($this::class . '->afterValidation(...)');
     }
 }
 
 class WithBothHooks extends NoHooks {
-    public function beforeValidation(array $rawData, ModelConfigs $configs) {
+    public function beforeValidation(array $rawData, ModelConfigs $configs): array {
         var_dump($this::class . '->beforeValidation(...)');
         var_dump($rawData);
         return ['number' => 'invalid-value'];
     }
 
-    public function afterValidation(array $rawData, ModelConfigs $configs) {
+    public function afterValidation(array $rawData, ModelConfigs $configs): void {
         var_dump($this::class . '->afterValidation(...)');
         var_dump($rawData);
     }
