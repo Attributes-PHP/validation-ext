@@ -32,14 +32,8 @@ ZEND_FUNCTION(validate)
         RETURN_THROWS();
     }
 
-    // TODO: 3. Get model-level configurations attributes
-    // - Check for #[AliasGenerator] attribute on the model class
-    // - Apply alias transformation to all property names when looking them up in rawData
-    // - Example: snake_case to camelCase conversion
-
-    // TODO: 4. Create an errors collection array to store validation errors
-    // - Initialize empty array to aggregate all errors
-    // - Each error should be keyed by the property path (e.g., "team_name", "users.0.email")
+    zval errors;
+    array_init(&errors);
 
     // TODO: 5. Get all properties of the model via reflection
     // - Use zend_get_class_entry and zend_get_properties to inspect model properties
@@ -96,6 +90,7 @@ ZEND_FUNCTION(validate)
     attributes_validation_call_after_validation_hook(model, raw_data, &configs_obj);
     if (EG(exception)) {
         zval_ptr_dtor(&configs_obj);
+        zval_ptr_dtor(&errors);
         RETURN_THROWS();
     }
 
@@ -104,5 +99,6 @@ ZEND_FUNCTION(validate)
     // - Handle public properties directly
     // - Handle private/protected properties via reflection or property setting methods
     zval_ptr_dtor(&configs_obj);
+    zval_ptr_dtor(&errors);
     RETURN_COPY(model);
 }
