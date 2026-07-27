@@ -35,22 +35,34 @@ ZEND_FUNCTION(validate)
     zval errors;
     array_init(&errors);
 
-    // TODO: 5. Get all properties of the model via reflection
-    // - Use zend_get_class_entry and zend_get_properties to inspect model properties
-    // - For each property, get:
-    //   a. Property name
-    //   b. Type hint (if any)
-    //   c. All attributes applied to the property
-    //   d. Default value (if any)
+    zend_class_entry *model_ce = Z_OBJCE_P(model);
 
-    // TODO: 6. For each property, resolve the actual field name in rawData
-    // - Check for #[Alias] attribute on the property
-    // - If alias exists, use it as the key to look up in rawData
-    // - If model has AliasGenerator, apply transformation to property name
-    // - If field doesn't exist in rawData:
-    //   * If property has default value, use it
-    //   * If property is nullable, skip it
-    //   * Otherwise, add "field is required" error
+    while (model_ce != NULL && model_ce != Attributes_Validation_BaseModel_ce) {
+        zend_string *property_name;
+        zend_property_info *prop_info;
+
+        ZEND_HASH_FOREACH_STR_KEY_PTR(&model_ce->properties_info, property_name, prop_info) {
+            // TODO: 6. For each property, resolve the actual field name in rawData
+            // - Check for #[Alias] attribute on the property
+            // - If alias exists, use it as the key to look up in rawData
+            // - If model has AliasGenerator, apply transformation to property name
+            // - If field doesn't exist in rawData:
+            //   * If property has default value, use it
+            //   * If property is nullable, skip it
+            //   * Otherwise, add "field is required" error
+
+            // For each property, we have:
+            // a. Property name: property_name (zend_string *)
+            // b. Type hint: prop_info->type (zend_type)
+            // c. Attributes: prop_info->attributes (HashTable *)
+            // d. Default value: from model_ce->default_properties_table[prop_info->offset]
+
+            // TODO: Process this property (name, type, attributes, default value)
+            // This will be used in subsequent steps (6-9)
+        } ZEND_HASH_FOREACH_END();
+
+        model_ce = model_ce->parent;
+    }
 
     // TODO: 7. For each property, collect and sort validation rules
     // - Collect all attributes that are validation rules

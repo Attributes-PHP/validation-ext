@@ -16,6 +16,7 @@
 #include "src/arrayof.h"
 #include "src/exception.h"
 #include "src/model_configs.h"
+#include "src/fields/alias.h"
 
 /* Module startup */
 PHP_MINIT_FUNCTION(attributes_validation)
@@ -25,6 +26,7 @@ PHP_MINIT_FUNCTION(attributes_validation)
     attributes_validation_register_ArrayOf_class();
     attributes_validation_register_ModelConfigs_class();
     attributes_validation_register_all_exception_classes();
+    attributes_validation_register_Alias_class();
     return SUCCESS;
 }
 
