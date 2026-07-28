@@ -1,11 +1,103 @@
 #include "validate_function.h"
+#include "exception.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
+#include "Zend/zend_attributes.h"
 #include "base_model.h"
 #include "model_configs.h"
-#include "exception.h"
-#include "Zend/zend_interfaces.h"
-#include "php.h"
+#include "zend_portability.h"
+#include "zend_types.h"
+#include "helpers/string.h"
+#include <stddef.h>
+
+
+/**
+ * Transforms a property name based on the alias generator type
+ */
+static zend_string* transform_property_name(zend_string *property_name, char alias_generator)
+{
+    switch (alias_generator) {
+        case ATTRIBUTES_VALIDATION_PASCAL_CASE:
+            return attributes_validation_to_pascal_case(property_name);
+        case ATTRIBUTES_VALIDATION_CAMEL_CASE:
+            return attributes_validation_to_camel_case(property_name);
+        case ATTRIBUTES_VALIDATION_SNAKE_CASE:
+            return attributes_validation_to_snake_case(property_name);
+        case ATTRIBUTES_VALIDATION_KEBAB_CASE:
+            return attributes_validation_to_kebab_case(property_name);
+        default:
+            return zend_string_copy(property_name);
+    }
+}
+
+/**
+ * Retrieves the property name from the following priority:
+ *  1) If the Alias attribute is set uses that value
+ *  2) If aliasGenerator is configured, transforms the property name
+ *  3) Otherwise uses the property name as-is
+ */
+static inline zend_string* get_property_name(zend_class_entry *model_ce, zend_string *property_name, zend_property_info *prop_info, char alias_generator)
+{
+    zend_string *field_name;
+
+    // Check for #[Alias] attribute on the property
+    if (prop_info->attributes != NULL) {
+        zend_attribute *alias_attr = zend_get_attribute_str(
+            prop_info->attributes,
+            "attributes\\validation\\fields\\alias",
+            sizeof("attributes\\validation\\fields\\alias") - 1
+        );
+        if (alias_attr != NULL && alias_attr->argc > 0) {
+            zval attr_value;
+            if (zend_get_attribute_value(&attr_value, alias_attr, 0, model_ce) == SUCCESS) {
+                if (UNEXPECTED(Z_TYPE(attr_value) != IS_STRING)) {
+                    zval_ptr_dtor(&attr_value);
+                    zend_argument_type_error(1, "must be of type string, %s given", zend_zval_type_name(&attr_value));
+                    return NULL;
+                }
+                field_name = zend_string_copy(Z_STR(attr_value));
+                zval_ptr_dtor(&attr_value);
+                return field_name;
+            }
+        }
+    }
+
+    // If no Alias attribute, check for aliasGenerator in ModelConfigs
+    if (alias_generator != false) {
+        return transform_property_name(property_name, alias_generator);
+    }
+
+    return property_name;
+}
+
+static inline zval* get_property_value(zend_class_entry *model_ce, zval *raw_data, zend_string *field_name, zend_property_info *prop_info)
+{
+    // Check if field exists in rawData
+    zval *raw_value = zend_hash_find(Z_ARRVAL_P(raw_data), field_name);
+
+    if (raw_value != NULL) return raw_value;
+
+    // Field doesn't exist in rawData, check for default value
+    zval *default_prop = &model_ce->default_properties_table[prop_info->offset];
+    if (default_prop != NULL && Z_TYPE_P(default_prop) != IS_UNDEF) {
+        return default_prop;
+    }
+
+    return NULL;
+}
+
+static inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length)
+{
+    zval error_msg;
+    ZVAL_STRING(&error_msg, error_message);
+    zend_hash_str_add(Z_ARRVAL_P(errors), ZSTR_VAL(field_name), ZSTR_LEN(field_name), &error_msg);
+    zval_ptr_dtor(&error_msg);
+}
+
+static inline zval *validate_field_value(zval *value, zend_property_info *prop_info, zval *errors)
+{
+    return value;
+}
 
 /* Function implementation for validate */
 ZEND_FUNCTION(validate)
@@ -21,7 +113,7 @@ ZEND_FUNCTION(validate)
     zval configs_obj;
     attributes_validation_model_configs_properties properties;
     attributes_validation_create_model_configs(&configs_obj, model, &properties);
-    if (EG(exception)) {
+    if (UNEXPECTED(EG(exception))) {
         zval_ptr_dtor(&configs_obj);
         RETURN_THROWS();
     }
@@ -42,14 +134,49 @@ ZEND_FUNCTION(validate)
         zend_property_info *prop_info;
 
         ZEND_HASH_FOREACH_STR_KEY_PTR(&model_ce->properties_info, property_name, prop_info) {
-            // TODO: 6. For each property, resolve the actual field name in rawData
-            // - Check for #[Alias] attribute on the property
-            // - If alias exists, use it as the key to look up in rawData
-            // - Otherwise, resort to the aliasGenerator property from ModelConfigs if exists
-            // - If none of them exist, use the property name to look up in rawData
-            // - If field doesn't exist in rawData:
-            //   * If property has default value, use it
-            //   * Otherwise, add "[FIELD_NAME]" => "field is required" to errors
+            // Fetches name of the field name for the $rawData
+            zend_string *field_name = get_property_name(model_ce, property_name, prop_info, properties.alias_generator);
+
+            if (UNEXPECTED(EG(exception))) {
+                zval_ptr_dtor(&configs_obj);
+                zval_ptr_dtor(&errors);
+                RETURN_THROWS();
+            }
+
+            zval *field_value = get_property_value(model_ce, raw_data, field_name, prop_info);
+
+            bool is_to_release_field_name = (field_name != property_name);
+            if (field_value == NULL) {
+                add_field_error(&errors, field_name, "required field", sizeof("required field") - 1);
+                if (properties.stop_first_error) {
+                    attributes_validation_throw_validation_exception(&errors);
+
+                    if (is_to_release_field_name) zend_string_release(field_name);
+                    zval_ptr_dtor(&configs_obj);
+                    zval_ptr_dtor(&errors);
+                    RETURN_THROWS();
+                }
+            }
+
+            zval *valid_value = validate_field_value(field_value, prop_info, &errors);
+            if (UNEXPECTED(EG(exception))) {
+                if (is_to_release_field_name) zend_string_release(field_name);
+                zval_ptr_dtor(&configs_obj);
+                zval_ptr_dtor(&errors);
+                RETURN_THROWS();
+            }
+
+            if (valid_value == NULL) {
+                if (!properties.stop_first_error) continue;
+
+                attributes_validation_throw_validation_exception(&errors);
+
+                if (is_to_release_field_name) zend_string_release(field_name);
+                zval_ptr_dtor(&configs_obj);
+                RETURN_THROWS();
+            }
+
+            zend_update_property(model_ce, Z_OBJ_P(model), ZSTR_VAL(property_name), ZSTR_LEN(property_name), valid_value);
 
             // For each property, we have:
             // a. Property name: property_name (zend_string *)
@@ -58,10 +185,18 @@ ZEND_FUNCTION(validate)
             // d. Default value: from model_ce->default_properties_table[prop_info->offset]
 
             // TODO: Process this property (name, type, attributes, default value)
-            // This will be used in subsequent steps (6-9)
+            // This will be used in subsequent steps (7-11)
+            if (is_to_release_field_name) zend_string_release(field_name);
         } ZEND_HASH_FOREACH_END();
 
         model_ce = model_ce->parent;
+    }
+
+    if (!properties.stop_first_error && zend_hash_num_elements(Z_ARRVAL_P(&errors))) {
+        attributes_validation_throw_validation_exception(&errors);
+
+        zval_ptr_dtor(&configs_obj);
+        RETURN_THROWS();
     }
 
     // TODO: 7. For each property, collect and sort validation rules

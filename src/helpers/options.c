@@ -37,13 +37,5 @@ static inline void throw_invalid_parameter_exception(char *option, char **all_op
     }
     options_list[pos] = '\0';
 
-    zend_throw_exception_ex(spl_ce_InvalidArgumentException, 0,
-        "%s::%s: Argument #%d ($%s) invalid value '%s' given. Valid options: %s",
-        invalid_option_error->class_name,
-        invalid_option_error->method_name,
-        invalid_option_error->parameter_number,
-        invalid_option_error->name,
-        option,
-        options_list
-    );
+    zend_argument_value_error(1, "must be of one of the following options: %s", options_list);
 }

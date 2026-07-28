@@ -17,11 +17,13 @@
 /* Module startup */
 PHP_MINIT_FUNCTION(attributes_validation)
 {
-    // Register classes
+    // Register main classes
     attributes_validation_register_BaseModel_class();
     attributes_validation_register_ArrayOf_class();
     attributes_validation_register_ModelConfigs_class();
     attributes_validation_register_all_exception_classes();
+
+    // Register fields
     attributes_validation_register_Field_interface();
     attributes_validation_register_Alias_class();
     return SUCCESS;

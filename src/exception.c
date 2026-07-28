@@ -13,6 +13,15 @@ void attributes_validation_register_all_exception_classes(void)
     register_ValidationException_class();
 }
 
+void attributes_validation_throw_validation_exception(zval *errors)
+{
+    zval exception_val;
+
+    object_init_ex(&exception_val, class_Attributes_Validation_Exceptions_ValidationException);
+    zend_call_method_with_1_params(Z_OBJ(exception_val), class_Attributes_Validation_Exceptions_ValidationException, NULL, "__construct", NULL, errors);
+    zend_throw_exception_object(&exception_val);
+}
+
 static void register_BaseException_class(void)
 {
     zend_class_entry ce;

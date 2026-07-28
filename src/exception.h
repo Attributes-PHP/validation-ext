@@ -31,6 +31,8 @@ static const zend_function_entry class_Attributes_Validation_Exceptions_Validati
 
 /* Registration functions */
 void attributes_validation_register_all_exception_classes(void);
+void attributes_validation_throw_validation_exception(zval *errors);
+
 static void register_BaseException_class(void);
 static void register_ValidationException_class(void);
 
