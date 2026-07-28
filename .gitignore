@@ -1,5 +1,5 @@
 # Stubs
-stubs/*.h
+*_arginfo.h
 
 # Build products
 *.so

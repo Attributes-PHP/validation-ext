@@ -45,11 +45,11 @@ ZEND_FUNCTION(validate)
             // TODO: 6. For each property, resolve the actual field name in rawData
             // - Check for #[Alias] attribute on the property
             // - If alias exists, use it as the key to look up in rawData
-            // - If model has AliasGenerator, apply transformation to property name
+            // - Otherwise, resort to the aliasGenerator property from ModelConfigs if exists
+            // - If none of them exist, use the property name to look up in rawData
             // - If field doesn't exist in rawData:
             //   * If property has default value, use it
-            //   * If property is nullable, skip it
-            //   * Otherwise, add "field is required" error
+            //   * Otherwise, add "[FIELD_NAME]" => "field is required" to errors
 
             // For each property, we have:
             // a. Property name: property_name (zend_string *)

@@ -1,4 +1,5 @@
 #include "alias.h"
+#include "field.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_attributes.h"
 
@@ -21,6 +22,7 @@ void attributes_validation_register_Alias_class(void)
 
     INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation\\Fields", "Alias", class_Attributes_Validation_Fields_Alias_methods);
     Attributes_Validation_Fields_Alias_ce = zend_register_internal_class_ex(&ce, NULL);
+    zend_class_implements(Attributes_Validation_Fields_Alias_ce, 1, Attributes_Validation_Fields_Field_ce);
 
     /* Register $name property */
     zend_declare_property_null(Attributes_Validation_Fields_Alias_ce, "name", sizeof("name") - 1, ZEND_ACC_PUBLIC);
