@@ -167,7 +167,7 @@ static void update_model_properties(zend_object *this, attributes_validation_mod
     zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "stopAtFirstError", sizeof("stopAtFirstError") - 1, properties->stop_first_error);
 }
 
-static void set_default_properties(attributes_validation_model_configs_properties *properties)
+static zend_always_inline void set_default_properties(attributes_validation_model_configs_properties *properties)
 {
     properties->alias_generator = false;
     properties->str_to_lower = false;
@@ -202,14 +202,14 @@ static bool validate_extra(char *pretty_extra)
     return attributes_validation_validate_method_parameter(pretty_extra, all_pretty_extra, 3, &invalid_parameter_error);
 }
 
-static inline void declare_typed_property_bool(const char *name, bool default_value)
+static zend_always_inline void declare_typed_property_bool(const char *name, bool default_value)
 {
     zval z_default_value;
     ZVAL_BOOL(&z_default_value, default_value);
     declare_typed_property(name, &z_default_value, MAY_BE_BOOL);
 }
 
-static inline void declare_typed_property_string(const char *name, char *default_value, bool allow_null)
+static zend_always_inline void declare_typed_property_string(const char *name, char *default_value, bool allow_null)
 {
     zval z_default_value;
     if (default_value == NULL) ZVAL_NULL(&z_default_value);
@@ -222,7 +222,7 @@ static inline void declare_typed_property_string(const char *name, char *default
     declare_typed_property(name, &z_default_value, type);
 }
 
-static inline void declare_typed_property(const char *name, zval *default_value, zend_uchar type)
+static zend_always_inline void declare_typed_property(const char *name, zval *default_value, zend_uchar type)
 {
     zend_type property_type = (zend_type) ZEND_TYPE_INIT_MASK(type);
     zend_string *property_name = zend_string_init(name, strlen(name), 1);

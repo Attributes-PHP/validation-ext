@@ -14,7 +14,7 @@
 /**
  * Transforms a property name based on the alias generator type
  */
-static zend_string* transform_property_name(zend_string *property_name, char alias_generator)
+static zend_always_inline zend_string* transform_property_name(zend_string *property_name, char alias_generator)
 {
     switch (alias_generator) {
         case ATTRIBUTES_VALIDATION_PASCAL_CASE:
@@ -36,7 +36,7 @@ static zend_string* transform_property_name(zend_string *property_name, char ali
  *  2) If aliasGenerator is configured, transforms the property name
  *  3) Otherwise uses the property name as-is
  */
-static inline zend_string* get_property_name(zend_class_entry *model_ce, zend_string *property_name, zend_property_info *prop_info, char alias_generator)
+static zend_always_inline zend_string* get_property_name(zend_class_entry *model_ce, zend_string *property_name, zend_property_info *prop_info, char alias_generator)
 {
     zend_string *field_name;
 
@@ -70,7 +70,7 @@ static inline zend_string* get_property_name(zend_class_entry *model_ce, zend_st
     return property_name;
 }
 
-static inline zval* get_property_value(zend_class_entry *model_ce, zval *raw_data, zend_string *field_name, zend_property_info *prop_info)
+static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, zval *raw_data, zend_string *field_name, zend_property_info *prop_info)
 {
     // Check if field exists in rawData
     zval *raw_value = zend_hash_find(Z_ARRVAL_P(raw_data), field_name);
@@ -86,7 +86,7 @@ static inline zval* get_property_value(zend_class_entry *model_ce, zval *raw_dat
     return NULL;
 }
 
-static inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length)
+static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length)
 {
     zval error_msg;
     ZVAL_STRING(&error_msg, error_message);
