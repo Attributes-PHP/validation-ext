@@ -185,9 +185,10 @@ ZEND_FUNCTION(validate)
                 }
             }
 
+            if (is_to_release_field_name) zend_string_release(field_name);
+
             zval *valid_value = validate_field_value(field_value, prop_info, &errors);
             if (UNEXPECTED(EG(exception))) {
-                if (is_to_release_field_name) zend_string_release(field_name);
                 zval_ptr_dtor(&configs_obj);
                 zval_ptr_dtor(&errors);
                 RETURN_THROWS();
@@ -198,7 +199,6 @@ ZEND_FUNCTION(validate)
 
                 attributes_validation_throw_validation_exception(&errors);
 
-                if (is_to_release_field_name) zend_string_release(field_name);
                 zval_ptr_dtor(&configs_obj);
                 RETURN_THROWS();
             }
