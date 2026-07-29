@@ -96,6 +96,33 @@ static zend_always_inline void add_field_error(zval *errors, zend_string *field_
 
 static inline zval *validate_field_value(zval *value, zend_property_info *prop_info, zval *errors)
 {
+    // TODO: 7. For each property, collect and sort validation rules
+    // - Collect all attributes that are validation rules
+    // - Type hint has highest priority (applied first)
+    // - Other rules applied from bottom to top (reverse order of declaration)
+    // - Supported rule types:
+    //   * Type hints (int, string, DateTime, etc.)
+    //   * #[ArrayOf(type1, type2, ...)] for array validation
+    //   * #[Length(min, max)] for string length
+    //   * Custom rules implementing Rules\Custom interface
+
+    // TODO: 8. For each property value, perform validation:
+    // - Get raw value from rawData using resolved field name
+    // - Apply SensitiveParameter: mask value in errors if attribute is present
+    // - Apply type hint validation first:
+    //   * If strict mode, value must already be of the correct type
+    //   * Otherwise, attempt to cast/coerce the value
+    //   * Handle union types (e.g., float|int)
+    //   * Handle nullable types (e.g., ?string)
+    // - For ArrayOf:
+    //   * Validate each element of the array against the specified types
+    //   * Nested arrays create dot-notation paths (e.g., "users.0.email")
+    // - Apply other rules in order
+    // - For nested objects:
+    //   * Recursively validate nested Base model instances
+    //   * Build nested error paths
+    // - If stopAtFirstError is true, throw ValidationException immediately on first error
+    // - Otherwise, add error to errors collection and continue
     return value;
 }
 
@@ -178,14 +205,6 @@ ZEND_FUNCTION(validate)
 
             zend_update_property(model_ce, Z_OBJ_P(model), ZSTR_VAL(property_name), ZSTR_LEN(property_name), valid_value);
 
-            // For each property, we have:
-            // a. Property name: property_name (zend_string *)
-            // b. Type hint: prop_info->type (zend_type)
-            // c. Attributes: prop_info->attributes (HashTable *)
-            // d. Default value: from model_ce->default_properties_table[prop_info->offset]
-
-            // TODO: Process this property (name, type, attributes, default value)
-            // This will be used in subsequent steps (7-11)
             if (is_to_release_field_name) zend_string_release(field_name);
         } ZEND_HASH_FOREACH_END();
 
@@ -198,41 +217,6 @@ ZEND_FUNCTION(validate)
         zval_ptr_dtor(&configs_obj);
         RETURN_THROWS();
     }
-
-    // TODO: 7. For each property, collect and sort validation rules
-    // - Collect all attributes that are validation rules
-    // - Type hint has highest priority (applied first)
-    // - Other rules applied from bottom to top (reverse order of declaration)
-    // - Supported rule types:
-    //   * Type hints (int, string, DateTime, etc.)
-    //   * #[ArrayOf(type1, type2, ...)] for array validation
-    //   * #[Length(min, max)] for string length
-    //   * Custom rules implementing Rules\Custom interface
-
-    // TODO: 8. For each property value, perform validation:
-    // - Get raw value from rawData using resolved field name
-    // - Apply SensitiveParameter: mask value in errors if attribute is present
-    // - Apply type hint validation first:
-    //   * If strict mode, value must already be of the correct type
-    //   * Otherwise, attempt to cast/coerce the value
-    //   * Handle union types (e.g., float|int)
-    //   * Handle nullable types (e.g., ?string)
-    // - For ArrayOf:
-    //   * Validate each element of the array against the specified types
-    //   * Nested arrays create dot-notation paths (e.g., "users.0.email")
-    // - Apply other rules in order
-    // - For nested objects:
-    //   * Recursively validate nested Base model instances
-    //   * Build nested error paths
-    // - If stopAtFirstError is true, throw ValidationException immediately on first error
-    // - Otherwise, add error to errors collection and continue
-
-    // TODO: 9. After all properties are validated, check for errors
-    // - If errors collection is not empty:
-    //   * Create ValidationException with all aggregated errors
-    //   * Format: {"field_path": ["error message 1", "error message 2", ...]}
-    //   * Provide getAllErrors() method to retrieve the full error array
-    //   * Throw the exception
 
     attributes_validation_call_after_validation_hook(model, raw_data, &configs_obj);
     if (EG(exception)) {
