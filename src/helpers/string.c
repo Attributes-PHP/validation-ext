@@ -1,11 +1,12 @@
 #include "string.h"
 #include "Zend/zend_API.h"
 #include <ctype.h>
+#include "testing.h"
 
 /**
  * Checks if a character is uppercase
  */
-static zend_always_inline bool is_uppercase(char c)
+STATIC_ZEND_INLINE bool is_uppercase(char c)
 {
     return c >= 'A' && c <= 'Z';
 }
@@ -13,7 +14,7 @@ static zend_always_inline bool is_uppercase(char c)
 /**
  * Checks if a character is lowercase
  */
-static zend_always_inline bool is_lowercase(char c)
+STATIC_ZEND_INLINE bool is_lowercase(char c)
 {
     return c >= 'a' && c <= 'z';
 }
@@ -21,7 +22,7 @@ static zend_always_inline bool is_lowercase(char c)
 /**
  * Checks if a character is alphanumeric
  */
-static zend_always_inline bool is_alphanumeric(char c)
+STATIC_ZEND_INLINE bool is_alphanumeric(char c)
 {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
 }
