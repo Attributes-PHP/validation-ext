@@ -1,0 +1,41 @@
+{
+    "name": "attributes-php/validation-ext",
+    "type": "library",
+    "description": "Pydantic-inspired PHP library for validating data via type hints at lightning speed ⚡️",
+    "keywords": [
+        "validation",
+        "fast",
+        "attributes"
+    ],
+    "license": "MIT",
+    "require": {
+        "php": "^8.2"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Attributes\\Validation\\Tests\\": "tests/php/tests"
+        }
+    },
+    "require-dev": {
+        "laravel/pint": "1.30",
+        "pestphp/pest": "^3.0"
+    },
+    "scripts": {
+        "lint": "./vendor/bin/pint tests/php",
+        "test:lint": "./vendor/bin/pint --test tests/php",
+        "test:coverage": "./vendor/bin/pest --coverage tests/php",
+        "test:unit": "./vendor/bin/pest --colors=always --exclude-group=integration tests/php",
+        "test:integration": "./vendor/bin/pest --colors=always --group=integration tests/php",
+        "test": [
+            "@test:lint",
+            "@test:unit",
+            "@test:integration"
+        ]
+    },
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

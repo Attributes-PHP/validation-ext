@@ -1,5 +1,6 @@
 # Stubs
 *_arginfo.h
+vendor/
 
 # Build products
 *.so
