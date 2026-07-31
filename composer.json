@@ -24,8 +24,8 @@
         "lint": "./vendor/bin/pint tests/php",
         "test:lint": "./vendor/bin/pint --test tests/php",
         "test:coverage": "./vendor/bin/pest --coverage tests/php",
-        "test:unit": "./vendor/bin/pest --colors=always --exclude-group=integration tests/php",
-        "test:integration": "./vendor/bin/pest --colors=always --group=integration tests/php",
+        "test:unit": "ceedling",
+        "test:integration": "./vendor/bin/pest --colors=always tests/php",
         "test": [
             "@test:lint",
             "@test:unit",
