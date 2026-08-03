@@ -89,7 +89,14 @@ static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, z
 static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length)
 {
     zval error_msg;
-    ZVAL_STRING(&error_msg, error_message);
+    // Prepend field name to error message for better context
+    zend_string *full_error = zend_string_alloc(ZSTR_LEN(field_name) + length + 2, 0);
+    memcpy(ZSTR_VAL(full_error), ZSTR_VAL(field_name), ZSTR_LEN(field_name));
+    memcpy(ZSTR_VAL(full_error) + ZSTR_LEN(field_name), ": ", 2);
+    memcpy(ZSTR_VAL(full_error) + ZSTR_LEN(field_name) + 2, error_message, length);
+    ZSTR_VAL(full_error)[ZSTR_LEN(field_name) + 2 + length] = '\0';
+    
+    ZVAL_STR(&error_msg, full_error);
     zend_hash_str_add(Z_ARRVAL_P(errors), ZSTR_VAL(field_name), ZSTR_LEN(field_name), &error_msg);
     zval_ptr_dtor(&error_msg);
 }
@@ -174,7 +181,7 @@ ZEND_FUNCTION(validate)
 
             bool is_to_release_field_name = (field_name != property_name);
             if (field_value == NULL) {
-                add_field_error(&errors, field_name, "required field", sizeof("required field") - 1);
+                add_field_error(&errors, field_name, "Field is required", sizeof("Field is required") - 1);
                 if (properties.stop_first_error) {
                     av_throw_validation_exception(&errors);
 
