@@ -10,5 +10,5 @@ if test "$PHP_ATTRIBUTES_VALIDATION" != "no"; then
   fi
   
   PHP_ADD_LIBRARY(stdc++, 1, ATTRIBUTES_VALIDATION_SHARED_LIBADD)
-  PHP_NEW_EXTENSION(attributes_validation, attributes_validation.c src/validate_function.c src/call_function.c src/base_model.c src/exception.c src/model_configs.c src/helpers/zend_wrappers.c src/helpers/options.c src/helpers/string.c src/fields/field.c src/fields/alias.c, $ext_shared)
+  PHP_NEW_EXTENSION(attributes_validation, attributes_validation.c src/validate_function.c src/call_function.c src/base_model.c src/exception.c src/model_configs.c src/helpers/av_wrappers.c src/helpers/options.c src/helpers/av_string.c src/fields/field.c src/fields/alias.c, $ext_shared)
 fi

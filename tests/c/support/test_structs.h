@@ -1,5 +1,5 @@
-#ifndef ATTRIBUTES_VALIDATION_TESTS_HELPERS_H
-#define ATTRIBUTES_VALIDATION_TESTS_HELPERS_H
+#ifndef AV_TESTS_HELPERS_H
+#define AV_TESTS_HELPERS_H
 
 #include <stddef.h>
 #include <stdbool.h>

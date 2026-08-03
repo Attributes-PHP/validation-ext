@@ -17,14 +17,14 @@
 static zend_always_inline zend_string* transform_property_name(zend_string *property_name, char alias_generator)
 {
     switch (alias_generator) {
-        case ATTRIBUTES_VALIDATION_PASCAL_CASE:
-            return attributes_validation_to_pascal_case(property_name);
-        case ATTRIBUTES_VALIDATION_CAMEL_CASE:
-            return attributes_validation_to_camel_case(property_name);
-        case ATTRIBUTES_VALIDATION_SNAKE_CASE:
-            return attributes_validation_to_snake_case(property_name);
-        case ATTRIBUTES_VALIDATION_KEBAB_CASE:
-            return attributes_validation_to_kebab_case(property_name);
+        case AV_PASCAL_CASE:
+            return av_to_pascal_case(property_name);
+        case AV_CAMEL_CASE:
+            return av_to_camel_case(property_name);
+        case AV_SNAKE_CASE:
+            return av_to_snake_case(property_name);
+        case AV_KEBAB_CASE:
+            return av_to_kebab_case(property_name);
         default:
             return zend_string_copy(property_name);
     }
@@ -134,18 +134,18 @@ ZEND_FUNCTION(validate)
 
     ZEND_PARSE_PARAMETERS_START(2, 2)
         Z_PARAM_ARRAY(raw_data)
-        Z_PARAM_OBJECT_OF_CLASS(model, Attributes_Validation_BaseModel_ce)
+        Z_PARAM_OBJECT_OF_CLASS(model, AV_BaseModel_ce)
     ZEND_PARSE_PARAMETERS_END();
 
     zval configs_obj;
-    attributes_validation_model_configs_properties properties;
-    attributes_validation_create_model_configs(&configs_obj, model, &properties);
+    av_model_configs_properties properties;
+    av_create_model_configs(&configs_obj, model, &properties);
     if (UNEXPECTED(EG(exception))) {
         zval_ptr_dtor(&configs_obj);
         RETURN_THROWS();
     }
 
-    attributes_validation_call_before_validation_hook(model, raw_data, &configs_obj);
+    av_call_before_validation_hook(model, raw_data, &configs_obj);
     if (EG(exception)) {
         zval_ptr_dtor(&configs_obj);
         RETURN_THROWS();
@@ -156,7 +156,7 @@ ZEND_FUNCTION(validate)
 
     zend_class_entry *model_ce = Z_OBJCE_P(model);
 
-    while (model_ce != NULL && model_ce != Attributes_Validation_BaseModel_ce) {
+    while (model_ce != NULL && model_ce != AV_BaseModel_ce) {
         zend_string *property_name;
         zend_property_info *prop_info;
 
@@ -176,7 +176,7 @@ ZEND_FUNCTION(validate)
             if (field_value == NULL) {
                 add_field_error(&errors, field_name, "required field", sizeof("required field") - 1);
                 if (properties.stop_first_error) {
-                    attributes_validation_throw_validation_exception(&errors);
+                    av_throw_validation_exception(&errors);
 
                     if (is_to_release_field_name) zend_string_release(field_name);
                     zval_ptr_dtor(&configs_obj);
@@ -197,7 +197,7 @@ ZEND_FUNCTION(validate)
             if (valid_value == NULL) {
                 if (!properties.stop_first_error) continue;
 
-                attributes_validation_throw_validation_exception(&errors);
+                av_throw_validation_exception(&errors);
 
                 zval_ptr_dtor(&configs_obj);
                 RETURN_THROWS();
@@ -212,13 +212,13 @@ ZEND_FUNCTION(validate)
     }
 
     if (!properties.stop_first_error && zend_hash_num_elements(Z_ARRVAL_P(&errors))) {
-        attributes_validation_throw_validation_exception(&errors);
+        av_throw_validation_exception(&errors);
 
         zval_ptr_dtor(&configs_obj);
         RETURN_THROWS();
     }
 
-    attributes_validation_call_after_validation_hook(model, raw_data, &configs_obj);
+    av_call_after_validation_hook(model, raw_data, &configs_obj);
     if (EG(exception)) {
         zval_ptr_dtor(&configs_obj);
         zval_ptr_dtor(&errors);

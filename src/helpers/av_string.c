@@ -1,6 +1,6 @@
 #include "av_string.h"
 #include "Zend/zend_API.h"
-#include "zend_wrappers.h"
+#include "av_wrappers.h"
 #include "testing.h"
 #include <ctype.h>
 #include <stddef.h>
@@ -29,7 +29,7 @@ STATIC_ZEND_INLINE bool is_alphanumeric(char c)
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
 }
 
-STATIC_INLINE void to_pascal_case(attributes_validation_string *input, attributes_validation_string *output)
+STATIC_INLINE void to_pascal_case(av_string *input, av_string *output)
 {
     bool next_upper = true;
     for (size_t i = 0; i < input->length; i++) {
@@ -54,7 +54,7 @@ STATIC_INLINE void to_pascal_case(attributes_validation_string *input, attribute
     output->value[output->length] = '\0';
 }
 
-STATIC_INLINE void to_camel_case(attributes_validation_string *input, attributes_validation_string *output)
+STATIC_INLINE void to_camel_case(av_string *input, av_string *output)
 {
     bool next_upper = false;
     bool first_char = true;
@@ -85,7 +85,7 @@ STATIC_INLINE void to_camel_case(attributes_validation_string *input, attributes
     output->value[output->length] = '\0';
 }
 
-STATIC_INLINE void to_snake_case(attributes_validation_string *input, attributes_validation_string *output)
+STATIC_INLINE void to_snake_case(av_string *input, av_string *output)
 {
     for (size_t i = 0; i < input->length; i++) {
         char c = input->value[i];
@@ -109,7 +109,7 @@ STATIC_INLINE void to_snake_case(attributes_validation_string *input, attributes
     output->value[output->length] = '\0';
 }
 
-STATIC_INLINE void to_kebab_case(attributes_validation_string *input, attributes_validation_string *output)
+STATIC_INLINE void to_kebab_case(av_string *input, av_string *output)
 {
     for (size_t i = 0; i < input->length; i++) {
         char c = input->value[i];
@@ -137,19 +137,19 @@ STATIC_INLINE void to_kebab_case(attributes_validation_string *input, attributes
  * Converts a property name to PascalCase
  * Example: "firstName" -> "FirstName", "first_name" -> "FirstName"
  */
-zend_string* attributes_validation_to_pascal_case(zend_string *str)
+zend_string* av_to_pascal_case(zend_string *str)
 {
-    attributes_validation_string input, output;
+    av_string input, output;
     input.value = ZSTR_VAL(str);
     input.length = ZSTR_LEN(str);
 
     // Worst case: same length as input
-    output.value = attributes_validation_emalloc(input.length + 1);
+    output.value = av_emalloc(input.length + 1);
     output.length = 0;
 
     to_pascal_case(&input, &output);
-    zend_string *result = attributes_validation_string_init(output.value, output.length, 0);
-    attributes_validation_efree(output.value);
+    zend_string *result = av_string_init(output.value, output.length, 0);
+    av_efree(output.value);
     return result;
 }
 
@@ -157,19 +157,19 @@ zend_string* attributes_validation_to_pascal_case(zend_string *str)
  * Converts a property name to camelCase
  * Example: "FirstName" -> "firstName", "first_name" -> "firstName"
  */
-zend_string* attributes_validation_to_camel_case(zend_string *str)
+zend_string* av_to_camel_case(zend_string *str)
 {
-    attributes_validation_string input, output;
+    av_string input, output;
     input.value = ZSTR_VAL(str);
     input.length = ZSTR_LEN(str);
 
     // Worst case: same length as input
-    output.value = attributes_validation_emalloc(input.length + 1);
+    output.value = av_emalloc(input.length + 1);
     output.length = 0;
 
     to_camel_case(&input, &output);
-    zend_string *result = attributes_validation_string_init(output.value, output.length, 0);
-    attributes_validation_efree(output.value);
+    zend_string *result = av_string_init(output.value, output.length, 0);
+    av_efree(output.value);
     return result;
 }
 
@@ -177,19 +177,19 @@ zend_string* attributes_validation_to_camel_case(zend_string *str)
  * Converts a property name to snake_case
  * Example: "FirstName" -> "first_name", "firstName" -> "first_name"
  */
-zend_string* attributes_validation_to_snake_case(zend_string *str)
+zend_string* av_to_snake_case(zend_string *str)
 {
-    attributes_validation_string input, output;
+    av_string input, output;
     input.value = ZSTR_VAL(str);
     input.length = ZSTR_LEN(str);
 
     // Worst case: each character becomes 2 (char + underscore)
-    output.value = attributes_validation_emalloc(input.length * 2 + 1);
+    output.value = av_emalloc(input.length * 2 + 1);
     output.length = 0;
 
     to_snake_case(&input, &output);
-    zend_string *result = attributes_validation_string_init(output.value, output.length, 0);
-    attributes_validation_efree(output.value);
+    zend_string *result = av_string_init(output.value, output.length, 0);
+    av_efree(output.value);
     return result;
 }
 
@@ -197,18 +197,18 @@ zend_string* attributes_validation_to_snake_case(zend_string *str)
  * Converts a property name to kebab-case
  * Example: "FirstName" -> "first-name", "firstName" -> "first-name"
  */
-zend_string* attributes_validation_to_kebab_case(zend_string *str)
+zend_string* av_to_kebab_case(zend_string *str)
 {
-    attributes_validation_string input, output;
+    av_string input, output;
     input.value = ZSTR_VAL(str);
     input.length = ZSTR_LEN(str);
 
     // Worst case scenario: each character becomes 2 (char + dash)
-    output.value = attributes_validation_emalloc(input.length * 2 + 1);
+    output.value = av_emalloc(input.length * 2 + 1);
     output.length = 0;
 
     to_kebab_case(&input, &output);
-    zend_string *result = attributes_validation_string_init(output.value, output.length, 0);
-    attributes_validation_efree(output.value);
+    zend_string *result = av_string_init(output.value, output.length, 0);
+    av_efree(output.value);
     return result;
 }

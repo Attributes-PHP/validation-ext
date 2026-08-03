@@ -43,7 +43,7 @@
 
 # further details to configure the way Ceedling handles release code
 :release_build:
-  :output: attributes_validation.out
+  :output: av.out
   :use_assembly: FALSE
   :artifacts: []
 

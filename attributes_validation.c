@@ -17,13 +17,13 @@
 PHP_MINIT_FUNCTION(attributes_validation)
 {
     // Register main classes
-    attributes_validation_register_BaseModel_class();
-    attributes_validation_register_ModelConfigs_class();
-    attributes_validation_register_all_exception_classes();
+    av_register_BaseModel_class();
+    av_register_ModelConfigs_class();
+    av_register_all_exception_classes();
 
     // Register fields
-    attributes_validation_register_Field_interface();
-    attributes_validation_register_Alias_class();
+    av_register_Field_interface();
+    av_register_Alias_class();
     return SUCCESS;
 }
 
@@ -58,14 +58,14 @@ PHP_MINFO_FUNCTION(attributes_validation)
 /* Module entry */
 zend_module_entry attributes_validation_module_entry = {
     STANDARD_MODULE_HEADER,
-    ATTRIBUTES_VALIDATION_NAME,
+    EXTENSION_NAME,
     ext_functions,
     PHP_MINIT(attributes_validation),
     PHP_MSHUTDOWN(attributes_validation),
     PHP_RINIT(attributes_validation),
     PHP_RSHUTDOWN(attributes_validation),
     PHP_MINFO(attributes_validation),
-    ATTRIBUTES_VALIDATION_VERSION,
+    EXTENSION_VERSION,
     STANDARD_MODULE_PROPERTIES
 };
 

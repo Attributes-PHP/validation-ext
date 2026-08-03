@@ -6,60 +6,60 @@
 #include "Zend/zend_type_info.h"
 #include "Zend/zend_types.h"
 
-zend_class_entry *Attributes_Validation_ModelConfigs_ce;
+zend_class_entry *AV_ModelConfigs_ce;
 
 /**
  * Reads a property from the current object and returns it.
  * Used by all getter methods in this class.
  */
-#define ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN(prop_name) \
+#define AV_GET_PROPERTY_AND_RETURN(prop_name) \
     ZEND_PARSE_PARAMETERS_NONE(); \
     zval rv, *value; \
-    value = zend_read_property(Attributes_Validation_ModelConfigs_ce, Z_OBJ_P(getThis()), prop_name, sizeof(prop_name) - 1, 1, &rv); \
+    value = zend_read_property(AV_ModelConfigs_ce, Z_OBJ_P(getThis()), prop_name, sizeof(prop_name) - 1, 1, &rv); \
     RETURN_COPY_DEREF(value)
 
-ZEND_METHOD(Attributes_Validation_ModelConfigs, getAliasGenerator)
+ZEND_METHOD(AV_ModelConfigs, getAliasGenerator)
 {
-    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("aliasGenerator");
+    AV_GET_PROPERTY_AND_RETURN("aliasGenerator");
 }
 
-ZEND_METHOD(Attributes_Validation_ModelConfigs, isStrToLower)
+ZEND_METHOD(AV_ModelConfigs, isStrToLower)
 {
-    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("strToLower");
+    AV_GET_PROPERTY_AND_RETURN("strToLower");
 }
 
-ZEND_METHOD(Attributes_Validation_ModelConfigs, isStrToUpper)
+ZEND_METHOD(AV_ModelConfigs, isStrToUpper)
 {
-    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("strToUpper");
+    AV_GET_PROPERTY_AND_RETURN("strToUpper");
 }
 
-ZEND_METHOD(Attributes_Validation_ModelConfigs, isStripWhitespace)
+ZEND_METHOD(AV_ModelConfigs, isStripWhitespace)
 {
-    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("stripWhitespace");
+    AV_GET_PROPERTY_AND_RETURN("stripWhitespace");
 }
 
-ZEND_METHOD(Attributes_Validation_ModelConfigs, getExtra)
+ZEND_METHOD(AV_ModelConfigs, getExtra)
 {
-    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("extra");
+    AV_GET_PROPERTY_AND_RETURN("extra");
 }
 
-ZEND_METHOD(Attributes_Validation_ModelConfigs, isStrict)
+ZEND_METHOD(AV_ModelConfigs, isStrict)
 {
-    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("strict");
+    AV_GET_PROPERTY_AND_RETURN("strict");
 }
 
-ZEND_METHOD(Attributes_Validation_ModelConfigs, isStopAtFirstError)
+ZEND_METHOD(AV_ModelConfigs, isStopAtFirstError)
 {
-    ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN("stopAtFirstError");
+    AV_GET_PROPERTY_AND_RETURN("stopAtFirstError");
 }
 
 /* Registration function */
-void attributes_validation_register_ModelConfigs_class(void)
+void av_register_ModelConfigs_class(void)
 {
     zend_class_entry ce;
-    INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation", "ModelConfigs", class_Attributes_Validation_ModelConfigs_methods);
-    Attributes_Validation_ModelConfigs_ce = zend_register_internal_class_ex(&ce, NULL);
-    Attributes_Validation_ModelConfigs_ce->ce_flags |= ZEND_ACC_FINAL;
+    INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation", "ModelConfigs", class_AV_ModelConfigs_methods);
+    AV_ModelConfigs_ce = zend_register_internal_class_ex(&ce, NULL);
+    AV_ModelConfigs_ce->ce_flags |= ZEND_ACC_FINAL;
 
     /* Declare properties */
     declare_typed_property_string("aliasGenerator", NULL, true);
@@ -72,7 +72,7 @@ void attributes_validation_register_ModelConfigs_class(void)
 
     /* Register as an internal attribute that targets classes only */
     zend_internal_attribute_register(
-        Attributes_Validation_ModelConfigs_ce,
+        AV_ModelConfigs_ce,
         ZEND_ATTRIBUTE_TARGET_CLASS
     );
 }
@@ -84,9 +84,9 @@ void attributes_validation_register_ModelConfigs_class(void)
  * Inheritance is supported: if Child extends Parent and Parent has ModelConfigs,
  * those configs are used for Child unless Child overrides them with its own ModelConfigs.
  */
-void attributes_validation_create_model_configs(zval *configs, zval *model, attributes_validation_model_configs_properties *properties)
+void av_create_model_configs(zval *configs, zval *model, av_model_configs_properties *properties)
 {
-    object_init_ex(configs, Attributes_Validation_ModelConfigs_ce);
+    object_init_ex(configs, AV_ModelConfigs_ce);
 
     zend_class_entry *base_model_class_entry = Z_OBJCE_P(model);
     zend_attribute *model_configs_attr = get_model_configs_attribute(base_model_class_entry);
@@ -151,29 +151,29 @@ void attributes_validation_create_model_configs(zval *configs, zval *model, attr
     update_model_properties(Z_OBJ_P(configs), properties, pretty_alias_generator, pretty_extra);
 }
 
-static void update_model_properties(zend_object *this, attributes_validation_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra)
+static void update_model_properties(zend_object *this, av_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra)
 {
     if (pretty_alias_generator == NULL) {
-        zend_update_property_null(Attributes_Validation_ModelConfigs_ce, this, "aliasGenerator", sizeof("aliasGenerator") - 1);
+        zend_update_property_null(AV_ModelConfigs_ce, this, "aliasGenerator", sizeof("aliasGenerator") - 1);
     } else {
-        zend_update_property_string(Attributes_Validation_ModelConfigs_ce, this, "aliasGenerator", sizeof("aliasGenerator") - 1, pretty_alias_generator);
+        zend_update_property_string(AV_ModelConfigs_ce, this, "aliasGenerator", sizeof("aliasGenerator") - 1, pretty_alias_generator);
     }
 
-    zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "strToLower", sizeof("strToLower") - 1, properties->str_to_lower);
-    zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "strToUpper", sizeof("strToUpper") - 1, properties->str_to_upper);
-    zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "stripWhitespace", sizeof("stripWhitespace") - 1, properties->strip_whitespace);
-    zend_update_property_string(Attributes_Validation_ModelConfigs_ce, this, "extra", sizeof("extra") - 1, pretty_extra);
-    zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "strict", sizeof("strict") - 1, properties->strict);
-    zend_update_property_bool(Attributes_Validation_ModelConfigs_ce, this, "stopAtFirstError", sizeof("stopAtFirstError") - 1, properties->stop_first_error);
+    zend_update_property_bool(AV_ModelConfigs_ce, this, "strToLower", sizeof("strToLower") - 1, properties->str_to_lower);
+    zend_update_property_bool(AV_ModelConfigs_ce, this, "strToUpper", sizeof("strToUpper") - 1, properties->str_to_upper);
+    zend_update_property_bool(AV_ModelConfigs_ce, this, "stripWhitespace", sizeof("stripWhitespace") - 1, properties->strip_whitespace);
+    zend_update_property_string(AV_ModelConfigs_ce, this, "extra", sizeof("extra") - 1, pretty_extra);
+    zend_update_property_bool(AV_ModelConfigs_ce, this, "strict", sizeof("strict") - 1, properties->strict);
+    zend_update_property_bool(AV_ModelConfigs_ce, this, "stopAtFirstError", sizeof("stopAtFirstError") - 1, properties->stop_first_error);
 }
 
-static zend_always_inline void set_default_properties(attributes_validation_model_configs_properties *properties)
+static zend_always_inline void set_default_properties(av_model_configs_properties *properties)
 {
     properties->alias_generator = false;
     properties->str_to_lower = false;
     properties->str_to_upper = false;
     properties->strip_whitespace = false;
-    properties->extra = ATTRIBUTES_VALIDATION_IGNORE;
+    properties->extra = AV_IGNORE;
     properties->strict = false;
     properties->stop_first_error = false;
 }
@@ -181,25 +181,25 @@ static zend_always_inline void set_default_properties(attributes_validation_mode
 static bool validate_alias_generator(char *pretty_alias_generator)
 {
     char *all_pretty_alias[] = {"pascal", "camel", "snake", "kebab"};
-    attributes_validation_invalid_method_parameter invalid_parameter_error = {
+    av_invalid_method_parameter invalid_parameter_error = {
         .class_name = "Attributes\\Validation\\ModelConfigs",
         .method_name = "__construct()",
         .parameter_number = 1,
         .name = "aliasGenerator"
     };
-    return attributes_validation_validate_method_parameter(pretty_alias_generator, all_pretty_alias, 4, &invalid_parameter_error);
+    return av_validate_method_parameter(pretty_alias_generator, all_pretty_alias, 4, &invalid_parameter_error);
 }
 
 static bool validate_extra(char *pretty_extra)
 {
     char *all_pretty_extra[] = {"ignore", "forbid", "allow"};
-    attributes_validation_invalid_method_parameter invalid_parameter_error = {
+    av_invalid_method_parameter invalid_parameter_error = {
         .class_name = "Attributes\\Validation\\ModelConfigs",
         .method_name = "__construct()",
         .parameter_number = 5,
         .name = "extra"
     };
-    return attributes_validation_validate_method_parameter(pretty_extra, all_pretty_extra, 3, &invalid_parameter_error);
+    return av_validate_method_parameter(pretty_extra, all_pretty_extra, 3, &invalid_parameter_error);
 }
 
 static zend_always_inline void declare_typed_property_bool(const char *name, bool default_value)
@@ -226,7 +226,7 @@ static zend_always_inline void declare_typed_property(const char *name, zval *de
 {
     zend_type property_type = (zend_type) ZEND_TYPE_INIT_MASK(type);
     zend_string *property_name = zend_string_init(name, strlen(name), 1);
-    zend_declare_typed_property(Attributes_Validation_ModelConfigs_ce, property_name, default_value, ZEND_ACC_PRIVATE, NULL, property_type);
+    zend_declare_typed_property(AV_ModelConfigs_ce, property_name, default_value, ZEND_ACC_PRIVATE, NULL, property_type);
     zend_string_release(property_name);
 }
 
@@ -291,4 +291,4 @@ static int get_argument_index_by_name(zend_string *name)
     return -1;
 }
 
-#undef ATTRIBUTES_VALIDATION_GET_PROPERTY_AND_RETURN
+#undef AV_GET_PROPERTY_AND_RETURN

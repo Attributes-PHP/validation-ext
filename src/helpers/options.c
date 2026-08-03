@@ -3,10 +3,10 @@
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
 #include "ext/spl/spl_exceptions.h"
-#include "zend_wrappers.h"
+#include "av_wrappers.h"
 
 
-bool attributes_validation_validate_method_parameter(char *option, char **all_valid_options, size_t length, attributes_validation_invalid_method_parameter *invalid_parameter_error)
+bool av_validate_method_parameter(char *option, char **all_valid_options, size_t length, av_invalid_method_parameter *invalid_parameter_error)
 {
     for (size_t i = 0; i < length; i++) {
         if (strcasecmp(option, all_valid_options[i]) == 0) {
@@ -18,7 +18,7 @@ bool attributes_validation_validate_method_parameter(char *option, char **all_va
     return false;
 }
 
-STATIC_INLINE void throw_invalid_parameter_exception(char *option, char **all_options, size_t length, attributes_validation_invalid_method_parameter *invalid_option_error)
+STATIC_INLINE void throw_invalid_parameter_exception(char *option, char **all_options, size_t length, av_invalid_method_parameter *invalid_option_error)
 {
     // Create list of valid options
     char options_list[256] = "";

@@ -1,9 +1,9 @@
-#ifndef ATTRIBUTES_VALIDATION_VALIDATE_FUNCTION_H
-#define ATTRIBUTES_VALIDATION_VALIDATE_FUNCTION_H
+#ifndef AV_VALIDATE_FUNCTION_H
+#define AV_VALIDATE_FUNCTION_H
 
 #include "php.h"
 
-ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_Attributes_Validation_validate, 0, 2, Attributes\\Validation\\BaseModel, 0)
+ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_AV_validate, 0, 2, Attributes\\Validation\\BaseModel, 0)
     ZEND_ARG_TYPE_INFO(0, rawData, IS_ARRAY, 0)
     ZEND_ARG_OBJ_INFO(0, model, Attributes\\Validation\\BaseModel, 0)
 ZEND_END_ARG_INFO()
@@ -16,4 +16,4 @@ static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, z
 static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length);
 static inline zval *validate_field_value(zval *value, zend_property_info *prop_info, zval *errors);
 
-#endif /* ATTRIBUTES_VALIDATION_VALIDATE_FUNCTION_H */
+#endif /* AV_VALIDATE_FUNCTION_H */
