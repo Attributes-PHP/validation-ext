@@ -3,7 +3,7 @@
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
 #include "ext/spl/spl_exceptions.h"
-#include "testing.h"
+#include "zend_wrappers.h"
 
 
 bool attributes_validation_validate_method_parameter(char *option, char **all_valid_options, size_t length, attributes_validation_invalid_method_parameter *invalid_parameter_error)

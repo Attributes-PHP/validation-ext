@@ -3,8 +3,8 @@
 #include "Zend/zend_attributes.h"
 #include "Zend/zend_exceptions.h"
 #include "helpers/options.h"
-#include "zend_type_info.h"
-#include "zend_types.h"
+#include "Zend/zend_type_info.h"
+#include "Zend/zend_types.h"
 
 zend_class_entry *Attributes_Validation_ModelConfigs_ce;
 

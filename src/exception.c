@@ -2,7 +2,7 @@
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_interfaces.h"
-#include "zend_types.h"
+#include "Zend/zend_types.h"
 
 zend_class_entry *class_Attributes_Validation_Exceptions_BaseException;
 zend_class_entry *class_Attributes_Validation_Exceptions_ValidationException;

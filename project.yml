@@ -15,7 +15,7 @@
 
   # optional features. If you don't need them, keep them turned off for performance
   :use_mocks: TRUE
-  :use_test_preprocessor: :none  # options are :none, :mocks, :tests, or :all
+  :use_test_preprocessor: :all   # options are :none, :mocks, :tests, or :all
   :use_backtrace: :simple        # options are :none, :simple, or :gdb
 
   # tweak the way ceedling handles automatic tasks
@@ -43,7 +43,7 @@
 
 # further details to configure the way Ceedling handles release code
 :release_build:
-  :output: MyApp.out
+  :output: attributes_validation.out
   :use_assembly: FALSE
   :artifacts: []
 

@@ -5,9 +5,9 @@
 #include "Zend/zend_attributes.h"
 #include "base_model.h"
 #include "model_configs.h"
-#include "zend_portability.h"
-#include "zend_types.h"
-#include "helpers/string.h"
+#include "Zend/zend_portability.h"
+#include "Zend/zend_types.h"
+#include "helpers/av_string.h"
 #include <stddef.h>
 
 
