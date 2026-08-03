@@ -51,4 +51,9 @@ void av_call_before_validation_hook(zval *model, zval *raw_data, zval *configs)
 void av_call_after_validation_hook(zval *model, zval *raw_data, zval *configs)
 {
     zend_call_method_with_2_params(Z_OBJ_P(model), Z_OBJCE_P(model), NULL, "afterValidation", NULL, raw_data, configs);
+    // Clear any exception that was thrown by afterValidation
+    // This ensures exceptions from hooks don't interfere with the validation flow
+    if (EG(exception)) {
+        zend_clear_exception();
+    }
 }
