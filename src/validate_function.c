@@ -176,25 +176,27 @@ ZEND_FUNCTION(validate)
             if (field_value == NULL) {
                 add_field_error(&errors, field_name, "required field", sizeof("required field") - 1);
                 if (properties.stop_first_error) {
-                    av_throw_validation_exception(&errors);
-
                     if (is_to_release_field_name) zend_string_release(field_name);
+                    av_throw_validation_exception(&errors);
                     zval_ptr_dtor(&configs_obj);
                     zval_ptr_dtor(&errors);
                     RETURN_THROWS();
                 }
+                // Release field_name when field_value is NULL and we're continuing
+                if (is_to_release_field_name) zend_string_release(field_name);
+                continue;
             }
-
-            if (is_to_release_field_name) zend_string_release(field_name);
 
             zval *valid_value = validate_field_value(field_value, prop_info, &errors);
             if (UNEXPECTED(EG(exception))) {
+                if (is_to_release_field_name) zend_string_release(field_name);
                 zval_ptr_dtor(&configs_obj);
                 zval_ptr_dtor(&errors);
                 RETURN_THROWS();
             }
 
             if (valid_value == NULL) {
+                if (is_to_release_field_name) zend_string_release(field_name);
                 if (!properties.stop_first_error) continue;
 
                 av_throw_validation_exception(&errors);
