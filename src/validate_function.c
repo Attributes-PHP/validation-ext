@@ -7,8 +7,11 @@
 #include "model_configs.h"
 #include "Zend/zend_portability.h"
 #include "Zend/zend_types.h"
+#include "Zend/zend_type_info.h"
 #include "helpers/av_string.h"
 #include <stddef.h>
+#include <stdarg.h>
+#include <stdbool.h>
 
 
 /**
@@ -86,43 +89,145 @@ static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, z
     return NULL;
 }
 
-static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length)
+static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, const char *error_message, size_t length)
 {
     zval error_msg;
-    ZVAL_STRING(&error_msg, error_message);
+    ZVAL_STRINGL(&error_msg, error_message, length);
     zend_hash_str_add(Z_ARRVAL_P(errors), ZSTR_VAL(field_name), ZSTR_LEN(field_name), &error_msg);
-    zval_ptr_dtor(&error_msg);
 }
 
-static inline zval *validate_field_value(zval *value, zend_property_info *prop_info, zval *errors)
+static zend_always_inline void add_field_errorf(zval *errors, zend_string *field_name, const char *format, ...)
 {
-    // TODO: 7. For each property, collect and sort validation rules
-    // - Collect all attributes that are validation rules
-    // - Type hint has highest priority (applied first)
-    // - Other rules applied from bottom to top (reverse order of declaration)
-    // - Supported rule types:
-    //   * Type hints (int, string, DateTime, etc.)
-    //   * #[ArrayOf(type1, type2, ...)] for array validation
-    //   * #[Length(min, max)] for string length
-    //   * Custom rules implementing Rules\Custom interface
+    va_list args;
+    va_start(args, format);
+    
+    char *buffer;
+    int len = vspprintf(&buffer, 0, format, args);
+    va_end(args);
+    
+    if (len > 0) {
+        zval error_msg;
+        ZVAL_STRINGL(&error_msg, buffer, len);
+        zend_hash_str_add(Z_ARRVAL_P(errors), ZSTR_VAL(field_name), ZSTR_LEN(field_name), &error_msg);
+    }
+    
+    efree(buffer);
+}
 
-    // TODO: 8. For each property value, perform validation:
-    // - Get raw value from rawData using resolved field name
-    // - Apply SensitiveParameter: mask value in errors if attribute is present
-    // - Apply type hint validation first:
-    //   * If strict mode, value must already be of the correct type
-    //   * Otherwise, attempt to cast/coerce the value
-    //   * Handle union types (e.g., float|int)
-    //   * Handle nullable types (e.g., ?string)
-    // - For ArrayOf:
-    //   * Validate each element of the array against the specified types
-    //   * Nested arrays create dot-notation paths (e.g., "users.0.email")
-    // - Apply other rules in order
-    // - For nested objects:
-    //   * Recursively validate nested Base model instances
-    //   * Build nested error paths
-    // - If stopAtFirstError is true, throw ValidationException immediately on first error
-    // - Otherwise, add error to errors collection and continue
+static zend_always_inline zval* validate_field_value(zval *value, zend_property_info *prop_info, zval *errors, av_model_configs_properties *properties);
+
+static zend_always_inline bool validate_type(zval *value, zend_type type, zval *errors, zend_string *field_name, bool strict)
+{
+    zend_uchar expected_type = type & ZEND_TYPE_MASK;
+    zend_uchar actual_type = Z_TYPE_P(value);
+    
+    // If strict mode, types must match exactly
+    if (strict) {
+        if (actual_type != expected_type) {
+            add_field_errorf(errors, field_name, "Expected %s, got %s", 
+                            zend_type_name(type), zend_zval_type_name(value));
+            return false;
+        }
+        return true;
+    }
+    
+    // Non-strict mode: attempt coercion
+    switch (expected_type) {
+        case IS_LONG:
+            if (actual_type == IS_STRING) {
+                zval coerced;
+                ZVAL_LONG(&coerced, zval_get_long(value));
+                ZVAL_COPY(value, &coerced);
+                return true;
+            }
+            break;
+            
+        case IS_DOUBLE:
+            if (actual_type == IS_STRING || actual_type == IS_LONG) {
+                zval coerced;
+                ZVAL_DOUBLE(&coerced, zval_get_double(value));
+                ZVAL_COPY(value, &coerced);
+                return true;
+            }
+            break;
+            
+        case IS_STRING:
+            if (actual_type == IS_LONG || actual_type == IS_DOUBLE) {
+                zval coerced;
+                if (actual_type == IS_LONG) {
+                    ZVAL_STRING(&coerced, zend_long_to_str(Z_LVAL_P(value)));
+                } else {
+                    ZVAL_STRING(&coerced, zend_double_to_str(Z_DVAL_P(value)));
+                }
+                ZVAL_COPY(value, &coerced);
+                return true;
+            }
+            break;
+            
+        case IS_BOOL:
+            if (actual_type == IS_STRING || actual_type == IS_LONG || actual_type == IS_DOUBLE) {
+                zval coerced;
+                ZVAL_BOOL(&coerced, zval_is_true(value));
+                ZVAL_COPY(value, &coerced);
+                return true;
+            }
+            break;
+            
+        case IS_ARRAY:
+            if (actual_type == IS_OBJECT) {
+                // Try to convert object to array
+                zval coerced;
+                array_init(&coerced);
+                zend_object_to_array(value, &coerced, 0);
+                ZVAL_COPY(value, &coerced);
+                return true;
+            }
+            break;
+    }
+    
+    // If no coercion was possible, check if types match
+    if (actual_type != expected_type) {
+        add_field_errorf(errors, field_name, "Expected %s, got %s",
+                        zend_type_name(type), zend_zval_type_name(value));
+        return false;
+    }
+    
+    return true;
+}
+
+static zend_always_inline zval* validate_field_value(zval *value, zend_property_info *prop_info, zval *errors, av_model_configs_properties *properties)
+{
+    if (value == NULL) {
+        return NULL;
+    }
+
+    zend_type property_type = prop_info->type;
+    zend_string *field_name = zend_string_init(ZSTR_VAL(prop_info->name), ZSTR_LEN(prop_info->name), 0);
+    
+    // Handle nullable types
+    bool is_nullable = (property_type & ZEND_TYPE_NULLABLE) != 0;
+    property_type &= ~ZEND_TYPE_NULLABLE;
+    
+    // If value is NULL and type is nullable, return NULL (valid)
+    if (Z_TYPE_P(value) == IS_NULL && is_nullable) {
+        zend_string_release(field_name);
+        return value;
+    }
+    
+    // If value is NULL but type is not nullable, add error
+    if (Z_TYPE_P(value) == IS_NULL) {
+        add_field_errorf(errors, field_name, "Expected %s, got null", zend_type_name(property_type));
+        zend_string_release(field_name);
+        return NULL;
+    }
+    
+    // Validate and coerce the value based on property type
+    if (!validate_type(value, property_type, errors, field_name, properties->strict)) {
+        zend_string_release(field_name);
+        return NULL;
+    }
+    
+    zend_string_release(field_name);
     return value;
 }
 
@@ -163,8 +268,12 @@ ZEND_FUNCTION(validate)
         ZEND_HASH_FOREACH_STR_KEY_PTR(&model_ce->properties_info, property_name, prop_info) {
             // Fetches name of the field name for the $rawData
             zend_string *field_name = get_property_name(model_ce, property_name, prop_info, properties.alias_generator);
+            bool field_name_owned = (field_name != property_name);
 
             if (UNEXPECTED(EG(exception))) {
+                if (field_name_owned) {
+                    zend_string_release(field_name);
+                }
                 zval_ptr_dtor(&configs_obj);
                 zval_ptr_dtor(&errors);
                 RETURN_THROWS();
@@ -172,22 +281,31 @@ ZEND_FUNCTION(validate)
 
             zval *field_value = get_property_value(model_ce, raw_data, field_name, prop_info);
 
-            bool is_to_release_field_name = (field_name != property_name);
             if (field_value == NULL) {
                 add_field_error(&errors, field_name, "required field", sizeof("required field") - 1);
                 if (properties.stop_first_error) {
                     av_throw_validation_exception(&errors);
-
-                    if (is_to_release_field_name) zend_string_release(field_name);
+                    if (field_name_owned) {
+                        zend_string_release(field_name);
+                    }
                     zval_ptr_dtor(&configs_obj);
                     zval_ptr_dtor(&errors);
                     RETURN_THROWS();
                 }
+                // Release field_name after adding error if not stopping at first error
+                if (field_name_owned) {
+                    zend_string_release(field_name);
+                    field_name_owned = false;
+                }
+                continue;
             }
 
-            if (is_to_release_field_name) zend_string_release(field_name);
+            if (field_name_owned) {
+                zend_string_release(field_name);
+                field_name_owned = false;
+            }
 
-            zval *valid_value = validate_field_value(field_value, prop_info, &errors);
+            zval *valid_value = validate_field_value(field_value, prop_info, &errors, &properties);
             if (UNEXPECTED(EG(exception))) {
                 zval_ptr_dtor(&configs_obj);
                 zval_ptr_dtor(&errors);
@@ -195,17 +313,17 @@ ZEND_FUNCTION(validate)
             }
 
             if (valid_value == NULL) {
-                if (!properties.stop_first_error) continue;
+                if (!properties.stop_first_error) {
+                    continue;
+                }
 
                 av_throw_validation_exception(&errors);
-
                 zval_ptr_dtor(&configs_obj);
+                zval_ptr_dtor(&errors);
                 RETURN_THROWS();
             }
 
             zend_update_property(model_ce, Z_OBJ_P(model), ZSTR_VAL(property_name), ZSTR_LEN(property_name), valid_value);
-
-            if (is_to_release_field_name) zend_string_release(field_name);
         } ZEND_HASH_FOREACH_END();
 
         model_ce = model_ce->parent;
@@ -213,8 +331,8 @@ ZEND_FUNCTION(validate)
 
     if (!properties.stop_first_error && zend_hash_num_elements(Z_ARRVAL_P(&errors))) {
         av_throw_validation_exception(&errors);
-
         zval_ptr_dtor(&configs_obj);
+        zval_ptr_dtor(&errors);
         RETURN_THROWS();
     }
 
@@ -225,10 +343,6 @@ ZEND_FUNCTION(validate)
         RETURN_THROWS();
     }
 
-    // TODO: 11. Populate the model instance with validated data
-    // - For each validated property, set the value on the model object
-    // - Handle public properties directly
-    // - Handle private/protected properties via reflection or property setting methods
     zval_ptr_dtor(&configs_obj);
     zval_ptr_dtor(&errors);
     RETURN_COPY(model);

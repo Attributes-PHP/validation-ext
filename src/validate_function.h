@@ -2,6 +2,7 @@
 #define AV_VALIDATE_FUNCTION_H
 
 #include "php.h"
+#include "model_configs.h"
 
 ZEND_BEGIN_ARG_WITH_RETURN_OBJ_INFO_EX(arginfo_AV_validate, 0, 2, Attributes\\Validation\\BaseModel, 0)
     ZEND_ARG_TYPE_INFO(0, rawData, IS_ARRAY, 0)
@@ -13,7 +14,10 @@ ZEND_FUNCTION(validate);
 static zend_always_inline zend_string* transform_property_name(zend_string *property_name, char alias_generator);
 static zend_always_inline zend_string* get_property_name(zend_class_entry *model_ce, zend_string *property_name, zend_property_info *prop_info, char alias_generator);
 static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, zval *raw_data, zend_string *field_name, zend_property_info *prop_info);
-static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length);
-static inline zval *validate_field_value(zval *value, zend_property_info *prop_info, zval *errors);
+static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, const char *error_message, size_t length);
+static zend_always_inline void add_field_errorf(zval *errors, zend_string *field_name, const char *format, ...);
+static zend_always_inline zval* validate_field_value(zval *value, zend_property_info *prop_info, zval *errors, av_model_configs_properties *properties);
+static zend_always_inline bool validate_type(zval *value, zend_type type, zval *errors, zend_string *field_name, bool strict);
+static zend_always_inline zval* coerce_to_type(zval *value, zend_type type);
 
 #endif /* AV_VALIDATE_FUNCTION_H */
