@@ -26,10 +26,10 @@ $rawData = [
     'age' => '30',
     'birthday' => '1994-01-01T09:00:00+00:00',
 ];
-$person = validate($rawData, new Person);
+$user = validate($rawData, new User());
 
-var_dump($person->age);      // int(30)
-var_dump($person->birthday); // object(DateTime) { ["date"] => string(26) "1994-01-01 09:00:00.000000", (...) }
+var_dump($user->age);      // int(30)
+var_dump($user->birthday); // object(DateTime) { ["date"] => string(26) "1994-01-01 09:00:00.000000", (...) }
 ```
 
 ### Need to call a function?
@@ -40,8 +40,8 @@ var_dump($person->birthday); // object(DateTime) { ["date"] => string(26) "1994-
 use Attributes\Validation\call;
 
 function myFunction(User $user) {
-    var_dump($person->age);      // int(30)
-    var_dump($person->birthday); // object(DateTime) { ["date"] => string(26) "1994-01-01 09:00:00.000000", (...) }
+    var_dump($user->age);      // int(30)
+    var_dump($user->birthday); // object(DateTime) { ["date"] => string(26) "1994-01-01 09:00:00.000000", (...) }
 }
 
 call("myFunction", $rawData);
