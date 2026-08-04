@@ -38,7 +38,7 @@ static zend_always_inline zend_string* transform_property_name(zend_string *prop
  */
 static zend_always_inline zend_string* get_property_name(zend_class_entry *model_ce, zend_string *property_name, zend_property_info *prop_info, char alias_generator)
 {
-    zend_string *field_name;
+    zend_string *field_name = NULL;
 
     // Check for #[Alias] attribute on the property
     if (prop_info->attributes != NULL) {
@@ -164,15 +164,16 @@ ZEND_FUNCTION(validate)
             // Fetches name of the field name for the $rawData
             zend_string *field_name = get_property_name(model_ce, property_name, prop_info, properties.alias_generator);
 
+            bool is_to_release_field_name = (field_name != property_name);
+
             if (UNEXPECTED(EG(exception))) {
+                if (is_to_release_field_name) zend_string_release(field_name);
                 zval_ptr_dtor(&configs_obj);
                 zval_ptr_dtor(&errors);
                 RETURN_THROWS();
             }
 
             zval *field_value = get_property_value(model_ce, raw_data, field_name, prop_info);
-
-            bool is_to_release_field_name = (field_name != property_name);
             if (field_value == NULL) {
                 add_field_error(&errors, field_name, "required field", sizeof("required field") - 1);
                 if (properties.stop_first_error) {
@@ -183,22 +184,26 @@ ZEND_FUNCTION(validate)
                     zval_ptr_dtor(&errors);
                     RETURN_THROWS();
                 }
+                // field_name will be released at the end of the loop iteration
             }
-
-            if (is_to_release_field_name) zend_string_release(field_name);
 
             zval *valid_value = validate_field_value(field_value, prop_info, &errors);
             if (UNEXPECTED(EG(exception))) {
+                if (is_to_release_field_name) zend_string_release(field_name);
                 zval_ptr_dtor(&configs_obj);
                 zval_ptr_dtor(&errors);
                 RETURN_THROWS();
             }
 
             if (valid_value == NULL) {
-                if (!properties.stop_first_error) continue;
+                if (!properties.stop_first_error) {
+                    if (is_to_release_field_name) zend_string_release(field_name);
+                    continue;
+                }
 
                 av_throw_validation_exception(&errors);
 
+                if (is_to_release_field_name) zend_string_release(field_name);
                 zval_ptr_dtor(&configs_obj);
                 RETURN_THROWS();
             }
