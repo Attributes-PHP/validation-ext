@@ -86,12 +86,11 @@ static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, z
     return NULL;
 }
 
-static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length)
+static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, const char *error_message, size_t length)
 {
     zval error_msg;
-    ZVAL_STRING(&error_msg, error_message);
+    ZVAL_STRINGL(&error_msg, error_message, length);
     zend_hash_str_add(Z_ARRVAL_P(errors), ZSTR_VAL(field_name), ZSTR_LEN(field_name), &error_msg);
-    zval_ptr_dtor(&error_msg);
 }
 
 static inline zval *validate_field_value(zval *value, zend_property_info *prop_info, zval *errors)
@@ -163,8 +162,12 @@ ZEND_FUNCTION(validate)
         ZEND_HASH_FOREACH_STR_KEY_PTR(&model_ce->properties_info, property_name, prop_info) {
             // Fetches name of the field name for the $rawData
             zend_string *field_name = get_property_name(model_ce, property_name, prop_info, properties.alias_generator);
+            bool field_name_owned = (field_name != property_name);
 
             if (UNEXPECTED(EG(exception))) {
+                if (field_name_owned) {
+                    zend_string_release(field_name);
+                }
                 zval_ptr_dtor(&configs_obj);
                 zval_ptr_dtor(&errors);
                 RETURN_THROWS();
@@ -172,20 +175,29 @@ ZEND_FUNCTION(validate)
 
             zval *field_value = get_property_value(model_ce, raw_data, field_name, prop_info);
 
-            bool is_to_release_field_name = (field_name != property_name);
             if (field_value == NULL) {
                 add_field_error(&errors, field_name, "required field", sizeof("required field") - 1);
                 if (properties.stop_first_error) {
                     av_throw_validation_exception(&errors);
-
-                    if (is_to_release_field_name) zend_string_release(field_name);
+                    if (field_name_owned) {
+                        zend_string_release(field_name);
+                    }
                     zval_ptr_dtor(&configs_obj);
                     zval_ptr_dtor(&errors);
                     RETURN_THROWS();
                 }
+                // Release field_name after adding error if not stopping at first error
+                if (field_name_owned) {
+                    zend_string_release(field_name);
+                    field_name_owned = false;
+                }
+                continue;
             }
 
-            if (is_to_release_field_name) zend_string_release(field_name);
+            if (field_name_owned) {
+                zend_string_release(field_name);
+                field_name_owned = false;
+            }
 
             zval *valid_value = validate_field_value(field_value, prop_info, &errors);
             if (UNEXPECTED(EG(exception))) {
@@ -195,17 +207,17 @@ ZEND_FUNCTION(validate)
             }
 
             if (valid_value == NULL) {
-                if (!properties.stop_first_error) continue;
+                if (!properties.stop_first_error) {
+                    continue;
+                }
 
                 av_throw_validation_exception(&errors);
-
                 zval_ptr_dtor(&configs_obj);
+                zval_ptr_dtor(&errors);
                 RETURN_THROWS();
             }
 
             zend_update_property(model_ce, Z_OBJ_P(model), ZSTR_VAL(property_name), ZSTR_LEN(property_name), valid_value);
-
-            if (is_to_release_field_name) zend_string_release(field_name);
         } ZEND_HASH_FOREACH_END();
 
         model_ce = model_ce->parent;
@@ -213,8 +225,8 @@ ZEND_FUNCTION(validate)
 
     if (!properties.stop_first_error && zend_hash_num_elements(Z_ARRVAL_P(&errors))) {
         av_throw_validation_exception(&errors);
-
         zval_ptr_dtor(&configs_obj);
+        zval_ptr_dtor(&errors);
         RETURN_THROWS();
     }
 
