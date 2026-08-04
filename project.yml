@@ -137,12 +137,12 @@
   :test:
     :compile:
       '*':            # Add PHP include paths for all test executables
-        - -I/opt/homebrew/Cellar/php@8.2/8.2.32/include/php
-        - -I/opt/homebrew/Cellar/php@8.2/8.2.32/include/php/main
-        - -I/opt/homebrew/Cellar/php@8.2/8.2.32/include/php/TSRM
-        - -I/opt/homebrew/Cellar/php@8.2/8.2.32/include/php/Zend
-        - -I/opt/homebrew/Cellar/php@8.2/8.2.32/include/php/ext
-        - -I/opt/homebrew/Cellar/php@8.2/8.2.32/include/php/ext/date/lib
+        - -I$(php-config --include-dir)
+        - -I$(php-config --include-dir)/main
+        - -I$(php-config --include-dir)/TSRM
+        - -I$(php-config --include-dir)/Zend
+        - -I$(php-config --include-dir)/ext
+        - -I$(php-config --include-dir)/ext/date/lib
         - -D_GNU_SOURCE
         - -Wno-implicit-function-declaration
 
