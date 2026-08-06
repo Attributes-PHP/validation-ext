@@ -157,14 +157,17 @@ ZEND_FUNCTION(validate)
     zend_class_entry *model_ce = Z_OBJCE_P(model);
 
     while (model_ce != NULL && model_ce != AV_BaseModel_ce) {
-        zend_string *property_name;
+        zend_string *property_name = NULL;
         zend_property_info *prop_info;
 
         ZEND_HASH_FOREACH_STR_KEY_PTR(&model_ce->properties_info, property_name, prop_info) {
             // Fetches name of the field name for the $rawData
             zend_string *field_name = get_property_name(model_ce, property_name, prop_info, properties.alias_generator);
+            bool is_to_release_field_name = (field_name != property_name && field_name != NULL);
 
             if (UNEXPECTED(EG(exception))) {
+                if (is_to_release_field_name) zend_string_release(field_name);
+
                 zval_ptr_dtor(&configs_obj);
                 zval_ptr_dtor(&errors);
                 RETURN_THROWS();
@@ -172,7 +175,6 @@ ZEND_FUNCTION(validate)
 
             zval *field_value = get_property_value(model_ce, raw_data, field_name, prop_info);
 
-            bool is_to_release_field_name = (field_name != property_name);
             if (field_value == NULL) {
                 add_field_error(&errors, field_name, "required field", sizeof("required field") - 1);
                 if (properties.stop_first_error) {
