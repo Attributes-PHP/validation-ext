@@ -1,5 +1,4 @@
 #include "unity.h"
-#include "test_structs.h"
 #include "test_helpers.h"
 #include "helpers/mock_av_wrappers.h"
 #include "helpers/av_string.h"
@@ -18,257 +17,72 @@ void tearDown(void) {
 
 // ============= PascalCase Tests =============
 
-void test_to_pascal_case_snake_case(void) {
-    zend_string* input = av_string_init("first_name", sizeof("first_name") - 1, 0);
-    zend_string* result = av_to_pascal_case(input);
-    TEST_ASSERT_EQUAL_STRING("FirstName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_pascal_case_kebab_case(void) {
-    zend_string* input = av_string_init("first-name", sizeof("first-name") - 1, 0);
-    zend_string* result = av_to_pascal_case(input);
-    TEST_ASSERT_EQUAL_STRING("FirstName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_pascal_case_space(void) {
-    zend_string* input = av_string_init("first name", sizeof("first name") - 1, 0);
-    zend_string* result = av_to_pascal_case(input);
-    TEST_ASSERT_EQUAL_STRING("FirstName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_pascal_case_camel_case(void) {
-    zend_string* input = av_string_init("firstName", sizeof("firstName") - 1, 0);
-    zend_string* result = av_to_pascal_case(input);
-    TEST_ASSERT_EQUAL_STRING("FirstName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_pascal_case_already_pascal(void) {
-    zend_string* input = av_string_init("FirstName", sizeof("FirstName") - 1, 0);
-    zend_string* result = av_to_pascal_case(input);
-    TEST_ASSERT_EQUAL_STRING("FirstName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_pascal_case_multiple_separators(void) {
-    zend_string* input = av_string_init("first_name_last-name", sizeof("first_name_last-name") - 1, 0);
-    zend_string* result = av_to_pascal_case(input);
-    TEST_ASSERT_EQUAL_STRING("FirstNameLastName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_pascal_case_single_word(void) {
-    zend_string* input = av_string_init("name", sizeof("name") - 1, 0);
-    zend_string* result = av_to_pascal_case(input);
-    TEST_ASSERT_EQUAL_STRING("Name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_pascal_case_empty(void) {
-    zend_string* input = av_string_init("", sizeof("") - 1, 0);
-    zend_string* result = av_to_pascal_case(input);
-    TEST_ASSERT_EQUAL_STRING("", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_pascal_case_numbers(void) {
-    zend_string* input = av_string_init("user2_name", sizeof("user2_name") - 1, 0);
-    zend_string* result = av_to_pascal_case(input);
-    TEST_ASSERT_EQUAL_STRING("User2Name", result->val);
-    av_string_release(input);
+TEST_CASE("first_name", "FirstName")
+TEST_CASE("first-name", "FirstName")
+TEST_CASE("first name", "FirstName")
+TEST_CASE("firstName", "FirstName")
+TEST_CASE("FirstName", "FirstName")
+TEST_CASE("first_name_last-name", "FirstNameLastName")
+TEST_CASE("name", "Name")
+TEST_CASE("", "")
+TEST_CASE("user2_name", "User2Name")
+void test_to_pascal_case(const char* input, const char* expected) {
+    zend_string* input_str = av_string_init(input, strlen(input), 0);
+    zend_string* result = av_to_pascal_case(input_str);
+    TEST_ASSERT_EQUAL_STRING(expected, result->val);
+    av_string_release(input_str);
     av_string_release(result);
 }
 
 // ============= camelCase Tests =============
 
-void test_to_camel_case_snake_case(void) {
-    zend_string* input = av_string_init("first_name", sizeof("first_name") - 1, 0);
-    zend_string* result = av_to_camel_case(input);
-    TEST_ASSERT_EQUAL_STRING("firstName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_camel_case_kebab_case(void) {
-    zend_string* input = av_string_init("first-name", sizeof("first-name") - 1, 0);
-    zend_string* result = av_to_camel_case(input);
-    TEST_ASSERT_EQUAL_STRING("firstName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_camel_case_pascal_case(void) {
-    zend_string* input = av_string_init("FirstName", sizeof("FirstName") - 1, 0);
-    zend_string* result = av_to_camel_case(input);
-    TEST_ASSERT_EQUAL_STRING("firstName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_camel_case_already_camel(void) {
-    zend_string* input = av_string_init("firstName", sizeof("firstName") - 1, 0);
-    zend_string* result = av_to_camel_case(input);
-    TEST_ASSERT_EQUAL_STRING("firstName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_camel_case_single_word(void) {
-    zend_string* input = av_string_init("Name", sizeof("Name") - 1, 0);
-    zend_string* result = av_to_camel_case(input);
-    TEST_ASSERT_EQUAL_STRING("name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_camel_case_multiple_separators(void) {
-    zend_string* input = av_string_init("first_name_last-name", sizeof("first_name_last-name") - 1, 0);
-    zend_string* result = av_to_camel_case(input);
-    TEST_ASSERT_EQUAL_STRING("firstNameLastName", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_camel_case_numbers(void) {
-    zend_string* input = av_string_init("user2_name", sizeof("user2_name") - 1, 0);
-    zend_string* result = av_to_camel_case(input);
-    TEST_ASSERT_EQUAL_STRING("user2Name", result->val);
-    av_string_release(input);
+TEST_CASE("first_name", "firstName")
+TEST_CASE("first-name", "firstName")
+TEST_CASE("FirstName", "firstName")
+TEST_CASE("firstName", "firstName")
+TEST_CASE("Name", "name")
+TEST_CASE("first_name_last-name", "firstNameLastName")
+TEST_CASE("user2_name", "user2Name")
+void test_to_camel_case(const char* input, const char* expected) {
+    zend_string* input_str = av_string_init(input, strlen(input), 0);
+    zend_string* result = av_to_camel_case(input_str);
+    TEST_ASSERT_EQUAL_STRING(expected, result->val);
+    av_string_release(input_str);
     av_string_release(result);
 }
 
 // ============= snake_case Tests =============
 
-void test_to_snake_case_pascal_case(void) {
-    zend_string* input = av_string_init("FirstName", sizeof("FirstName") - 1, 0);
-    zend_string* result = av_to_snake_case(input);
-    TEST_ASSERT_EQUAL_STRING("first_name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_snake_case_camel_case(void) {
-    zend_string* input = av_string_init("firstName", sizeof("firstName") - 1, 0);
-    zend_string* result = av_to_snake_case(input);
-    TEST_ASSERT_EQUAL_STRING("first_name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_snake_case_kebab_case(void) {
-    zend_string* input = av_string_init("first-name", sizeof("first-name") - 1, 0);
-    zend_string* result = av_to_snake_case(input);
-    TEST_ASSERT_EQUAL_STRING("first_name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_snake_case_space(void) {
-    zend_string* input = av_string_init("first name", sizeof("first name") - 1, 0);
-    zend_string* result = av_to_snake_case(input);
-    TEST_ASSERT_EQUAL_STRING("first_name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_snake_case_already_snake(void) {
-    zend_string* input = av_string_init("first_name", sizeof("first_name") - 1, 0);
-    zend_string* result = av_to_snake_case(input);
-    TEST_ASSERT_EQUAL_STRING("first_name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_snake_case_single_word(void) {
-    zend_string* input = av_string_init("Name", sizeof("Name") - 1, 0);
-    zend_string* result = av_to_snake_case(input);
-    TEST_ASSERT_EQUAL_STRING("name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_snake_case_consecutive_uppercase(void) {
-    zend_string* input = av_string_init("HTTPResponse", sizeof("HTTPResponse") - 1, 0);
-    zend_string* result = av_to_snake_case(input);
-    TEST_ASSERT_EQUAL_STRING("h_t_t_p_response", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_snake_case_numbers(void) {
-    zend_string* input = av_string_init("user2Name", sizeof("user2Name") - 1, 0);
-    zend_string* result = av_to_snake_case(input);
-    TEST_ASSERT_EQUAL_STRING("user2_name", result->val);
-    av_string_release(input);
+TEST_CASE("FirstName", "first_name")
+TEST_CASE("firstName", "first_name")
+TEST_CASE("first-name", "first_name")
+TEST_CASE("first name", "first_name")
+TEST_CASE("first_name", "first_name")
+TEST_CASE("Name", "name")
+TEST_CASE("HTTPResponse", "h_t_t_p_response")
+TEST_CASE("user2Name", "user2_name")
+void test_to_snake_case(const char* input, const char* expected) {
+    zend_string* input_str = av_string_init(input, strlen(input), 0);
+    zend_string* result = av_to_snake_case(input_str);
+    TEST_ASSERT_EQUAL_STRING(expected, result->val);
+    av_string_release(input_str);
     av_string_release(result);
 }
 
 // ============= kebab-case Tests =============
 
-void test_to_kebab_case_pascal_case(void) {
-    zend_string* input = av_string_init("FirstName", sizeof("FirstName") - 1, 0);
-    zend_string* result = av_to_kebab_case(input);
-    TEST_ASSERT_EQUAL_STRING("first-name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_kebab_case_camel_case(void) {
-    zend_string* input = av_string_init("firstName", sizeof("firstName") - 1, 0);
-    zend_string* result = av_to_kebab_case(input);
-    TEST_ASSERT_EQUAL_STRING("first-name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_kebab_case_snake_case(void) {
-    zend_string* input = av_string_init("first_name", sizeof("first_name") - 1, 0);
-    zend_string* result = av_to_kebab_case(input);
-    TEST_ASSERT_EQUAL_STRING("first-name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_kebab_case_space(void) {
-    zend_string* input = av_string_init("first name", sizeof("first name") - 1, 0);
-    zend_string* result = av_to_kebab_case(input);
-    TEST_ASSERT_EQUAL_STRING("first-name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_kebab_case_already_kebab(void) {
-    zend_string* input = av_string_init("first-name", sizeof("first-name") - 1, 0);
-    zend_string* result = av_to_kebab_case(input);
-    TEST_ASSERT_EQUAL_STRING("first-name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_kebab_case_single_word(void) {
-    zend_string* input = av_string_init("Name", sizeof("Name") - 1, 0);
-    zend_string* result = av_to_kebab_case(input);
-    TEST_ASSERT_EQUAL_STRING("name", result->val);
-    av_string_release(input);
-    av_string_release(result);
-}
-
-void test_to_kebab_case_numbers(void) {
-    zend_string* input = av_string_init("user2Name", sizeof("user2Name") - 1, 0);
-    zend_string* result = av_to_kebab_case(input);
-    TEST_ASSERT_EQUAL_STRING("user2-name", result->val);
-    av_string_release(input);
+TEST_CASE("FirstName", "first-name")
+TEST_CASE("firstName", "first-name")
+TEST_CASE("first_name", "first-name")
+TEST_CASE("first name", "first-name")
+TEST_CASE("first-name", "first-name")
+TEST_CASE("Name", "name")
+TEST_CASE("user2Name", "user2-name")
+void test_to_kebab_case(const char* input, const char* expected) {
+    zend_string* input_str = av_string_init(input, strlen(input), 0);
+    zend_string* result = av_to_kebab_case(input_str);
+    TEST_ASSERT_EQUAL_STRING(expected, result->val);
+    av_string_release(input_str);
     av_string_release(result);
 }
 
@@ -301,44 +115,42 @@ void test_no_input_modification(void) {
 
 // ============= Static Helper Function Tests =============
 
-void test_is_uppercase(void) {
-    TEST_ASSERT_TRUE(is_uppercase('A'));
-    TEST_ASSERT_TRUE(is_uppercase('Z'));
-    TEST_ASSERT_TRUE(is_uppercase('M'));
-    TEST_ASSERT_FALSE(is_uppercase('a'));
-    TEST_ASSERT_FALSE(is_uppercase('z'));
-    TEST_ASSERT_FALSE(is_uppercase('0'));
-    TEST_ASSERT_FALSE(is_uppercase(' '));
-    TEST_ASSERT_FALSE(is_uppercase('!'));
+TEST_MATRIX(['A', 'B', 'C', 'D', 'M', 'Z'])
+void test_is_uppercase(char letter) {
+    TEST_ASSERT_TRUE(is_uppercase(letter));
 }
 
-void test_is_lowercase(void) {
-    TEST_ASSERT_TRUE(is_lowercase('a'));
-    TEST_ASSERT_TRUE(is_lowercase('z'));
-    TEST_ASSERT_TRUE(is_lowercase('m'));
-    TEST_ASSERT_FALSE(is_lowercase('A'));
-    TEST_ASSERT_FALSE(is_lowercase('Z'));
-    TEST_ASSERT_FALSE(is_lowercase('0'));
-    TEST_ASSERT_FALSE(is_lowercase(' '));
-    TEST_ASSERT_FALSE(is_lowercase('!'));
+TEST_MATRIX(['a', 'b', 'c', 'd', '1', '2', '5', ' ', '!', '%'])
+void test_is_uppercase_not_valid(char letter) {
+    TEST_ASSERT_FALSE(is_uppercase(letter));
 }
 
-void test_is_alphanumeric(void) {
-    // Uppercase letters
-    TEST_ASSERT_TRUE(is_alphanumeric('A'));
-    TEST_ASSERT_TRUE(is_alphanumeric('Z'));
-    // Lowercase letters
-    TEST_ASSERT_TRUE(is_alphanumeric('a'));
-    TEST_ASSERT_TRUE(is_alphanumeric('z'));
-    // Numbers
-    TEST_ASSERT_TRUE(is_alphanumeric('0'));
-    TEST_ASSERT_TRUE(is_alphanumeric('9'));
-    // Non-alphanumeric
-    TEST_ASSERT_FALSE(is_alphanumeric(' '));
-    TEST_ASSERT_FALSE(is_alphanumeric('!'));
-    TEST_ASSERT_FALSE(is_alphanumeric('@'));
-    TEST_ASSERT_FALSE(is_alphanumeric('#'));
-    TEST_ASSERT_FALSE(is_alphanumeric('_'));
-    TEST_ASSERT_FALSE(is_alphanumeric('-'));
+TEST_MATRIX(['a', 'z', 'm', 'k', 'l', 't'])
+void test_is_lowercase(char letter) {
+    TEST_ASSERT_TRUE(is_lowercase(letter));
 }
 
+TEST_MATRIX(['A', 'B', 'C', 'Z', 'T', ' ', '!', '%'])
+void test_is_lowercase_not_valid(char letter) {
+    TEST_ASSERT_FALSE(is_lowercase(letter));
+}
+
+TEST_MATRIX(['A', 'B', 'C', 'D', 'M', 'Z'])
+void test_is_alphanumeric_uppercase(char letter) {
+    TEST_ASSERT_TRUE(is_alphanumeric(letter));
+}
+
+TEST_MATRIX(['a', 'z', 'm', 'k', 'l', 't'])
+void test_is_alphanumeric_lowercase(char letter) {
+    TEST_ASSERT_TRUE(is_alphanumeric(letter));
+}
+
+TEST_MATRIX(['1', '0', '2', '3', '4', '9', '8'])
+void test_is_alphanumeric_numbers(char letter) {
+    TEST_ASSERT_TRUE(is_alphanumeric(letter));
+}
+
+TEST_MATRIX([' ', '!', '+', '_', '-', '/', '@', '#'])
+void test_is_alphanumeric_non_alphanumeric(char letter) {
+    TEST_ASSERT_FALSE(is_alphanumeric(letter));
+}
