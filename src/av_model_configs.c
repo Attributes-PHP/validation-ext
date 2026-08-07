@@ -1,8 +1,8 @@
-#include "model_configs.h"
+#include "av_model_configs.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_attributes.h"
 #include "Zend/zend_exceptions.h"
-#include "helpers/options.h"
+#include "helpers/av_options.h"
 #include "Zend/zend_type_info.h"
 #include "Zend/zend_types.h"
 

@@ -7,11 +7,11 @@
 #include "attributes_validation.h"
 
 /* Include the component headers */
-#include "src/base_model.h"
-#include "src/exception.h"
-#include "src/model_configs.h"
-#include "src/fields/field.h"
-#include "src/fields/alias.h"
+#include "src/av_base_model.h"
+#include "src/av_exception.h"
+#include "src/av_model_configs.h"
+#include "src/fields/av_field.h"
+#include "src/fields/av_alias.h"
 
 /* Module startup */
 PHP_MINIT_FUNCTION(attributes_validation)

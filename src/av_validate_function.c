@@ -1,10 +1,10 @@
-#include "validate_function.h"
-#include "exception.h"
+#include "av_validate_function.h"
+#include "av_exception.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_attributes.h"
-#include "base_model.h"
-#include "model_configs.h"
+#include "av_base_model.h"
+#include "av_model_configs.h"
 #include "Zend/zend_portability.h"
 #include "Zend/zend_types.h"
 #include "helpers/av_string.h"
@@ -38,7 +38,7 @@ static zend_always_inline zend_string* transform_property_name(zend_string *prop
  */
 static zend_always_inline zend_string* get_property_name(zend_class_entry *model_ce, zend_string *property_name, zend_property_info *prop_info, char alias_generator)
 {
-    zend_string *field_name;
+    zend_string *field_name = NULL;
 
     // Check for #[Alias] attribute on the property
     if (prop_info->attributes != NULL) {
@@ -75,7 +75,7 @@ static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, z
     // Check if field exists in rawData
     zval *raw_value = zend_hash_find(Z_ARRVAL_P(raw_data), field_name);
 
-    if (raw_value != NULL) return raw_value;
+    if (raw_value != NULL && Z_TYPE_P(raw_value) != IS_UNDEF) return raw_value;
 
     // Field doesn't exist in rawData, check for default value
     zval *default_prop = &model_ce->default_properties_table[prop_info->offset];
