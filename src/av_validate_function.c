@@ -78,9 +78,13 @@ static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, z
     if (raw_value != NULL && Z_TYPE_P(raw_value) != IS_UNDEF) return raw_value;
 
     // Field doesn't exist in rawData, check for default value
-    zval *default_prop = &model_ce->default_properties_table[prop_info->offset];
-    if (default_prop != NULL && Z_TYPE_P(default_prop) != IS_UNDEF) {
-        return default_prop;
+    // Safety check: ensure default_properties_table exists and offset is valid
+    if (model_ce->default_properties_table != NULL &&
+        prop_info->offset < model_ce->default_properties_count) {
+        zval *default_prop = &model_ce->default_properties_table[prop_info->offset];
+        if (Z_TYPE_P(default_prop) != IS_UNDEF) {
+            return default_prop;
+        }
     }
 
     return NULL;
