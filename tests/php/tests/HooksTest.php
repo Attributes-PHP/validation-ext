@@ -8,7 +8,7 @@ use Attributes\Validation\ModelConfigs;
 use function Attributes\Validation\validate;
 
 it('calls no hooks when not defined', function () {
-    $hooks = validate(['number' => '1.23'], new Hooks);
+    $hooks = validate(['number' => '1.23'], new NoHooks);
     expect($hooks->calledBeforeValidation)->toBeFalse();
     expect($hooks->calledAfterValidation)->toBeFalse();
 });
@@ -34,7 +34,7 @@ it('calls afterValidation hook correctly', function () {
     {
         public function afterValidation(array $rawData, ModelConfigs $configs): void
         {
-            $this->hasCalledAfterValidation = true;
+            $this->calledAfterValidation = true;
         }
     };
 
@@ -65,8 +65,7 @@ it('calls both beforeValidation and afterValidation hooks correctly', function (
     expect($withBothHooks->calledAfterValidation)->toBeTrue();
 });
 
-#[ModelConfigs(extra: 'forbid')]
-abstract class NoHooks extends BaseModel
+class NoHooks extends BaseModel
 {
     public bool $calledBeforeValidation = false;
 

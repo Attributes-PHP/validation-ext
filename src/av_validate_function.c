@@ -70,22 +70,11 @@ static zend_always_inline zend_string* get_property_name(zend_class_entry *model
     return property_name;
 }
 
-static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, zval *raw_data, zend_string *field_name, zend_property_info *prop_info)
+static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, zval *raw_data, zend_string *field_name)
 {
-    // Check if field exists in rawData
     zval *raw_value = zend_hash_find(Z_ARRVAL_P(raw_data), field_name);
 
     if (raw_value != NULL && Z_TYPE_P(raw_value) != IS_UNDEF) return raw_value;
-
-    // Field doesn't exist in rawData, check for default value
-    // Safety check: ensure default_properties_table exists and offset is valid
-    if (model_ce->default_properties_table != NULL &&
-        prop_info->offset < model_ce->default_properties_count) {
-        zval *default_prop = &model_ce->default_properties_table[prop_info->offset];
-        if (Z_TYPE_P(default_prop) != IS_UNDEF) {
-            return default_prop;
-        }
-    }
 
     return NULL;
 }
@@ -96,6 +85,15 @@ static zend_always_inline void add_field_error(zval *errors, zend_string *field_
     ZVAL_STRING(&error_msg, error_message);
     zend_hash_str_add(Z_ARRVAL_P(errors), ZSTR_VAL(field_name), ZSTR_LEN(field_name), &error_msg);
     zval_ptr_dtor(&error_msg);
+}
+
+static zend_always_inline bool has_property_default_value(zend_class_entry *model_ce, zend_property_info *prop_info)
+{
+    if (!model_ce->default_properties_table) return false;
+
+    const uint32_t index = OBJ_PROP_TO_NUM(prop_info->offset);
+    const zval *default_value = &model_ce->default_properties_table[index];
+    return Z_TYPE_P(default_value) != IS_UNDEF;
 }
 
 static inline zval *validate_field_value(zval *value, zend_property_info *prop_info, zval *errors)
@@ -165,6 +163,9 @@ ZEND_FUNCTION(validate)
         zend_property_info *prop_info;
 
         ZEND_HASH_FOREACH_STR_KEY_PTR(&model_ce->properties_info, property_name, prop_info) {
+            if (prop_info->flags & ZEND_ACC_STATIC) continue;
+            if (prop_info->flags & (ZEND_ACC_PROTECTED | ZEND_ACC_PRIVATE)) continue;
+
             // Fetches name of the field name for the $rawData
             zend_string *field_name = get_property_name(model_ce, property_name, prop_info, properties.alias_generator);
             bool is_to_release_field_name = (field_name != property_name && field_name != NULL);
@@ -177,10 +178,17 @@ ZEND_FUNCTION(validate)
                 RETURN_THROWS();
             }
 
-            zval *field_value = get_property_value(model_ce, raw_data, field_name, prop_info);
+            zval *field_value = get_property_value(model_ce, raw_data, field_name);
 
             if (field_value == NULL) {
-                add_field_error(&errors, field_name, "required field", sizeof("required field") - 1);
+                const bool has_default_value = has_property_default_value(model_ce, prop_info);
+                if (has_default_value) {
+                    if (is_to_release_field_name) zend_string_release(field_name);
+
+                    continue;
+                }
+
+                add_field_error(&errors, field_name, "Required field", sizeof("Required field") - 1);
                 if (properties.stop_first_error) {
                     av_throw_validation_exception(&errors);
 
@@ -206,6 +214,7 @@ ZEND_FUNCTION(validate)
                 av_throw_validation_exception(&errors);
 
                 zval_ptr_dtor(&configs_obj);
+                zval_ptr_dtor(&errors);
                 RETURN_THROWS();
             }
 
@@ -221,6 +230,7 @@ ZEND_FUNCTION(validate)
         av_throw_validation_exception(&errors);
 
         zval_ptr_dtor(&configs_obj);
+        zval_ptr_dtor(&errors);
         RETURN_THROWS();
     }
 
