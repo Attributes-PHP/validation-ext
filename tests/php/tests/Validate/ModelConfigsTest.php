@@ -127,4 +127,13 @@ describe('validate function model configs handling', function () {
 
         validate(['firstName' => 'John'], $model);
     })->throws(ValidationException::class);
+
+    it('aliasGenerator throws error when passing invalid option', function () {
+        $model = new #[ModelConfigs(aliasGenerator: 'invalid')] class extends BaseModel
+        {
+            public string $name;
+        };
+
+        validate(['name' => 'test'], $model);
+    })->throws(\ValueError::class, 'must be of one of the following options: pascal, camel, snake, kebab');
 });

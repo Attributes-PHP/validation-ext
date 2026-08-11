@@ -5,6 +5,7 @@ namespace Attributes\Validation\Tests\Validate;
 use Attributes\Validation\BaseModel;
 use Attributes\Validation\Exceptions\ValidationException;
 use Attributes\Validation\Fields\Alias;
+use Attributes\Validation\ModelConfigs;
 
 use function Attributes\Validation\validate;
 
@@ -57,5 +58,19 @@ describe('validate function alias attribute handling', function () {
         $result = validate(['user_name' => 'John', 'email' => 'john@example.com'], $model);
         expect($result->name)->toBe('John');
         expect($result->email)->toBe('john@example.com');
+    });
+
+    it('Alias attribute takes precedence over aliasGenerator', function () {
+        $model = new #[ModelConfigs(aliasGenerator: 'snake')] class extends BaseModel
+        {
+            #[Alias('custom_alias')]
+            public string $firstName;
+
+            public string $lastName;
+        };
+
+        $result = validate(['custom_alias' => 'John', 'last_name' => 'Doe'], $model);
+        expect($result->firstName)->toBe('John');
+        expect($result->lastName)->toBe('Doe');
     });
 });
