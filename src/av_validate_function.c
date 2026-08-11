@@ -82,9 +82,8 @@ static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, z
 static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length)
 {
     zval error_msg;
-    ZVAL_STRING(&error_msg, error_message);
+    ZVAL_STRINGL(&error_msg, error_message, length);
     zend_hash_str_add(Z_ARRVAL_P(errors), ZSTR_VAL(field_name), ZSTR_LEN(field_name), &error_msg);
-    zval_ptr_dtor(&error_msg);
 }
 
 static zend_always_inline bool has_property_default_value(zend_class_entry *model_ce, zend_property_info *prop_info)
@@ -92,6 +91,8 @@ static zend_always_inline bool has_property_default_value(zend_class_entry *mode
     if (!model_ce->default_properties_table) return false;
 
     const uint32_t index = OBJ_PROP_TO_NUM(prop_info->offset);
+    if (index >= model_ce->default_properties_count) return false;
+
     const zval *default_value = &model_ce->default_properties_table[index];
     return Z_TYPE_P(default_value) != IS_UNDEF;
 }
