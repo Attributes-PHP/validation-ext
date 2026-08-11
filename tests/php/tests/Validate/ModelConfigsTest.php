@@ -54,4 +54,77 @@ describe('validate function model configs handling', function () {
             expect(array_key_exists('email', $errors))->toBeTrue();
         }
     });
+
+    it('aliasGenerator=pascal transforms property names to PascalCase', function () {
+        $model = new #[ModelConfigs(aliasGenerator: 'pascal')] class extends BaseModel
+        {
+            public string $firstName;
+
+            public string $lastName;
+
+            public int $user2Id;
+        };
+
+        $result = validate(['FirstName' => 'John', 'LastName' => 'Doe', 'User2Id' => 123], $model);
+        expect($result->firstName)->toBe('John');
+        expect($result->lastName)->toBe('Doe');
+        expect($result->user2Id)->toBe(123);
+    });
+
+    it('aliasGenerator=camel transforms property names to camelCase', function () {
+        $model = new #[ModelConfigs(aliasGenerator: 'camel')] class extends BaseModel
+        {
+            public string $firstName;
+
+            public string $lastName;
+
+            public int $user2Id;
+        };
+
+        $result = validate(['firstName' => 'John', 'lastName' => 'Doe', 'user2Id' => 123], $model);
+        expect($result->firstName)->toBe('John');
+        expect($result->lastName)->toBe('Doe');
+        expect($result->user2Id)->toBe(123);
+    });
+
+    it('aliasGenerator=snake transforms property names to snake_case', function () {
+        $model = new #[ModelConfigs(aliasGenerator: 'snake')] class extends BaseModel
+        {
+            public string $firstName;
+
+            public string $lastName;
+
+            public int $user2Id;
+        };
+
+        $result = validate(['first_name' => 'John', 'last_name' => 'Doe', 'user2_id' => 123], $model);
+        expect($result->firstName)->toBe('John');
+        expect($result->lastName)->toBe('Doe');
+        expect($result->user2Id)->toBe(123);
+    });
+
+    it('aliasGenerator=kebab transforms property names to kebab-case', function () {
+        $model = new #[ModelConfigs(aliasGenerator: 'kebab')] class extends BaseModel
+        {
+            public string $firstName;
+
+            public string $lastName;
+
+            public int $user2Id;
+        };
+
+        $result = validate(['first-name' => 'John', 'last-name' => 'Doe', 'user2-id' => 123], $model);
+        expect($result->firstName)->toBe('John');
+        expect($result->lastName)->toBe('Doe');
+        expect($result->user2Id)->toBe(123);
+    });
+
+    it('aliasGenerator throws error when using wrong property name', function () {
+        $model = new #[ModelConfigs(aliasGenerator: 'snake')] class extends BaseModel
+        {
+            public string $firstName;
+        };
+
+        validate(['firstName' => 'John'], $model);
+    })->throws(ValidationException::class);
 });
