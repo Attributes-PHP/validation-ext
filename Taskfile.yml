@@ -16,6 +16,18 @@ tasks:
     cmds:
       - phpize && ./configure --enable-attributes-validation && make
 
+  _ensure-gen_stub:
+    internal: true
+    cmds:
+      - test -f build/gen_stub.php || task build
+
+  stubs:
+    desc: Generate arginfo stubs
+    deps:
+      - _ensure-gen_stub
+    cmds:
+      - php build/gen_stub.php
+
   lint:
     desc: Run Pint linter on test files
     deps:
@@ -59,6 +71,7 @@ tasks:
   clean:src:
     desc: Clean extension build artifacts
     cmds:
+      - rm -rf ./build
       - make distclean
 
   clean:test:

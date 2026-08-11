@@ -2,7 +2,7 @@
 /** @generate-class-entries */
 
 namespace Attributes\Validation\Fields {
-   #[Attribute(Attribute::TARGET_PROPERTY|Attribute::TARGET_PARAMETER)]
+   #[Attribute]
    class Alias implements Field {
       public function __construct(public string $name) {}
    }
