@@ -3,6 +3,7 @@
 namespace Attributes\Validation\Tests\Validate;
 
 use Attributes\Validation\BaseModel;
+use Attributes\Validation\Exceptions\ValidationException;
 use Attributes\Validation\ModelConfigs;
 
 use function Attributes\Validation\validate;
@@ -19,7 +20,7 @@ describe('validate function model configs handling', function () {
     });
 
     it('stopAtFirstError=true', function () {
-        $model = new class extends BaseModel
+        $model = new #[ModelConfigs(stopAtFirstError: true)] class extends BaseModel
         {
             public string $name;
 
@@ -36,7 +37,7 @@ describe('validate function model configs handling', function () {
     });
 
     it('stopAtFirstError=false', function () {
-        $model = new #[ModelConfigs(stopAtFirstError: false)] class extends BaseModel
+        $model = new class extends BaseModel
         {
             public string $name;
 

@@ -3,6 +3,7 @@
 namespace Attributes\Validation\Tests\Validate;
 
 use Attributes\Validation\BaseModel;
+use Attributes\Validation\Exceptions\ValidationException;
 
 use function Attributes\Validation\validate;
 

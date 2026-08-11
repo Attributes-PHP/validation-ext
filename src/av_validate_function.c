@@ -190,14 +190,13 @@ ZEND_FUNCTION(validate)
                 }
 
                 add_field_error(&errors, field_name, "Required field", sizeof("Required field") - 1);
-                if (properties.stop_first_error) {
-                    av_throw_validation_exception(&errors);
+                if (is_to_release_field_name) zend_string_release(field_name);
+                if (!properties.stop_first_error) continue;
 
-                    if (is_to_release_field_name) zend_string_release(field_name);
-                    zval_ptr_dtor(&configs_obj);
-                    zval_ptr_dtor(&errors);
-                    RETURN_THROWS();
-                }
+                av_throw_validation_exception(&errors);
+                zval_ptr_dtor(&configs_obj);
+                zval_ptr_dtor(&errors);
+                RETURN_THROWS();
             }
 
             if (is_to_release_field_name) zend_string_release(field_name);
@@ -209,25 +208,24 @@ ZEND_FUNCTION(validate)
                 RETURN_THROWS();
             }
 
-            if (valid_value == NULL) {
-                if (!properties.stop_first_error) continue;
-
-                av_throw_validation_exception(&errors);
-
-                zval_ptr_dtor(&configs_obj);
-                zval_ptr_dtor(&errors);
-                RETURN_THROWS();
+            if (valid_value != NULL) {
+                zend_update_property(model_ce, Z_OBJ_P(model), ZSTR_VAL(property_name), ZSTR_LEN(property_name), valid_value);
+                continue;
             }
 
-            zend_update_property(model_ce, Z_OBJ_P(model), ZSTR_VAL(property_name), ZSTR_LEN(property_name), valid_value);
+            if (!properties.stop_first_error) continue;
 
-            if (is_to_release_field_name) zend_string_release(field_name);
+            av_throw_validation_exception(&errors);
+
+            zval_ptr_dtor(&configs_obj);
+            zval_ptr_dtor(&errors);
+            RETURN_THROWS();
         } ZEND_HASH_FOREACH_END();
 
         model_ce = model_ce->parent;
     }
 
-    if (!properties.stop_first_error && zend_hash_num_elements(Z_ARRVAL_P(&errors))) {
+    if (zend_hash_num_elements(Z_ARRVAL_P(&errors))) {
         av_throw_validation_exception(&errors);
 
         zval_ptr_dtor(&configs_obj);
@@ -236,17 +234,12 @@ ZEND_FUNCTION(validate)
     }
 
     av_call_after_validation_hook(model, raw_data, &configs_obj);
+    zval_ptr_dtor(&configs_obj);
+    zval_ptr_dtor(&errors);
+
     if (EG(exception)) {
-        zval_ptr_dtor(&configs_obj);
-        zval_ptr_dtor(&errors);
         RETURN_THROWS();
     }
 
-    // TODO: 11. Populate the model instance with validated data
-    // - For each validated property, set the value on the model object
-    // - Handle public properties directly
-    // - Handle private/protected properties via reflection or property setting methods
-    zval_ptr_dtor(&configs_obj);
-    zval_ptr_dtor(&errors);
     RETURN_COPY(model);
 }
