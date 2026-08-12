@@ -11,15 +11,26 @@ tasks:
     cmds:
       - test -d {{.VENDOR_DIR}} || composer install
 
-  build:
-    desc: Build the PHP extension
-    cmds:
-      - phpize && ./configure --enable-attributes-validation && make
-
   _ensure-gen_stub:
     internal: true
     cmds:
       - test -f build/gen_stub.php || task build
+
+  build:
+    desc: Build the PHP extension
+    cmds:
+      # phpize & ./configure only need to run if Makefiles don't exist yet.
+      # Using standard "make" handles incremental C compilation efficiently.
+      - |
+        if [ ! -f Makefile ]; then
+          phpize && ./configure --enable-attributes-validation
+        fi
+      - make
+
+  watch:
+    desc: Watch source files and automatically rebuild the PHP extension
+    cmds:
+      - reflex -r '\.(c|h|m4|w32)$' -- task build
 
   stubs:
     desc: Generate arginfo stubs
@@ -71,8 +82,8 @@ tasks:
   clean:src:
     desc: Clean extension build artifacts
     cmds:
-      - rm -rf ./build
-      - make distclean
+      - make clean || true
+      - phpize --clean || true
 
   clean:test:
     desc: Clean Ceedling test artifacts
