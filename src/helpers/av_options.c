@@ -38,5 +38,5 @@ STATIC_INLINE void throw_invalid_parameter_exception(char *option, char **all_op
     }
     options_list[pos] = '\0';
 
-    zend_argument_value_error(invalid_option_error->parameter_number, "must be of one of the following options: %s", options_list);
+    zend_value_error("%s::%s: Argument #%d must be of one of the following options: %s", invalid_option_error->class_name, invalid_option_error->method_name, invalid_option_error->parameter_number, options_list);
 }

@@ -5,6 +5,7 @@ namespace Attributes\Validation\Tests\Validate;
 use Attributes\Validation\BaseModel;
 use Attributes\Validation\Exceptions\ValidationException;
 use Attributes\Validation\ModelConfigs;
+use ValueError;
 
 use function Attributes\Validation\validate;
 
@@ -135,5 +136,5 @@ describe('validate function model configs handling', function () {
         };
 
         validate(['name' => 'test'], $model);
-    })->throws(\ValueError::class, 'must be of one of the following options: pascal, camel, snake, kebab');
+    })->throws(ValueError::class, 'Attributes\Validation\ModelConfigs::__construct(): Argument #1 must be of one of the following options: pascal, camel, snake, kebab');
 });
