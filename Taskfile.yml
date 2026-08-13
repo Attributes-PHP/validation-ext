@@ -30,7 +30,7 @@ tasks:
   watch:
     desc: Watch source files and automatically rebuild the PHP extension
     cmds:
-      - reflex -r '\.(c|h|m4|w32)$' -- task build
+      - reflex --inverse-regex='^config.h' -r '\.(c|h|m4|w32)$' -- task build
 
   stubs:
     desc: Generate arginfo stubs
