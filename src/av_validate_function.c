@@ -9,6 +9,8 @@
 #include "Zend/zend_types.h"
 #include "helpers/av_string.h"
 #include <stddef.h>
+#include "Zend/zend_hash.h"
+#include "php.h"
 
 
 /**
@@ -97,8 +99,43 @@ static zend_always_inline bool has_property_default_value(zend_class_entry *mode
     return Z_TYPE_P(default_value) != IS_UNDEF;
 }
 
-static inline zval *validate_field_value(zval *value, zend_property_info *prop_info, zval *errors)
+static inline bool validate_type_hint(zend_string *field_name, zval *value, zend_property_info *prop_info, av_model_configs_properties properties, zval *errors)
 {
+    if (!ZEND_TYPE_IS_SET(prop_info->type)) return true;
+
+    if (zend_verify_property_type(prop_info, value, properties.strict)) return true;
+
+    zend_clear_exception();
+    add_field_error(errors, field_name, AV_ERROR_TYPE_HINT);
+    if (properties.stop_first_error) {
+        av_throw_validation_exception(errors);
+    }
+
+    return false;
+}
+
+static inline zval *validate_field_value(zend_string *field_name, zval *value, zend_property_info *prop_info, av_model_configs_properties properties, zval *errors)
+{
+    /**
+     * TODO 1: Validate type-hint steps
+     *
+     * 1) Check if prop_info has type-hint
+     * 2) If prop_info doesn't have a type-hint, or is mixed or is the same as value then skip the following steps
+     * 3) Call function validate_type_hint
+     **/
+
+    if (ZEND_TYPE_IS_SET(prop_info->type)) {
+        if (! validate_type_hint(field_name, value, prop_info, properties, errors)) return NULL;
+    }
+
+    // zend_attribute *attr;
+
+    // ZEND_HASH_PACKED_FOREACH_PTR(prop_info->attributes, attr) {
+    //     // if (attr->offset == 0 && zend_string_equals(attr->lcname, lcname)) {
+    //     //     return attr;
+    //     // }
+    //     php_printf("Hello");
+    // } ZEND_HASH_FOREACH_END();
     // TODO: 7. For each property, collect and sort validation rules
     // - Collect all attributes that are validation rules
     // - Type hint has highest priority (applied first)
@@ -189,7 +226,7 @@ ZEND_FUNCTION(validate)
                     continue;
                 }
 
-                add_field_error(&errors, field_name, "Required field", sizeof("Required field") - 1);
+                add_field_error(&errors, field_name, AV_ERROR_REQUIRED);
                 if (is_to_release_field_name) zend_string_release(field_name);
                 if (!properties.stop_first_error) continue;
 
@@ -199,15 +236,16 @@ ZEND_FUNCTION(validate)
                 RETURN_THROWS();
             }
 
-            if (is_to_release_field_name) zend_string_release(field_name);
-
-            zval *valid_value = validate_field_value(field_value, prop_info, &errors);
+            zval *valid_value = validate_field_value(field_name, field_value, prop_info, properties, &errors);
             if (UNEXPECTED(EG(exception))) {
+                if (is_to_release_field_name) zend_string_release(field_name);
+
                 zval_ptr_dtor(&configs_obj);
                 zval_ptr_dtor(&errors);
                 RETURN_THROWS();
             }
 
+            if (is_to_release_field_name) zend_string_release(field_name);
             if (valid_value != NULL) {
                 zend_update_property(model_ce, Z_OBJ_P(model), ZSTR_VAL(property_name), ZSTR_LEN(property_name), valid_value);
                 continue;
