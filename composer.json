@@ -13,7 +13,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Attributes\\Validation\\Tests\\": "tests/php/tests"
+            "Attributes\\Validation\\Tests\\": "tests/php/"
         }
     },
     "require-dev": {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Attributes\Validation\Tests;
+namespace Attributes\Validation\Tests\Integration;
 
 use Attributes\Validation\Fields\Alias;
 use Attributes\Validation\Fields\Field;

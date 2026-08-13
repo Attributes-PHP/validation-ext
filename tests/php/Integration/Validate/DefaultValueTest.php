@@ -1,6 +1,6 @@
 <?php
 
-namespace Attributes\Validation\Tests\Validate;
+namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
 
