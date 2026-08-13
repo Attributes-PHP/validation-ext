@@ -1,6 +1,6 @@
 <?php
 
-namespace Attributes\Validation\Tests;
+namespace Attributes\Validation\Tests\Integration;
 
 use Attributes\Validation\Exceptions\BaseException;
 use Attributes\Validation\Exceptions\ValidationException;

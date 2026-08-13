@@ -70,7 +70,7 @@ tasks:
     deps:
       - _ensure-vendor
     cmds:
-      - ./vendor/bin/pest --colors=always tests/php
+      - ./vendor/bin/pest --colors=always --group=integration tests/php
 
   test:
     desc: Run all tests (lint, unit, integration)
