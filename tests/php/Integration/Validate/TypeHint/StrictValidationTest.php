@@ -117,7 +117,7 @@ describe('type-hint validation (strict mode)', function () {
 
             $result = validate(['value' => $value], $model);
             expect($result->value)->toBeInstanceOf(DateTimeInterface::class);
-        })->with('valid datetimeinterface strict');
+        })->with('valid datetime strict');
 
         it('rejects invalid DateTimeInterface values in strict mode', function ($value) {
             $model = new #[ModelConfigs(strict: true)] class extends BaseModel
@@ -126,6 +126,6 @@ describe('type-hint validation (strict mode)', function () {
             };
 
             validate(['value' => $value], $model);
-        })->with('invalid datetimeinterface strict')->throws(ValidationException::class);
+        })->with('invalid datetime strict')->throws(ValidationException::class);
     });
 });

@@ -116,7 +116,7 @@ describe('type-hint validation (loose mode)', function () {
 
             $result = validate(['value' => $value], $model);
             expect($result->value)->toBeInstanceOf(DateTimeInterface::class);
-        })->with('valid datetimeinterface loose');
+        })->with('valid datetime loose');
 
         it('rejects invalid DateTimeInterface values', function ($value) {
             $model = new class extends BaseModel
@@ -125,7 +125,7 @@ describe('type-hint validation (loose mode)', function () {
             };
 
             validate(['value' => $value], $model);
-        })->with('invalid datetimeinterface loose')->throws(ValidationException::class);
+        })->with('invalid datetime loose')->throws(ValidationException::class);
     });
 
     describe('DateTime string conversion', function () {

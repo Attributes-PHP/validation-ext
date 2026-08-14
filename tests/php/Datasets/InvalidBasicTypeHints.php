@@ -1,8 +1,8 @@
 <?php
 
 dataset('invalid string loose', [
-    [123],
-    ['a' => 1, 'b' => 2],
+    [[123]],
+    [['a' => 1, 'b' => 2]],
     (object) [123],
     (object) ['a' => 1, 'b' => 2],
     new class {},

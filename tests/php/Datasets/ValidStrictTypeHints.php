@@ -38,12 +38,3 @@ dataset('valid datetime strict', [
     new DateTime('2013-6-23'),
     new DateTime('2025-03-06T08:57:06+00:00'),
 ]);
-
-dataset('valid datetimeinterface strict', [
-    '2025-03-06T08:57:06+00:00',
-    '2050-12-06T00:00:03+00:00',
-    '2013-06-23',
-    new DateTime,
-    new DateTime('2013-6-23'),
-    new DateTime('2025-03-06T08:57:06+00:00'),
-]);
