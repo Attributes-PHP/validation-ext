@@ -1,10 +1,12 @@
 #include "av_validate_function.h"
 #include "av_exception.h"
+#include "validators/av_typehint_validator.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_attributes.h"
 #include "av_base_model.h"
 #include "av_model_configs.h"
+#include "av_exception.h"
 #include "Zend/zend_portability.h"
 #include "Zend/zend_types.h"
 #include "helpers/av_string.h"
@@ -81,12 +83,7 @@ static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, z
     return NULL;
 }
 
-static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length)
-{
-    zval error_msg;
-    ZVAL_STRINGL(&error_msg, error_message, length);
-    zend_hash_str_add(Z_ARRVAL_P(errors), ZSTR_VAL(field_name), ZSTR_LEN(field_name), &error_msg);
-}
+
 
 static zend_always_inline bool has_property_default_value(zend_class_entry *model_ce, zend_property_info *prop_info)
 {
@@ -99,44 +96,15 @@ static zend_always_inline bool has_property_default_value(zend_class_entry *mode
     return Z_TYPE_P(default_value) != IS_UNDEF;
 }
 
-static inline bool validate_type_hint(zend_string *field_name, zval *value, zend_property_info *prop_info, av_model_configs_properties properties, zval *errors)
+static inline bool validate_field_value(zend_string *field_name, zval *value, zend_property_info *prop_info, av_model_configs_properties *properties, zval *errors, zend_string *parent_path)
 {
-    if (!ZEND_TYPE_IS_SET(prop_info->type)) return true;
-
-    if (zend_verify_property_type(prop_info, value, properties.strict)) return true;
-
-    zend_clear_exception();
-    add_field_error(errors, field_name, AV_ERROR_TYPE_HINT);
-    if (properties.stop_first_error) {
-        av_throw_validation_exception(errors);
+    if (!av_validate_type_hint(field_name, value, prop_info, properties, errors, parent_path)) {
+        return false;
     }
-
-    return false;
+    return true;
 }
 
-static inline zval *validate_field_value(zend_string *field_name, zval *value, zend_property_info *prop_info, av_model_configs_properties properties, zval *errors)
-{
-    /**
-     * TODO 1: Validate type-hint steps
-     *
-     * 1) Check if prop_info has type-hint
-     * 2) If prop_info doesn't have a type-hint, or is mixed or is the same as value then skip the following steps
-     * 3) Call function validate_type_hint
-     **/
-
-    if (ZEND_TYPE_IS_SET(prop_info->type)) {
-        if (! validate_type_hint(field_name, value, prop_info, properties, errors)) return NULL;
-    }
-
-    // zend_attribute *attr;
-
-    // ZEND_HASH_PACKED_FOREACH_PTR(prop_info->attributes, attr) {
-    //     // if (attr->offset == 0 && zend_string_equals(attr->lcname, lcname)) {
-    //     //     return attr;
-    //     // }
-    //     php_printf("Hello");
-    // } ZEND_HASH_FOREACH_END();
-    // TODO: 7. For each property, collect and sort validation rules
+// TODO: For each property, collect and sort validation rules
     // - Collect all attributes that are validation rules
     // - Type hint has highest priority (applied first)
     // - Other rules applied from bottom to top (reverse order of declaration)
@@ -162,8 +130,78 @@ static inline zval *validate_field_value(zend_string *field_name, zval *value, z
     //   * Recursively validate nested Base model instances
     //   * Build nested error paths
     // - If stopAtFirstError is true, throw ValidationException immediately on first error
-    // - Otherwise, add error to errors collection and continue
-    return value;
+    //   * Otherwise, add error to errors collection and continue
+
+
+bool av_validate_model_internal(zval *raw_data, zval *model, zend_class_entry *model_ce, av_model_configs_properties *properties, zval *errors, zend_string *parent_path)
+{
+    while (model_ce != NULL && model_ce != AV_BaseModel_ce) {
+        zend_string *property_name = NULL;
+        zend_property_info *prop_info;
+
+        ZEND_HASH_FOREACH_STR_KEY_PTR(&model_ce->properties_info, property_name, prop_info) {
+            if (prop_info->flags & ZEND_ACC_STATIC) continue;
+            if (prop_info->flags & (ZEND_ACC_PROTECTED | ZEND_ACC_PRIVATE)) continue;
+
+            zend_string *field_name = get_property_name(model_ce, property_name, prop_info, properties->alias_generator);
+            bool is_to_release_field_name = (field_name != property_name && field_name != NULL);
+
+            if (UNEXPECTED(EG(exception))) {
+                if (is_to_release_field_name) zend_string_release(field_name);
+                return false;
+            }
+
+            zval *field_value = get_property_value(model_ce, raw_data, field_name);
+
+            if (field_value == NULL) {
+                const bool has_default_value = has_property_default_value(model_ce, prop_info);
+                if (has_default_value) {
+                    if (is_to_release_field_name) zend_string_release(field_name);
+                    continue;
+                }
+
+                zend_string *msg = zend_string_concat3(
+                    "The ", sizeof("The ") - 1,
+                    ZSTR_VAL(field_name), ZSTR_LEN(field_name),
+                    " field is required.", sizeof(" field is required.") - 1
+                );
+                av_add_field_error_with_prefix(errors, parent_path, field_name, ZSTR_VAL(msg), ZSTR_LEN(msg));
+                zend_string_release(msg);
+                if (is_to_release_field_name) zend_string_release(field_name);
+                if (properties->stop_first_error) {
+                    return false;
+                }
+                continue;
+            }
+
+            zval valid_value;
+            ZVAL_COPY(&valid_value, field_value);
+
+            zend_string *nested_path = parent_path ?
+                zend_string_concat3(ZSTR_VAL(parent_path), ZSTR_LEN(parent_path), ".", 1, ZSTR_VAL(field_name), ZSTR_LEN(field_name)) :
+                NULL;
+
+            const bool is_valid = validate_field_value(field_name, &valid_value, prop_info, properties, errors, nested_path);
+
+            if (nested_path) zend_string_release(nested_path);
+            if (is_to_release_field_name) zend_string_release(field_name);
+
+            if (!is_valid) {
+                zval_ptr_dtor(&valid_value);
+                if (properties->stop_first_error) {
+                    return false;
+                }
+                continue;
+            }
+
+            zend_update_property(model_ce, Z_OBJ_P(model), ZSTR_VAL(property_name), ZSTR_LEN(property_name), &valid_value);
+            zval_ptr_dtor(&valid_value);
+        } ZEND_HASH_FOREACH_END();
+
+        model_ce = model_ce->parent;
+    }
+
+    return zend_hash_num_elements(Z_ARRVAL_P(errors)) == 0;
 }
 
 /* Function implementation for validate */
@@ -181,14 +219,12 @@ ZEND_FUNCTION(validate)
     av_model_configs_properties properties;
     av_create_model_configs(&configs_obj, model, &properties);
     if (UNEXPECTED(EG(exception))) {
-        zval_ptr_dtor(&configs_obj);
-        RETURN_THROWS();
+        AV_ZVAL_DTOR_RETURN_THROWS(&configs_obj);
     }
 
     av_call_before_validation_hook(model, raw_data, &configs_obj);
     if (EG(exception)) {
-        zval_ptr_dtor(&configs_obj);
-        RETURN_THROWS();
+        AV_ZVAL_DTOR_RETURN_THROWS(&configs_obj);
     }
 
     zval errors;
@@ -196,79 +232,11 @@ ZEND_FUNCTION(validate)
 
     zend_class_entry *model_ce = Z_OBJCE_P(model);
 
-    while (model_ce != NULL && model_ce != AV_BaseModel_ce) {
-        zend_string *property_name = NULL;
-        zend_property_info *prop_info;
+    if (!av_validate_model_internal(raw_data, model, model_ce, &properties, &errors, NULL)) {
+        ZEND_ASSERT(zend_hash_num_elements(Z_ARRVAL_P(&errors)) > 0);
 
-        ZEND_HASH_FOREACH_STR_KEY_PTR(&model_ce->properties_info, property_name, prop_info) {
-            if (prop_info->flags & ZEND_ACC_STATIC) continue;
-            if (prop_info->flags & (ZEND_ACC_PROTECTED | ZEND_ACC_PRIVATE)) continue;
-
-            // Fetches name of the field name for the $rawData
-            zend_string *field_name = get_property_name(model_ce, property_name, prop_info, properties.alias_generator);
-            bool is_to_release_field_name = (field_name != property_name && field_name != NULL);
-
-            if (UNEXPECTED(EG(exception))) {
-                if (is_to_release_field_name) zend_string_release(field_name);
-
-                zval_ptr_dtor(&configs_obj);
-                zval_ptr_dtor(&errors);
-                RETURN_THROWS();
-            }
-
-            zval *field_value = get_property_value(model_ce, raw_data, field_name);
-
-            if (field_value == NULL) {
-                const bool has_default_value = has_property_default_value(model_ce, prop_info);
-                if (has_default_value) {
-                    if (is_to_release_field_name) zend_string_release(field_name);
-
-                    continue;
-                }
-
-                add_field_error(&errors, field_name, AV_ERROR_REQUIRED);
-                if (is_to_release_field_name) zend_string_release(field_name);
-                if (!properties.stop_first_error) continue;
-
-                av_throw_validation_exception(&errors);
-                zval_ptr_dtor(&configs_obj);
-                zval_ptr_dtor(&errors);
-                RETURN_THROWS();
-            }
-
-            zval *valid_value = validate_field_value(field_name, field_value, prop_info, properties, &errors);
-            if (UNEXPECTED(EG(exception))) {
-                if (is_to_release_field_name) zend_string_release(field_name);
-
-                zval_ptr_dtor(&configs_obj);
-                zval_ptr_dtor(&errors);
-                RETURN_THROWS();
-            }
-
-            if (is_to_release_field_name) zend_string_release(field_name);
-            if (valid_value != NULL) {
-                zend_update_property(model_ce, Z_OBJ_P(model), ZSTR_VAL(property_name), ZSTR_LEN(property_name), valid_value);
-                continue;
-            }
-
-            if (!properties.stop_first_error) continue;
-
-            av_throw_validation_exception(&errors);
-
-            zval_ptr_dtor(&configs_obj);
-            zval_ptr_dtor(&errors);
-            RETURN_THROWS();
-        } ZEND_HASH_FOREACH_END();
-
-        model_ce = model_ce->parent;
-    }
-
-    if (zend_hash_num_elements(Z_ARRVAL_P(&errors))) {
         av_throw_validation_exception(&errors);
-
-        zval_ptr_dtor(&configs_obj);
-        zval_ptr_dtor(&errors);
-        RETURN_THROWS();
+        AV_ZVAL_DTOR_RETURN_THROWS(&configs_obj, &errors);
     }
 
     av_call_after_validation_hook(model, raw_data, &configs_obj);

@@ -14,7 +14,10 @@
     "autoload-dev": {
         "psr-4": {
             "Attributes\\Validation\\Tests\\": "tests/php/"
-        }
+        },
+        "classmap": [
+            "tests/php/Models/"
+        ]
     },
     "require-dev": {
         "laravel/pint": "1.30",

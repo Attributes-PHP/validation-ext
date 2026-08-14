@@ -3,9 +3,7 @@
 
 #include "php.h"
 #include "av_model_configs.h"
-
-#define AV_ERROR_REQUIRED "Required field", sizeof("Required field") - 1
-#define AV_ERROR_TYPE_HINT "Invalid type", sizeof("Invalid type") - 1
+#include "av_exception.h"
 
 #define AV_ZVAL_DTOR_RETURN_THROWS(...) \
     AV_ZVAL_DTOR_RETURN_THROWS_N(__VA_ARGS__, 2, 1)(__VA_ARGS__)
@@ -29,11 +27,11 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(validate);
 
+bool av_validate_model_internal(zval *raw_data, zval *model, zend_class_entry *model_ce, av_model_configs_properties *properties, zval *errors, zend_string *parent_path);
+
 static zend_always_inline zend_string* transform_property_name(zend_string *property_name, char alias_generator);
 static zend_always_inline zend_string* get_property_name(zend_class_entry *model_ce, zend_string *property_name, zend_property_info *prop_info, char alias_generator);
 static zend_always_inline zval* get_property_value(zend_class_entry *model_ce, zval *raw_data, zend_string *field_name);
-static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length);
-static inline bool validate_type_hint(zend_string *field_name, zval *value, zend_property_info *prop_info, av_model_configs_properties properties, zval *errors);
-static inline bool validate_field_value(zend_string *field_name, zval *value, zend_property_info *prop_info, av_model_configs_properties properties, zval *errors);
+static inline bool validate_field_value(zend_string *field_name, zval *value, zend_property_info *prop_info, av_model_configs_properties *properties, zval *errors, zend_string *parent_path);
 
 #endif /* AV_VALIDATE_FUNCTION_H */

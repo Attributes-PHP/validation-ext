@@ -33,6 +33,11 @@ static const zend_function_entry class_AV_Exceptions_ValidationException_methods
 void av_register_all_exception_classes(void);
 void av_throw_validation_exception(zval *errors);
 
+/* Error handling functions */
+zend_always_inline void av_add_field_error_to_array(zval *errors_array, char *error_message, size_t length);
+zend_always_inline void av_add_field_error(zval *errors, zend_string *field_name, char *error_message, size_t length);
+void av_add_field_error_with_prefix(zval *errors, zend_string *parent_path, zend_string *field_name, char *error_message, size_t length);
+
 static void register_BaseException_class(void);
 static void register_ValidationException_class(void);
 
