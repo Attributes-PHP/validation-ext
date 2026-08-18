@@ -6,24 +6,10 @@
 #include "ext/standard/info.h"
 #include "attributes_validation.h"
 
-/* Include the component headers */
-#include "src/av_base_model.h"
-#include "src/av_exception.h"
-#include "src/av_model_configs.h"
-#include "src/fields/av_field.h"
-#include "src/fields/av_alias.h"
-
 /* Module startup */
 PHP_MINIT_FUNCTION(attributes_validation)
 {
-    // Register main classes
-    av_register_BaseModel_class();
-    av_register_ModelConfigs_class();
-    av_register_all_exception_classes();
-
-    // Register fields
-    av_register_Field_interface();
-    av_register_Alias_class();
+    php_printf("Hello, World from C PHP extension!\n");
     return SUCCESS;
 }
 
@@ -59,7 +45,7 @@ PHP_MINFO_FUNCTION(attributes_validation)
 zend_module_entry attributes_validation_module_entry = {
     STANDARD_MODULE_HEADER,
     EXTENSION_NAME,
-    ext_functions,
+    NULL,
     PHP_MINIT(attributes_validation),
     PHP_MSHUTDOWN(attributes_validation),
     PHP_RINIT(attributes_validation),
