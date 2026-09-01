@@ -25,11 +25,12 @@ static bool handle_class(zend_string *field_name, zval *value, zend_property_inf
 static bool coerce_bool(zend_string *field_name, zval *value);
 static zend_string* generate_type_name(zend_type *type);
 static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_configs_properties *properties);
-
-/* Enum detection */
-static bool av_type_is_enum(zend_type *type);
+static bool is_type_enum(zend_type *type);
+static bool is_datetime_class(zend_class_entry *ce);
 
 /* Error message generation */
+static zend_string* build_single_type_with_article(zend_type *type);
+static zend_string* build_union_type_string(zend_type property_type);
 static zend_string* generate_error_message(zend_type property_type, zend_string *field_name, zend_string *parent_path);
 static bool av_vowel_sound(char c);
 

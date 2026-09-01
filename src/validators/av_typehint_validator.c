@@ -43,13 +43,7 @@ static bool av_vowel_sound(char c)
     return (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u');
 }
 
-/**
- * Checks if a type represents an enum class.
- *
- * @param type The zend_type to check
- * @return true if the type is or contains an enum, false otherwise
- */
-static bool av_type_is_enum(zend_type *type)
+static bool is_type_enum(zend_type *type)
 {
     if (!ZEND_TYPE_HAS_NAME(*type)) {
         return false;
@@ -457,7 +451,7 @@ static zend_string* generate_error_message(zend_type property_type, zend_string 
 
     zend_type *type;
     ZEND_TYPE_FOREACH(property_type, type) {
-        if (ZEND_TYPE_HAS_NAME(*type) && av_type_is_enum(type)) {
+        if (ZEND_TYPE_HAS_NAME(*type) && is_type_enum(type)) {
             zend_string *msg = zend_string_concat3(
                 "The selected ", sizeof("The selected ") - 1,
                 ZSTR_VAL(full_path), ZSTR_LEN(full_path),
