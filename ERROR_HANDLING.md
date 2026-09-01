@@ -1,10 +1,21 @@
 # Future Enhancements
 
 1. **Custom Error Messages via Attributes:**
+
+In properties:
    ```php
-   #[ErrorMessage("Custom error message")]
+   #[ErrorMessage("required", "Custom {field} error message")]
    public string $field;
    ```
+
+Or directly in BaseModel to apply to all required rules:
+ ```php
+    #[ErrorMessage("required", "Custom {field} error message")]
+    class MyModel extends BaseModel {
+        public string $field;
+    }
+   ```
+
 
 2. **Include Valid Values in Enum Errors:**
    ```

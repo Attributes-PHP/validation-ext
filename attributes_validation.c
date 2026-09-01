@@ -12,6 +12,7 @@
 #include "src/av_model_configs.h"
 #include "src/fields/av_field.h"
 #include "src/fields/av_alias.h"
+#include "src/validators/av_typehint_validator.h"
 
 /* Module startup */
 PHP_MINIT_FUNCTION(attributes_validation)
@@ -36,6 +37,8 @@ PHP_MSHUTDOWN_FUNCTION(attributes_validation)
 /* Request startup */
 PHP_RINIT_FUNCTION(attributes_validation)
 {
+    // Initialize DateTime classes (must run after all MINITs)
+    av_init_typehint_validator();
     return SUCCESS;
 }
 

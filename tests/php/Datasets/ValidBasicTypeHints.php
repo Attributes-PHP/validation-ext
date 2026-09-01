@@ -92,7 +92,8 @@ dataset('valid bool loose', [
 $validDatetimeStrict = [
     '2025-03-06T08:57:06+00:00',
     '2050-12-06T00:00:03+00:00',
-    '2013-06-23',
+    '2050-12-06T00:00:61+00:00',  // converts to 1 min and 1 sec
+    '2020-01-03T00:00:60Z',
     new DateTime,
     new DateTime('2013-6-23'),
     new DateTime('2025-03-06T08:57:06+00:00'),

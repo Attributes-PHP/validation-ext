@@ -126,7 +126,7 @@ describe('type-hint validation (loose mode)', function () {
 
             validate(['value' => $value], $model);
         })->with('invalid datetime loose')->throws(ValidationException::class);
-    })->skip('DateTime/DateTimeInterface logic not implemented');
+    });
 
     describe('DateTime string conversion', function () {
         it('converts valid date strings to DateTime objects', function () {
@@ -161,7 +161,7 @@ describe('type-hint validation (loose mode)', function () {
             $result = validate(['value' => $date], $model);
             expect($result->value)->toBe($date);
         });
-    })->skip('DateTime/DateTimeInterface logic not implemented');
+    });
 
     describe('mixed properties', function () {
         it('validates multiple properties with different type hints', function () {
@@ -183,7 +183,7 @@ describe('type-hint validation (loose mode)', function () {
                 'age' => '30',
                 'score' => '95.5',
                 'active' => 1,
-                'createdAt' => '2025-01-01',
+                'createdAt' => '2025-01-01T08:57:06Z',
             ], $model);
 
             expect($result->name)->toBe('John Doe');
@@ -191,7 +191,7 @@ describe('type-hint validation (loose mode)', function () {
             expect($result->score)->toBe(95.5);
             expect($result->active)->toBe(true);
             expect($result->createdAt)->toBeInstanceOf(DateTime::class);
-        })->skip('DateTime/DateTimeInterface logic not implemented');
+        });
 
         it('fails when any property has invalid type', function () {
             $model = new class extends BaseModel

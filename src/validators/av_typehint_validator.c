@@ -11,6 +11,26 @@
 #include "av_typehint_validator.h"
 #include <math.h>
 
+zend_class_entry *datetime_ce;
+zend_class_entry *datetime_interface_ce;
+
+/**
+ * Initializes necessary class entries.
+ */
+void av_init_typehint_validator() {
+    zend_string *datetime_str = zend_string_init("DateTime", sizeof("DateTime") - 1, 0);
+    datetime_ce = zend_lookup_class_ex(datetime_str, NULL, ZEND_FETCH_CLASS_NO_AUTOLOAD);
+    zend_string_release(datetime_str);
+
+    zend_string *datetime_interface_str = zend_string_init("DateTimeInterface", sizeof("DateTimeInterface") - 1, 0);
+    datetime_interface_ce = zend_lookup_class_ex(datetime_interface_str, NULL, ZEND_FETCH_CLASS_NO_AUTOLOAD);
+    zend_string_release(datetime_interface_str);
+
+    if (!datetime_ce || !datetime_interface_ce) {
+        zend_throw_error(NULL, "DateTime or DateTimeInterface class not available. Ensure the datetime extension is loaded.");
+    }
+}
+
 /**
  * Checks if a character starts with a vowel sound (for "an" vs "a" article selection).
  *
@@ -86,6 +106,68 @@ static bool handle_intersection(
     return false;
 }
 
+/**
+ * Check if a class entry is DateTime or implements DateTimeInterface.
+ */
+static bool is_datetime_class(zend_class_entry *ce) {
+    if (!ce) return false;
+    return (ce == datetime_ce || ce == datetime_interface_ce || 
+            instanceof_function(ce, datetime_interface_ce));
+}
+
+static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_configs_properties *properties) {
+    const zend_string *str = Z_STR_P(value);
+    if (ZSTR_LEN(str) <= 12) {
+        return false;
+    }
+
+    const bool is_z_format = ZSTR_VAL(str)[ZSTR_LEN(str) - 1] == 'Z';
+    const char *expected_format = is_z_format ? "Y-m-d\\TH:i:sZ" : "Y-m-d\\TH:i:sP";
+
+    zval format, datetime_obj;
+    ZVAL_STRING(&format, expected_format);
+
+    zval args[2];
+    ZVAL_COPY(&args[0], &format);
+    ZVAL_COPY(&args[1], value);
+
+    zend_fcall_info fci;
+    zend_fcall_info_cache fcc;
+    zval function_name;
+
+    ZVAL_STRING(&function_name, "date_create_from_format");
+
+    fci.size = sizeof(fci);
+    fci.object = NULL;
+    fci.function_name = function_name;
+    fci.retval = &datetime_obj;
+    fci.param_count = 2;
+    fci.params = args;
+    fci.named_params = NULL;
+
+    fcc.function_handler = NULL;
+    fcc.calling_scope = NULL;
+    fcc.called_scope = NULL;
+    fcc.object = NULL;
+
+    zend_result result = zend_call_function(&fci, &fcc);
+
+    zval_ptr_dtor(&format);
+    zval_ptr_dtor(&function_name);
+
+    if (result == SUCCESS && Z_TYPE(datetime_obj) == IS_OBJECT && Z_OBJCE_P(&datetime_obj) == datetime_ce) {
+        zval_ptr_dtor(value);
+        ZVAL_COPY(value, &datetime_obj);
+        return true;
+    }
+
+    if (Z_TYPE(datetime_obj) != IS_UNDEF) {
+        zval_ptr_dtor(&datetime_obj);
+    }
+
+    return false;
+}
+
 static bool handle_class(
     zend_string *field_name,
     zval *value,
@@ -97,13 +179,20 @@ static bool handle_class(
 ) {
     ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*value_type));
 
+    zend_class_entry *ce = get_ce_from_type(prop_info, value_type);
+    if (!ce) {
+        return false;
+    }
+
+    if (Z_TYPE_P(value) == IS_STRING && is_datetime_class(ce)) {
+        return coerce_datetime(value, ce, properties);
+    }
+
     if (Z_TYPE_P(value) == IS_OBJECT) {
-        zend_class_entry *ce = get_ce_from_type(prop_info, value_type);
-        return ce && instanceof_function(Z_OBJCE_P(value), ce);
+        return instanceof_function(Z_OBJCE_P(value), ce);
     }
 
     if (Z_TYPE_P(value) == IS_ARRAY) {
-        zend_class_entry *ce = get_ce_from_type(prop_info, value_type);
         if (!ce || ce == AV_BaseModel_ce || !instanceof_function(ce, AV_BaseModel_ce)) return false;
 
         zval model_obj;
