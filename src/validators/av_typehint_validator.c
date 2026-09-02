@@ -115,11 +115,8 @@ static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_c
         return false;
     }
 
-    const bool is_z_format = ZSTR_VAL(str)[ZSTR_LEN(str) - 1] == 'Z';
-    const char *expected_format = is_z_format ? "Y-m-d\\TH:i:sZ" : "Y-m-d\\TH:i:sP";
-
     zval format, datetime_obj;
-    ZVAL_STRING(&format, expected_format);
+    ZVAL_STRING(&format, "X-m-d\\TH:i:sP");
 
     zval args[2];
     ZVAL_COPY(&args[0], &format);
