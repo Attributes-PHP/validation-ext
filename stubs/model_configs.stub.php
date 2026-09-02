@@ -2,7 +2,8 @@
 /** @generate-class-entries */
 
 namespace Attributes\Validation {
-   #[Attribute(Attribute::TARGET_CLASS)]
+   // Attribute::TARGET_CLASS
+   #[Attribute]
    abstract class ModelConfigs {
       private ?string $aliasGenerator = null;
       private bool $strToLower = false;
@@ -11,6 +12,7 @@ namespace Attributes\Validation {
       private string $extra = "ignore";
       private bool $strict = false;
       private bool $stopAtFirstError = false;
+      private static ?callable $defaultErrorMessages = null;
 
       public function getAliasGenerator(): ?string {}
       public function isStrToLower(): bool {}
@@ -19,5 +21,7 @@ namespace Attributes\Validation {
       public function getExtra(): string {}
       public function isStrict(): bool {}
       public function isStopAtFirstError(): bool {}
+
+      public static function setDefaultErrorMessages(callable $setErrorMessages): void {}
    }
 }

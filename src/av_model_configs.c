@@ -53,6 +53,22 @@ ZEND_METHOD(AV_ModelConfigs, isStopAtFirstError)
     AV_GET_PROPERTY_AND_RETURN("stopAtFirstError");
 }
 
+ZEND_METHOD(AV_ModelConfigs, setDefaultErrorMessages)
+{
+    zval *errorMessages;
+
+    ZEND_PARSE_PARAMETERS_START(1, 1)
+        Z_PARAM_ZVAL(errorMessages)
+    ZEND_PARSE_PARAMETERS_END();
+
+    if (!zend_is_callable(errorMessages, 0, NULL)) {
+        zend_throw_exception_ex(zend_ce_type_error, 0, "Argument 1 passed to Attributes\\Validation\\ModelConfigs::setDefaultErrorMessages() must be callable");
+        RETURN_THROWS();
+    }
+
+    zend_update_static_property(AV_ModelConfigs_ce, "defaultErrorMessages", sizeof("defaultErrorMessages") - 1, errorMessages);
+}
+
 /* Registration function */
 void av_register_ModelConfigs_class(void)
 {
@@ -62,13 +78,18 @@ void av_register_ModelConfigs_class(void)
     AV_ModelConfigs_ce->ce_flags |= ZEND_ACC_FINAL;
 
     /* Declare properties */
-    declare_typed_property_string("aliasGenerator", NULL, true);
-    declare_typed_property_bool("strToLower", false);
-    declare_typed_property_bool("strToUpper", false);
-    declare_typed_property_bool("stripWhitespace", false);
-    declare_typed_property_string("extra", "ignore", false);
-    declare_typed_property_bool("strict", false);
-    declare_typed_property_bool("stopAtFirstError", false);
+    declare_typed_property_string("aliasGenerator", sizeof("aliasGenerator") - 1, NULL, 0, true);
+    declare_typed_property_bool("strToLower", sizeof("strToLower") - 1, false);
+    declare_typed_property_bool("strToUpper", sizeof("strToUpper") - 1, false);
+    declare_typed_property_bool("stripWhitespace", sizeof("stripWhitespace") - 1, false);
+    declare_typed_property_string("extra", sizeof("extra") - 1, "ignore", sizeof("ignore") - 1, false);
+    declare_typed_property_bool("strict", sizeof("strict") - 1, false);
+    declare_typed_property_bool("stopAtFirstError", sizeof("stopAtFirstError") - 1, false);
+    
+    /* Declare defaultErrorMessages as a static mixed property */
+    zval default_error_messages_default;
+    ZVAL_NULL(&default_error_messages_default);
+    declare_typed_property("defaultErrorMessages", sizeof("defaultErrorMessages") - 1, &default_error_messages_default, 0, ZEND_ACC_PRIVATE|ZEND_ACC_STATIC);
 
     /* Register as an internal attribute that targets classes only */
     zend_internal_attribute_register(
@@ -202,31 +223,31 @@ static bool validate_extra(char *pretty_extra)
     return av_validate_method_parameter(pretty_extra, all_pretty_extra, 3, &invalid_parameter_error);
 }
 
-static zend_always_inline void declare_typed_property_bool(const char *name, bool default_value)
+static zend_always_inline void declare_typed_property_bool(const char *name, size_t length, bool default_value)
 {
     zval z_default_value;
     ZVAL_BOOL(&z_default_value, default_value);
-    declare_typed_property(name, &z_default_value, MAY_BE_BOOL);
+    declare_typed_property(name, length, &z_default_value, MAY_BE_BOOL, ZEND_ACC_PRIVATE);
 }
 
-static zend_always_inline void declare_typed_property_string(const char *name, char *default_value, bool allow_null)
+static zend_always_inline void declare_typed_property_string(const char *name, size_t length, char *default_value, size_t default_length, bool allow_null)
 {
     zval z_default_value;
     if (default_value == NULL) ZVAL_NULL(&z_default_value);
     else {
-        zend_string *default_string = zend_string_init(default_value, strlen(default_value), 1);
+        zend_string *default_string = zend_string_init(default_value, default_length, 1);
         ZVAL_STR(&z_default_value, default_string);
     }
 
     zend_uchar type = allow_null ? MAY_BE_STRING|MAY_BE_NULL : MAY_BE_STRING;
-    declare_typed_property(name, &z_default_value, type);
+    declare_typed_property(name, length, &z_default_value, type, ZEND_ACC_PRIVATE);
 }
 
-static zend_always_inline void declare_typed_property(const char *name, zval *default_value, zend_uchar type)
+static zend_always_inline void declare_typed_property(const char *name, size_t length, zval *default_value, int type, int visibility)
 {
     zend_type property_type = (zend_type) ZEND_TYPE_INIT_MASK(type);
-    zend_string *property_name = zend_string_init(name, strlen(name), 1);
-    zend_declare_typed_property(AV_ModelConfigs_ce, property_name, default_value, ZEND_ACC_PRIVATE, NULL, property_type);
+    zend_string *property_name = zend_string_init(name, length, 1);
+    zend_declare_typed_property(AV_ModelConfigs_ce, property_name, default_value, visibility, NULL, property_type);
     zend_string_release(property_name);
 }
 
