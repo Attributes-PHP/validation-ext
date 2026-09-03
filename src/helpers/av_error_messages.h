@@ -8,8 +8,7 @@
 
 typedef enum {
     AV_ERROR_REQUIRED,
-    AV_ERROR_TYPE,
-    AV_ERROR_ENUM
+    AV_ERROR_TYPE
 } av_error_type;
 
 // Error message generation

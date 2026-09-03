@@ -3,19 +3,111 @@
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
 #include "Zend/zend_interfaces.h"
+#include "Zend/zend_operators.h"
+#include "php.h"
+#include "zend.h"
+#include "zend_string.h"
 #include "zend_types.h"
+#include <string.h>
+#include "ext/standard/php_string.h"
 
 static const char* av_error_type_messages[] = {
-    [AV_ERROR_REQUIRED] = "The field is required",
-    [AV_ERROR_TYPE] = "Invalid type",
-    [AV_ERROR_ENUM] = "Invalid enum value"
+    [AV_ERROR_REQUIRED] = "The {field} field is required.",
+    [AV_ERROR_TYPE] = "The {field} must be {type}.",
 };
 
-static const size_t av_error_type_message_lengths[] = {
-    [AV_ERROR_REQUIRED] = sizeof("The field is required") - 1,
-    [AV_ERROR_TYPE] = sizeof("Invalid type") - 1,
-    [AV_ERROR_ENUM] = sizeof("Invalid enum value") - 1
-};
+static zend_string* av_value_to_string(zval *value)
+{
+    // TODO: Implement zval to zend_string implementation
+    if (value == NULL) {
+        return zend_string_init("null", 4, 0);
+    }
+    return zval_get_string(value);
+}
+
+static zend_string* av_replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info)
+{
+    struct { const char *search; size_t len; size_t counts; zend_string *replace; } table[] = {
+        {"{field}", sizeof("{field}") - 1, 0, field->name},
+        {"{value}", sizeof("{value}") - 1, 0, NULL},
+        {"{type}", sizeof("{type}") - 1, 0, NULL}
+    };
+    size_t table_size = sizeof(table) / sizeof(table[0]);
+
+    size_t max_template_size = length;
+    size_t total_placeholders = 0;
+    for (size_t i = 0; i < table_size; i++) {
+        const char *search_pos = template;
+        while ((search_pos = php_memnstr(search_pos, table[i].search, table[i].len, template + length))) {
+            table[i].counts += 1;
+            search_pos += table[i].len;
+        }
+
+        if (table[i].counts == 0) continue;
+
+        total_placeholders += table[i].counts;
+
+        if (table[i].replace == NULL) {
+            if (i == 1) { // {value}
+                table[i].replace = av_value_to_string(field->value);
+            } else if (i == 2) { // {type}
+                table[i].replace = build_union_type_string(prop_info->property->type);
+            }
+        }
+        max_template_size += table[i].counts * (ZSTR_LEN(table[i].replace) - table[i].len);
+    }
+
+    if (total_placeholders == 0) {
+        return zend_string_init(template, length, 0);
+    }
+
+    // Allocate and process in a single pass
+    zend_string *result = zend_string_alloc(max_template_size, 0);
+    char *output = ZSTR_VAL(result);
+    size_t output_pos = 0;
+
+    const char *input = template;
+    const char *input_end = template + length;
+
+    while (input < input_end) {
+        if (total_placeholders == 0) {
+            output[output_pos++] = *input++;
+            continue;
+        }
+
+        bool replaced = false;
+        for (size_t i = 0; i < table_size; i++) {
+            if (table[i].counts == 0) continue;
+            if (input + table[i].len > input_end) continue;
+            if (memcmp(input, table[i].search, table[i].len) != 0) continue;
+
+            table[i].counts -= 1;
+            total_placeholders -= 1;
+
+            memcpy(output + output_pos, ZSTR_VAL(table[i].replace), ZSTR_LEN(table[i].replace));
+            output_pos += ZSTR_LEN(table[i].replace);
+            input += table[i].len;
+            replaced = true;
+            break;
+        }
+
+        if (!replaced) {
+            output[output_pos++] = *input++;
+        }
+    }
+
+    // Null-terminate and truncate to actual size
+    output[output_pos] = '\0';
+    result = zend_string_truncate(result, output_pos, 0);
+
+    for (size_t i = 1; i < table_size; i++) {
+        if (table[i].replace != NULL) {
+            zend_string_release(table[i].replace);
+        }
+    }
+
+    return result;
+}
 
 static zend_always_inline void add_field_error_to_array(zval *errors_array, const char *error_message, size_t length)
 {
@@ -232,11 +324,12 @@ static zend_string* generate_error_message(av_field *field, zend_type property_t
 
 void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_property_info *property, zval *errors)
 {
-    const char *error_message = av_error_type_messages[type];
-    size_t length = av_error_type_message_lengths[type];
+    const char *template = av_error_type_messages[type];
+    zend_string *replaced_message = av_replace_placeholders(template, strlen(template), field, property);
 
     if (!field->parent || ZSTR_LEN(field->parent) == 0) {
-        add_field_error(errors, field->name, error_message, length);
+        add_field_error(errors, field->name, ZSTR_VAL(replaced_message), ZSTR_LEN(replaced_message));
+        zend_string_release(replaced_message);
         return;
     }
 
@@ -245,6 +338,7 @@ void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_prop
         ".", 1,
         ZSTR_VAL(field->name), ZSTR_LEN(field->name)
     );
-    add_field_error(errors, full_path, error_message, length);
+    add_field_error(errors, full_path, ZSTR_VAL(replaced_message), ZSTR_LEN(replaced_message));
     zend_string_release(full_path);
+    zend_string_release(replaced_message);
 }
