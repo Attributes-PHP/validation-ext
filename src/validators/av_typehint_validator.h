@@ -20,19 +20,11 @@
 
 static zend_class_entry *resolve_single_class_type(zend_string *name, zend_class_entry *self_ce);
 static zend_always_inline zend_class_entry *get_ce_from_type(zend_property_info *info, zend_type *type);
-static bool handle_intersection(zend_string *field_name, zval *value, zend_property_info *prop_info, zend_type *value_type);
-static bool handle_class(zend_string *field_name, zval *value, zend_property_info *prop_info, zend_type *value_type, av_model_configs_properties *properties, zval *errors, zend_string *parent_path);
-static bool coerce_bool(zend_string *field_name, zval *value);
-static zend_string* generate_type_name(zend_type *type);
+static bool handle_intersection(av_field *field, av_property_info *prop_info, zend_type *value_type);
+static bool handle_class(av_field *field, av_property_info *prop_info, zend_type *value_type, av_model_configs_properties *properties, zval *errors);
+static bool coerce_bool(av_field *field);
 static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_configs_properties *properties);
-static bool is_type_enum(zend_type *type);
 static bool is_datetime_class(zend_class_entry *ce);
-
-/* Error message generation */
-static zend_string* build_single_type_with_article(zend_type *type);
-static zend_string* build_union_type_string(zend_type property_type);
-static zend_string* generate_error_message(zend_type property_type, zend_string *field_name, zend_string *parent_path);
-static bool av_vowel_sound(char c);
 
 void av_init_typehint_validator(void);
 /**
@@ -40,14 +32,12 @@ void av_init_typehint_validator(void);
  *
  * For union types, tries each type in the union.
  *
- * @param field_name    The name of the field being validated
- * @param value         The value to validate (may be modified in-place)
+ * @param field         The field related structure
  * @param prop_info     Property type information
  * @param properties    Model configuration properties (for recursive validation)
  * @param errors        Error collection array
- * @param parent_path   Parent path for nested error messages
  * @return              true if validation succeeds, false otherwise
  */
-bool av_validate_type_hint(zend_string *field_name, zval *value, zend_property_info *prop_info, av_model_configs_properties *properties, zval *errors, zend_string *parent_path);
+bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors);
 
 #endif /* AV_TYPEHINT_VALIDATION_H */
