@@ -6,14 +6,15 @@
 #include "Zend/zend_operators.h"
 #include "php.h"
 #include "zend.h"
+#include "zend_portability.h"
 #include "zend_string.h"
 #include "zend_types.h"
+#include <stddef.h>
 #include <string.h>
-#include "ext/standard/php_string.h"
 
 static const char* av_error_type_messages[] = {
     [AV_ERROR_REQUIRED] = "The {field} field is required.",
-    [AV_ERROR_TYPE] = "The {field} must be {type}.",
+    [AV_ERROR_TYPE] = "The {field} must be {expected}.",
 };
 
 static zend_string* av_value_to_string(zval *value)
@@ -30,7 +31,7 @@ static zend_string* av_replace_placeholders(const char *template, size_t length,
     struct { const char *search; size_t len; size_t counts; zend_string *replace; } table[] = {
         {"{field}", sizeof("{field}") - 1, 0, field->name},
         {"{value}", sizeof("{value}") - 1, 0, NULL},
-        {"{type}", sizeof("{type}") - 1, 0, NULL}
+        {"{expected}", sizeof("{expected}") - 1, 0, NULL}
     };
     size_t table_size = sizeof(table) / sizeof(table[0]);
 
@@ -50,7 +51,7 @@ static zend_string* av_replace_placeholders(const char *template, size_t length,
         if (table[i].replace == NULL) {
             if (i == 1) { // {value}
                 table[i].replace = av_value_to_string(field->value);
-            } else if (i == 2) { // {type}
+            } else if (i == 2) { // {expected}
                 table[i].replace = build_union_type_string(prop_info->property->type);
             }
         }
@@ -95,6 +96,8 @@ static zend_string* av_replace_placeholders(const char *template, size_t length,
             output[output_pos++] = *input++;
         }
     }
+
+    ZEND_ASSERT(output_pos == max_template_size);
 
     // Null-terminate and truncate to actual size
     output[output_pos] = '\0';
@@ -162,8 +165,6 @@ static zend_string* generate_type_name(zend_type *type)
     if (type_mask == MAY_BE_OBJECT) return zend_string_init("object", 6, 0);
     if (type_mask == MAY_BE_RESOURCE) return zend_string_init("resource", 8, 0);
     if (type_mask == MAY_BE_NULL) return zend_string_init("null", 4, 0);
-    if (type_mask == MAY_BE_FALSE) return zend_string_init("false", 5, 0);
-    if (type_mask == MAY_BE_TRUE) return zend_string_init("true", 4, 0);
     if (type_mask == MAY_BE_CALLABLE) return zend_string_init("callable", 8, 0);
     if (type_mask == MAY_BE_VOID) return zend_string_init("void", 4, 0);
 
@@ -183,6 +184,80 @@ static zend_always_inline zend_string* build_single_type_with_article(zend_type 
     return result;
 }
 
+static zend_always_inline zend_string* build_union_only_basic_types(uint32_t pure_mask)
+{
+    struct { uint32_t mask; const char *name; size_t length; } type_mappings[] = {
+        {MAY_BE_BOOL, "boolean", sizeof("boolean") - 1},
+        {MAY_BE_LONG, "integer", sizeof("integer") - 1},
+        {MAY_BE_DOUBLE, "float", sizeof("float") - 1},
+        {MAY_BE_STRING, "string", sizeof("string") - 1},
+        {MAY_BE_ARRAY, "array", sizeof("array") - 1},
+        {MAY_BE_OBJECT, "object", sizeof("object") - 1},
+        {MAY_BE_RESOURCE, "resource", sizeof("resource") - 1},
+        {MAY_BE_NULL, "null", sizeof("null") - 1},
+        {MAY_BE_CALLABLE, "callable", sizeof("callable") - 1},
+        {MAY_BE_VOID, "void", sizeof("void") - 1},
+    };
+    size_t type_mappings_size = sizeof(type_mappings) / sizeof(type_mappings[0]);
+
+    struct { size_t max_string_size; size_t total; } count = {0, 0};
+    for (int i = 0; i < type_mappings_size; i++) {
+        if (!(pure_mask & type_mappings[i].mask)) continue;
+
+        count.max_string_size += type_mappings[i].length;
+        count.total += 1;
+    }
+
+    ZEND_ASSERT(count.max_string_size > 0);
+    ZEND_ASSERT(count.total >= 2);
+    ZEND_ASSERT(count.total <= type_mappings_size);
+
+    size_t num_commas = fmax(count.total - 2, 0) * (sizeof(", ") - 1);  // Comma + space after comma
+    size_t num_ors = sizeof(" or ") - 1;
+    count.max_string_size += num_commas + num_ors;
+
+    zend_string *result = zend_string_alloc(count.max_string_size, 0);
+    char *output = ZSTR_VAL(result);
+    size_t output_pos = 0;
+    int i = 0;
+
+    // Commas
+    for (; i < type_mappings_size && count.total - 2 > 0; i++) {
+        if (!(pure_mask & type_mappings[i].mask)) continue;
+
+        count.total -= 1;
+        // Append type-hint
+        memcpy(output + output_pos, type_mappings[i].name, type_mappings[i].length);
+        output_pos += type_mappings[i].length;
+
+        // Append comma
+        memcpy(output + output_pos, ", ", sizeof(", ") - 1);
+        output_pos += sizeof(", ") - 1;
+    }
+
+    // or
+    for (; i < type_mappings_size && count.total > 0; i++) {
+        if (!(pure_mask & type_mappings[i].mask)) continue;
+
+        count.total -= 1;
+
+        // Append type-hint
+        memcpy(output + output_pos, type_mappings[i].name, type_mappings[i].length);
+        output_pos += type_mappings[i].length;
+
+        if (count.total > 0) {
+            // Append or
+            memcpy(output + output_pos, " or ", sizeof(" or ") - 1);
+            output_pos += sizeof(" or ") - 1;
+        }
+    }
+
+    output[output_pos] = '\0';
+
+    ZEND_ASSERT(output_pos == count.max_string_size);
+    return zend_string_truncate(result, output_pos, 0);
+}
+
 static zend_always_inline zend_string* build_union_type_string(zend_type property_type)
 {
     uint32_t pure_mask = ZEND_TYPE_PURE_MASK(property_type);
@@ -190,55 +265,7 @@ static zend_always_inline zend_string* build_union_type_string(zend_type propert
                           ZEND_TYPE_IS_SET(property_type) &&
                           (pure_mask & (pure_mask - 1)) != 0;
 
-    if (is_simple_union) {
-        struct { uint32_t mask; const char *name; } type_mappings[] = {
-            {MAY_BE_BOOL, "boolean"},
-            {MAY_BE_LONG, "integer"},
-            {MAY_BE_DOUBLE, "float"},
-            {MAY_BE_STRING, "string"},
-            {MAY_BE_ARRAY, "array"},
-            {MAY_BE_OBJECT, "object"},
-            {MAY_BE_RESOURCE, "resource"},
-            {MAY_BE_NULL, "null"},
-            {MAY_BE_FALSE, "false"},
-            {MAY_BE_TRUE, "true"},
-            {MAY_BE_CALLABLE, "callable"},
-            {MAY_BE_VOID, "void"},
-            {0, NULL}
-        };
-
-        zend_string *result = NULL;
-        bool first = true;
-
-        for (int i = 0; type_mappings[i].name != NULL; i++) {
-            if (!(pure_mask & type_mappings[i].mask)) continue;
-
-            const char *article = av_vowel_sound(type_mappings[i].name[0]) ? "an" : "a";
-            zend_string *type_part = zend_string_concat3(
-                article, strlen(article),
-                " ", 1,
-                type_mappings[i].name, strlen(type_mappings[i].name)
-            );
-
-            if (first) {
-                result = type_part;
-                first = false;
-            } else {
-                zend_string *prefix = zend_string_init(" or ", 4, 0);
-                zend_string *temp = zend_string_concat3(
-                    ZSTR_VAL(result), ZSTR_LEN(result),
-                    ZSTR_VAL(prefix), ZSTR_LEN(prefix),
-                    ZSTR_VAL(type_part), ZSTR_LEN(type_part)
-                );
-                zend_string_release(result);
-                zend_string_release(prefix);
-                zend_string_release(type_part);
-                result = temp;
-            }
-        }
-
-        return result;
-    }
+    if (is_simple_union) return build_union_only_basic_types(pure_mask);
 
     zend_string *result = NULL;
     zend_type *type;

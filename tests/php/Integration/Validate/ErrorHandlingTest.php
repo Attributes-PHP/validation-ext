@@ -123,7 +123,7 @@ describe('validate function error handling', function () {
             validate(['value' => 'invalid'], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            expect($e->getErrors()['value'][0])->toBe('The value must be an integer or a float.');
+            expect($e->getErrors()['value'][0])->toBe('The value must be integer or float.');
         }
     });
 
@@ -163,7 +163,7 @@ describe('validate function error handling', function () {
             expect($errors)->toHaveKey('team_id');
             expect($errors)->toHaveKey('role');
 
-            expect($errors['team_id'][0])->toBe('The team_id must be an integer or a float.');
+            expect($errors['team_id'][0])->toBe('The team_id must be integer or float.');
             expect($errors['role'][0])->toBe('The selected role is invalid.');
 
             expect($e->getMessage())->toBe('Invalid data');
