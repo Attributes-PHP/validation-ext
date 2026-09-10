@@ -136,7 +136,7 @@ static bool av_vowel_sound(char c)
     return (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u');
 }
 
-static zend_string* generate_type_name(zend_type *type)
+static zend_string* generate_type_name(const zend_type *type)
 {
     if (ZEND_TYPE_IS_INTERSECTION(*type)) {
         return zend_string_init("mixed", 5, 0);
@@ -162,7 +162,7 @@ static zend_string* generate_type_name(zend_type *type)
     return zend_string_init("mixed", 5, 0);
 }
 
-static zend_always_inline zend_string* build_single_type_with_article(zend_type *type)
+static zend_always_inline zend_string* build_single_type_with_article(const zend_type *type)
 {
     zend_string *type_name = generate_type_name(type);
     const char *article = av_vowel_sound(ZSTR_VAL(type_name)[0]) ? "an" : "a";
@@ -259,7 +259,7 @@ static zend_always_inline zend_string* build_union_type_string(zend_type propert
     if (is_simple_union) return build_union_only_basic_types(pure_mask);
 
     zend_string *result = NULL;
-    zend_type *type;
+    const zend_type *type;
 
     ZEND_TYPE_FOREACH(property_type, type) {
         if (ZEND_TYPE_IS_INTERSECTION(*type)) continue;
@@ -285,7 +285,7 @@ static zend_always_inline zend_string* build_union_type_string(zend_type propert
     return result;
 }
 
-static bool is_type_enum(zend_type *type)
+static bool is_type_enum(const zend_type *type)
 {
     if (!ZEND_TYPE_HAS_NAME(*type)) {
         return false;
@@ -310,7 +310,7 @@ static zend_string* generate_error_message(av_field *field, zend_type property_t
         );
     }
 
-    zend_type *type;
+    const zend_type *type;
     ZEND_TYPE_FOREACH(property_type, type) {
         if (ZEND_TYPE_HAS_NAME(*type) && is_type_enum(type)) {
             zend_string *msg = zend_string_concat3(

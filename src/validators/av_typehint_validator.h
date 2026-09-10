@@ -19,9 +19,9 @@
 #define AV_EPSILON 1e-15
 
 static zend_class_entry *resolve_single_class_type(zend_string *name, zend_class_entry *self_ce);
-static zend_always_inline zend_class_entry *get_ce_from_type(zend_property_info *info, zend_type *type);
-static bool handle_intersection(av_field *field, av_property_info *prop_info, zend_type *value_type);
-static bool handle_class(av_field *field, av_property_info *prop_info, zend_type *value_type, av_model_configs_properties *properties, zval *errors);
+static zend_always_inline zend_class_entry *get_ce_from_type(zend_property_info *info, const zend_type *type);
+static bool handle_intersection(av_field *field, av_property_info *prop_info, const zend_type *value_type);
+static bool handle_class(av_field *field, av_property_info *prop_info, const zend_type *value_type, av_model_configs_properties *properties, zval *errors);
 static bool coerce_bool(av_field *field);
 static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_configs_properties *properties);
 static bool is_datetime_class(zend_class_entry *ce);
