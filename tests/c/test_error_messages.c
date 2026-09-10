@@ -134,7 +134,9 @@ void setUp(void)
     g_expected_type_string = "an integer";
 }
 
-void tearDown(void) {}
+void tearDown(void)
+{
+}
 
 // ---------------------------------------------------------------------------
 // No placeholders
