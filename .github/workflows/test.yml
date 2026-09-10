@@ -1,0 +1,56 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          ini-values: memory_limit=-1
+
+      - name: Install Task
+        uses: arduino/setup-task@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Ruby for Ceedling
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Install Ceedling
+        run: gem install ceedling -v 1.1.2
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Build the extension
+        run: |
+          phpize
+          ./configure --enable-attributes-validation
+          make
+          sudo make install
+          echo "extension=attributes_validation" | sudo tee "$(php-config --ini-dir)/attributes_validation.ini"
+
+      - name: Run linter
+        run: task test:lint
+
+      - name: Run C unit tests
+        run: task test:unit
+
+      - name: Run integration tests
+        run: task test:integration
