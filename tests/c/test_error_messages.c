@@ -6,7 +6,6 @@
 #include <Zend/zend.h>
 #include <Zend/zend_types.h>
 #include <Zend/zend_string.h>
-#include <stdlib.h>
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -37,18 +36,40 @@ static zend_string *string_copy_stub(zend_string *s, int num_calls)
     return string_init_stub(s->val, s->len, 0, num_calls);
 }
 
+// Manual integer-to-string conversion: avoids snprintf(), which the PHP
+// headers (pulled in transitively via av_structs.h -> php.h) redefine to
+// ap_php_snprintf, an unresolved symbol in the Ceedling unit-test build.
 static zend_string *long_to_str_stub(zend_long num, int num_calls)
 {
     char buf[32];
-    int len = snprintf(buf, sizeof(buf), ZEND_LONG_FMT, num);
-    return string_init_stub(buf, (size_t)len, 0, num_calls);
+    size_t len = 0;
+
+    if (num == 0) {
+        buf[len++] = '0';
+    } else {
+        zend_long n = num;
+        if (n < 0) {
+            buf[len++] = '-';
+            n = -n;
+        }
+        char tmp[32];
+        size_t tmp_len = 0;
+        while (n > 0) {
+            tmp[tmp_len++] = (char)('0' + (n % 10));
+            n /= 10;
+        }
+        while (tmp_len > 0)
+            buf[len++] = tmp[--tmp_len];
+    }
+
+    return string_init_stub(buf, len, 0, num_calls);
 }
 
+// Doubles are not exercised by these tests; provide a minimal stub.
 static zend_string *double_to_str_stub(double num, int num_calls)
 {
-    char buf[64];
-    int len = snprintf(buf, sizeof(buf), "%.14g", num);
-    return string_init_stub(buf, (size_t)len, 0, num_calls);
+    (void)num;
+    return string_init_stub("0", 1, 0, num_calls);
 }
 
 // ---------------------------------------------------------------------------
@@ -113,9 +134,7 @@ void setUp(void)
     g_expected_type_string = "an integer";
 }
 
-void tearDown(void)
-{
-}
+void tearDown(void) {}
 
 // ---------------------------------------------------------------------------
 // No placeholders

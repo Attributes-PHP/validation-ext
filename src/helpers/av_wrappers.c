@@ -1,4 +1,5 @@
 #include "av_wrappers.h"
+#include "php.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_interfaces.h"
 #include "Zend/zend_list.h"
