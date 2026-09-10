@@ -40,3 +40,42 @@ void efree_stub(void *ptr, int num_calls)
 {
     free(ptr);
 }
+
+zend_string *string_alloc_stub(size_t length, bool persistent, int num_calls)
+{
+    zend_string *s = malloc(sizeof(zend_string) + length);
+    if (s) {
+        s->gc.refcount = 1;
+        s->gc.u.type_info = 0;
+        s->h = 0;
+        s->len = length;
+        s->val[length] = '\0';
+    }
+    return s;
+}
+
+zend_string *string_truncate_stub(zend_string *s, size_t length, bool persistent, int num_calls)
+{
+    if (s) {
+        s->len = length;
+        s->val[length] = '\0';
+    }
+    return s;
+}
+
+const char *memnstr_stub(const char *haystack, const char *needle, size_t needle_len, const char *end, int num_calls)
+{
+    (void)num_calls;
+    if (needle_len == 0)
+        return haystack;
+
+    size_t haystack_len = (size_t)(end - haystack);
+    if (haystack_len < needle_len)
+        return NULL;
+
+    for (const char *p = haystack; p <= end - needle_len; p++) {
+        if (memcmp(p, needle, needle_len) == 0)
+            return p;
+    }
+    return NULL;
+}

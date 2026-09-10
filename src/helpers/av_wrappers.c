@@ -31,6 +31,16 @@ void av_efree(void *ptr)
     efree(ptr);
 }
 
+zend_string *av_string_alloc(size_t length, bool persistent)
+{
+    return zend_string_alloc(length, persistent);
+}
+
+zend_string *av_string_truncate(zend_string *s, size_t length, bool persistent)
+{
+    return zend_string_truncate(s, length, persistent);
+}
+
 zend_string *av_string_concat3(const char *str1, size_t str1_len, const char *str2, size_t str2_len, const char *str3, size_t str3_len)
 {
     return zend_string_concat3(str1, str1_len, str2, str2_len, str3, str3_len);
@@ -83,4 +93,9 @@ zend_result av_call_tostring(zend_object *object, zval *retval)
 void av_zval_ptr_dtor(zval *zval_ptr)
 {
     zval_ptr_dtor(zval_ptr);
+}
+
+const char *av_memnstr(const char *haystack, const char *needle, size_t needle_len, const char *end)
+{
+    return php_memnstr(haystack, needle, needle_len, end);
 }

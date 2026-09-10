@@ -11,6 +11,8 @@ zend_string *av_string_init(const char *str, size_t len, bool persistent);
 void av_string_release(zend_string *s);
 void *av_emalloc(size_t size);
 void av_efree(void *ptr);
+zend_string *av_string_alloc(size_t length, bool persistent);
+zend_string *av_string_truncate(zend_string *s, size_t length, bool persistent);
 
 /* Additional wrappers used by av_value_to_string to allow mocking in unit tests. */
 zend_string *av_string_concat3(const char *str1, size_t str1_len, const char *str2, size_t str2_len, const char *str3, size_t str3_len);
@@ -22,5 +24,8 @@ bool av_is_stringable(const zend_class_entry *instance_ce);
 const char *av_rsrc_list_get_rsrc_type(zend_resource *res);
 zend_result av_call_tostring(zend_object *object, zval *retval);
 void av_zval_ptr_dtor(zval *zval_ptr);
+
+/* Additional wrappers used by av_replace_placeholders to allow mocking in unit tests. */
+const char *av_memnstr(const char *haystack, const char *needle, size_t needle_len, const char *end);
 
 #endif /* AV_HELPERS_AV_WRAPPERS_H */
