@@ -2,7 +2,6 @@
 #define AV_HELPERS_VALUE_TO_STRING_H
 
 #include <Zend/zend_types.h>
-#include <Zend/zend_string.h>
 
 /*
  * Converts any PHP zval into a zend_string for use in error message

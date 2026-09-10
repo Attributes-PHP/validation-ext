@@ -1,7 +1,7 @@
 #include "av_value_to_string.h"
 #include "av_wrappers.h"
+#include "Zend/zend_API.h"
 #include "Zend/zend_operators.h"
-#include "Zend/zend_types.h"
 #include <string.h>
 
 /*
