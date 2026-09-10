@@ -10,10 +10,10 @@
 
 #else
 
-#define STATIC static
-#define STATIC_INLINE static inline
+#define STATIC             static
+#define STATIC_INLINE      static inline
 #define STATIC_ZEND_INLINE static zend_always_inline
-#define INLINE inline
+#define INLINE             inline
 
 #endif
 #endif

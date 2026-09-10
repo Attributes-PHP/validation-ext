@@ -10,7 +10,7 @@
  *   Input: "@var array<string, int>"
  *   Output: "array<string, int>"
  */
-zend_string* av_extract_var_type(const char *doc_comment, size_t doc_comment_len)
+zend_string *av_extract_var_type(const char *doc_comment, size_t doc_comment_len)
 {
     const char *ptr = doc_comment;
     const char *end = doc_comment + doc_comment_len;
@@ -21,14 +21,14 @@ zend_string* av_extract_var_type(const char *doc_comment, size_t doc_comment_len
     while (ptr + 4 <= end) {
         if (memcmp(ptr, "@var", 4) == 0) {
             ptr += 4;
-            
+
             // Skip whitespace
             while (ptr < end && (*ptr == ' ' || *ptr == '\t')) {
                 ptr++;
             }
-            
+
             type_start = ptr;
-            
+
             // Scan until newline or space not preceded by backslash
             while (ptr < end) {
                 if (*ptr == '\n') {
@@ -39,9 +39,9 @@ zend_string* av_extract_var_type(const char *doc_comment, size_t doc_comment_len
                 }
                 ptr++;
             }
-            
+
             type_len = ptr - type_start;
-            
+
             if (type_len > 0) {
                 return zend_string_init(type_start, type_len, 0);
             }
@@ -49,7 +49,7 @@ zend_string* av_extract_var_type(const char *doc_comment, size_t doc_comment_len
         }
         ptr++;
     }
-    
+
     return NULL;
 }
 
@@ -68,7 +68,7 @@ zend_string* av_extract_var_type(const char *doc_comment, size_t doc_comment_len
  *   Input: "@var string[]"
  *   Output: "string[]"
  */
-zend_string* av_extract_array_type(const char *doc_comment, size_t doc_comment_len)
+zend_string *av_extract_array_type(const char *doc_comment, size_t doc_comment_len)
 {
     const char *ptr = doc_comment;
     const char *end = doc_comment + doc_comment_len;
@@ -79,14 +79,14 @@ zend_string* av_extract_array_type(const char *doc_comment, size_t doc_comment_l
     while (ptr + 4 <= end) {
         if (memcmp(ptr, "@var", 4) == 0) {
             ptr += 4;
-            
+
             // Skip whitespace
             while (ptr < end && (*ptr == ' ' || *ptr == '\t')) {
                 ptr++;
             }
-            
+
             type_start = ptr;
-            
+
             // Scan until newline or space not preceded by backslash
             while (ptr < end) {
                 if (*ptr == '\n') {
@@ -97,21 +97,21 @@ zend_string* av_extract_array_type(const char *doc_comment, size_t doc_comment_l
                 }
                 ptr++;
             }
-            
+
             type_len = ptr - type_start;
-            
+
             if (type_len > 0) {
                 // Quick check for array-related types
                 // Check for "array" prefix (5 bytes)
                 if (type_len >= 5 && memcmp(type_start, "array", 5) == 0) {
                     return zend_string_init(type_start, type_len, 0);
                 }
-                
+
                 // Check for "list" prefix (4 bytes)
                 if (type_len >= 4 && memcmp(type_start, "list", 4) == 0) {
                     return zend_string_init(type_start, type_len, 0);
                 }
-                
+
                 // Check for "[]" suffix
                 if (type_len >= 2 && type_start[type_len - 2] == '[' && type_start[type_len - 1] == ']') {
                     return zend_string_init(type_start, type_len, 0);
@@ -121,6 +121,6 @@ zend_string* av_extract_array_type(const char *doc_comment, size_t doc_comment_l
         }
         ptr++;
     }
-    
+
     return NULL;
 }

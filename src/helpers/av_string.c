@@ -137,7 +137,7 @@ STATIC_INLINE void to_kebab_case(av_string *input, av_string *output)
  * Converts a property name to PascalCase
  * Example: "firstName" -> "FirstName", "first_name" -> "FirstName"
  */
-zend_string* av_to_pascal_case(zend_string *str)
+zend_string *av_to_pascal_case(zend_string *str)
 {
     av_string input, output;
     input.value = ZSTR_VAL(str);
@@ -157,7 +157,7 @@ zend_string* av_to_pascal_case(zend_string *str)
  * Converts a property name to camelCase
  * Example: "FirstName" -> "firstName", "first_name" -> "firstName"
  */
-zend_string* av_to_camel_case(zend_string *str)
+zend_string *av_to_camel_case(zend_string *str)
 {
     av_string input, output;
     input.value = ZSTR_VAL(str);
@@ -177,7 +177,7 @@ zend_string* av_to_camel_case(zend_string *str)
  * Converts a property name to snake_case
  * Example: "FirstName" -> "first_name", "firstName" -> "first_name"
  */
-zend_string* av_to_snake_case(zend_string *str)
+zend_string *av_to_snake_case(zend_string *str)
 {
     av_string input, output;
     input.value = ZSTR_VAL(str);
@@ -197,7 +197,7 @@ zend_string* av_to_snake_case(zend_string *str)
  * Converts a property name to kebab-case
  * Example: "FirstName" -> "first-name", "firstName" -> "first-name"
  */
-zend_string* av_to_kebab_case(zend_string *str)
+zend_string *av_to_kebab_case(zend_string *str)
 {
     av_string input, output;
     input.value = ZSTR_VAL(str);

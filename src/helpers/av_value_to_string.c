@@ -21,7 +21,7 @@
  * All Zend internals are reached through the mockable av_wrappers so the
  * function can be unit tested in isolation.
  */
-zend_string* av_value_to_string(zval *value)
+zend_string *av_value_to_string(zval *value)
 {
     if (value == NULL) {
         return av_string_init("null", sizeof("null") - 1, 0);

@@ -10,10 +10,10 @@ typedef struct {
 } av_string;
 
 /* Registration function */
-zend_string* av_to_pascal_case(zend_string *str);
-zend_string* av_to_camel_case(zend_string *str);
-zend_string* av_to_snake_case(zend_string *str);
-zend_string* av_to_kebab_case(zend_string *str);
+zend_string *av_to_pascal_case(zend_string *str);
+zend_string *av_to_camel_case(zend_string *str);
+zend_string *av_to_snake_case(zend_string *str);
+zend_string *av_to_kebab_case(zend_string *str);
 
 STATIC_ZEND_INLINE bool is_uppercase(char c);
 STATIC_ZEND_INLINE bool is_lowercase(char c);
