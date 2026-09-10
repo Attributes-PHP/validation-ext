@@ -9,6 +9,8 @@
 #include "zend_portability.h"
 #include "zend_string.h"
 #include "zend_types.h"
+#include "zend_list.h"
+#include <math.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -19,11 +21,47 @@ static const char* av_error_type_messages[] = {
 
 static zend_string* av_value_to_string(zval *value)
 {
-    // TODO: Implement zval to zend_string implementation
     if (value == NULL) {
-        return zend_string_init("null", 4, 0);
+        return zend_string_init("null", sizeof("null") - 1, 0);
     }
-    return zval_get_string(value);
+
+    ZVAL_DEREF(value);
+
+    switch (Z_TYPE_P(value)) {
+        case IS_NULL:
+            return zend_string_init("null", sizeof("null") - 1, 0);
+        case IS_TRUE:
+            return zend_string_init("true", sizeof("true") - 1, 0);
+        case IS_FALSE:
+            return zend_string_init("false", sizeof("false") - 1, 0);
+        case IS_LONG:
+            return zend_long_to_str(Z_LVAL_P(value));
+        case IS_DOUBLE:
+            return zend_double_to_str(Z_DVAL_P(value));
+        case IS_STRING:
+            return zend_string_concat3("'", 1, Z_STRVAL_P(value), Z_STRLEN_P(value), "'", 1);
+        case IS_ARRAY:
+            return zend_string_init("array", sizeof("array") - 1, 0);
+        case IS_OBJECT:
+            if (instanceof_function(Z_OBJCE_P(value), zend_ce_stringable)) {
+                zval result;
+                if (zend_call_method_with_0_params(Z_OBJ_P(value), NULL, NULL, "__tostring", &result) == SUCCESS && Z_TYPE(result) == IS_STRING) {
+                    zend_string *str = zend_string_concat3("'", 1, Z_STRVAL(result), Z_STRLEN(result), "'", 1);
+                    zval_ptr_dtor(&result);
+                    return str;
+                }
+                if (Z_TYPE(result) != IS_UNDEF) {
+                    zval_ptr_dtor(&result);
+                }
+            }
+            return zend_string_copy(Z_OBJCE_P(value)->name);
+        case IS_RESOURCE: {
+            const char *type_name = zend_rsrc_list_get_rsrc_type(Z_RES_P(value));
+            return zend_string_init(type_name ? type_name : "resource", strlen(type_name ? type_name : "resource"), 0);
+        }
+        default:
+            return zval_get_string(value);
+    }
 }
 
 static zend_string* av_replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info)
