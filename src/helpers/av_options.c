@@ -5,7 +5,6 @@
 #include "ext/spl/spl_exceptions.h"
 #include "av_wrappers.h"
 
-
 bool av_validate_method_parameter(char *option, char **all_valid_options, size_t length, av_invalid_method_parameter *invalid_parameter_error)
 {
     for (size_t i = 0; i < length; i++) {

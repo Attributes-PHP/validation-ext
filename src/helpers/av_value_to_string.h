@@ -8,6 +8,6 @@
  * templates (the {value} placeholder). See av_value_to_string.c for the
  * per-type conversion rules.
  */
-zend_string* av_value_to_string(zval *value);
+zend_string *av_value_to_string(zval *value);
 
 #endif /* AV_HELPERS_VALUE_TO_STRING_H */

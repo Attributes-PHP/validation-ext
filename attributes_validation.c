@@ -54,7 +54,7 @@ PHP_MINFO_FUNCTION(attributes_validation)
     php_info_print_table_start();
     php_info_print_table_header(2, "attributes_validation", "enabled");
     php_info_print_table_end();
-    
+
     DISPLAY_INI_ENTRIES();
 }
 

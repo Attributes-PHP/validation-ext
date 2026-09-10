@@ -12,9 +12,9 @@ zend_class_entry *AV_ModelConfigs_ce;
  * Reads a property from the current object and returns it.
  * Used by all getter methods in this class.
  */
-#define AV_GET_PROPERTY_AND_RETURN(prop_name) \
-    ZEND_PARSE_PARAMETERS_NONE(); \
-    zval rv, *value; \
+#define AV_GET_PROPERTY_AND_RETURN(prop_name)                                                                     \
+    ZEND_PARSE_PARAMETERS_NONE();                                                                                 \
+    zval rv, *value;                                                                                              \
     value = zend_read_property(AV_ModelConfigs_ce, Z_OBJ_P(getThis()), prop_name, sizeof(prop_name) - 1, 1, &rv); \
     RETURN_COPY_DEREF(value)
 
@@ -58,7 +58,7 @@ ZEND_METHOD(AV_ModelConfigs, setDefaultErrorMessages)
     zval *errorMessages;
 
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_ZVAL(errorMessages)
+    Z_PARAM_ZVAL(errorMessages)
     ZEND_PARSE_PARAMETERS_END();
 
     if (!zend_is_callable(errorMessages, 0, NULL)) {
@@ -85,17 +85,14 @@ void av_register_ModelConfigs_class(void)
     declare_typed_property_string("extra", sizeof("extra") - 1, "ignore", sizeof("ignore") - 1, false);
     declare_typed_property_bool("strict", sizeof("strict") - 1, false);
     declare_typed_property_bool("stopAtFirstError", sizeof("stopAtFirstError") - 1, false);
-    
+
     /* Declare defaultErrorMessages as a static mixed property */
     zval default_error_messages_default;
     ZVAL_NULL(&default_error_messages_default);
-    declare_typed_property("defaultErrorMessages", sizeof("defaultErrorMessages") - 1, &default_error_messages_default, 0, ZEND_ACC_PRIVATE|ZEND_ACC_STATIC);
+    declare_typed_property("defaultErrorMessages", sizeof("defaultErrorMessages") - 1, &default_error_messages_default, 0, ZEND_ACC_PRIVATE | ZEND_ACC_STATIC);
 
     /* Register as an internal attribute that targets classes only */
-    zend_internal_attribute_register(
-        AV_ModelConfigs_ce,
-        ZEND_ATTRIBUTE_TARGET_CLASS
-    );
+    zend_internal_attribute_register(AV_ModelConfigs_ce, ZEND_ATTRIBUTE_TARGET_CLASS);
 }
 
 /**
@@ -125,7 +122,8 @@ void av_create_model_configs(zval *configs, zval *model, av_model_configs_proper
     /* Parse attribute arguments */
     for (uint32_t i = 0; i < model_configs_attr->argc; i++) {
         zval arg_val;
-        if (zend_get_attribute_value(&arg_val, model_configs_attr, i, base_model_class_entry) != SUCCESS) continue;
+        if (zend_get_attribute_value(&arg_val, model_configs_attr, i, base_model_class_entry) != SUCCESS)
+            continue;
 
         zend_attribute_arg argument = model_configs_attr->args[i];
         int index = argument.name == NULL ? i : get_argument_index_by_name(argument.name);
@@ -134,7 +132,8 @@ void av_create_model_configs(zval *configs, zval *model, av_model_configs_proper
             case 0: /* aliasGenerator */
                 if (Z_TYPE(arg_val) == IS_STRING) {
                     pretty_alias_generator = Z_STRVAL(arg_val);
-                    if (!validate_alias_generator(pretty_alias_generator)) return;
+                    if (!validate_alias_generator(pretty_alias_generator))
+                        return;
 
                     properties->alias_generator = pretty_alias_generator[0];
                 }
@@ -151,7 +150,8 @@ void av_create_model_configs(zval *configs, zval *model, av_model_configs_proper
             case 4: /* extra */
                 if (Z_TYPE(arg_val) == IS_STRING) {
                     pretty_extra = Z_STRVAL(arg_val);
-                    if (!validate_extra(pretty_extra)) return;
+                    if (!validate_extra(pretty_extra))
+                        return;
 
                     properties->extra = pretty_extra[0];
                 }
@@ -202,24 +202,14 @@ static zend_always_inline void set_default_properties(av_model_configs_propertie
 static bool validate_alias_generator(char *pretty_alias_generator)
 {
     char *all_pretty_alias[] = {"pascal", "camel", "snake", "kebab"};
-    av_invalid_method_parameter invalid_parameter_error = {
-        .class_name = "Attributes\\Validation\\ModelConfigs",
-        .method_name = "__construct()",
-        .parameter_number = 1,
-        .name = "aliasGenerator"
-    };
+    av_invalid_method_parameter invalid_parameter_error = {.class_name = "Attributes\\Validation\\ModelConfigs", .method_name = "__construct()", .parameter_number = 1, .name = "aliasGenerator"};
     return av_validate_method_parameter(pretty_alias_generator, all_pretty_alias, 4, &invalid_parameter_error);
 }
 
 static bool validate_extra(char *pretty_extra)
 {
     char *all_pretty_extra[] = {"ignore", "forbid", "allow"};
-    av_invalid_method_parameter invalid_parameter_error = {
-        .class_name = "Attributes\\Validation\\ModelConfigs",
-        .method_name = "__construct()",
-        .parameter_number = 5,
-        .name = "extra"
-    };
+    av_invalid_method_parameter invalid_parameter_error = {.class_name = "Attributes\\Validation\\ModelConfigs", .method_name = "__construct()", .parameter_number = 5, .name = "extra"};
     return av_validate_method_parameter(pretty_extra, all_pretty_extra, 3, &invalid_parameter_error);
 }
 
@@ -233,19 +223,20 @@ static zend_always_inline void declare_typed_property_bool(const char *name, siz
 static zend_always_inline void declare_typed_property_string(const char *name, size_t length, char *default_value, size_t default_length, bool allow_null)
 {
     zval z_default_value;
-    if (default_value == NULL) ZVAL_NULL(&z_default_value);
+    if (default_value == NULL)
+        ZVAL_NULL(&z_default_value);
     else {
         zend_string *default_string = zend_string_init(default_value, default_length, 1);
         ZVAL_STR(&z_default_value, default_string);
     }
 
-    zend_uchar type = allow_null ? MAY_BE_STRING|MAY_BE_NULL : MAY_BE_STRING;
+    zend_uchar type = allow_null ? MAY_BE_STRING | MAY_BE_NULL : MAY_BE_STRING;
     declare_typed_property(name, length, &z_default_value, type, ZEND_ACC_PRIVATE);
 }
 
 static zend_always_inline void declare_typed_property(const char *name, size_t length, zval *default_value, int type, int visibility)
 {
-    zend_type property_type = (zend_type) ZEND_TYPE_INIT_MASK(type);
+    zend_type property_type = (zend_type)ZEND_TYPE_INIT_MASK(type);
     zend_string *property_name = zend_string_init(name, length, 1);
     zend_declare_typed_property(AV_ModelConfigs_ce, property_name, default_value, visibility, NULL, property_type);
     zend_string_release(property_name);
@@ -254,17 +245,13 @@ static zend_always_inline void declare_typed_property(const char *name, size_t l
 /**
  * Walks up the inheritance chain to find the first ModelConfigs attribute
  */
-static zend_attribute* get_model_configs_attribute(zend_class_entry *base_model_class_entry)
+static zend_attribute *get_model_configs_attribute(zend_class_entry *base_model_class_entry)
 {
     zend_class_entry *current_ce = base_model_class_entry;
     zend_attribute *model_configs_attr = NULL;
     while (current_ce != NULL) {
         if (current_ce->attributes != NULL) {
-            model_configs_attr = zend_get_attribute_str(
-                current_ce->attributes,
-                "attributes\\validation\\modelconfigs",
-                sizeof("attributes\\validation\\modelconfigs") - 1
-            );
+            model_configs_attr = zend_get_attribute_str(current_ce->attributes, "attributes\\validation\\modelconfigs", sizeof("attributes\\validation\\modelconfigs") - 1);
             if (model_configs_attr != NULL) {
                 return model_configs_attr;
             }
@@ -282,32 +269,39 @@ static int get_argument_index_by_name(zend_string *name)
 
     switch (len) {
         case 14: // "aliasGenerator"
-            if (memcmp(val, "aliasGenerator", 14) == 0) return 0;
+            if (memcmp(val, "aliasGenerator", 14) == 0)
+                return 0;
             break;
 
         case 10: // "strToLower", "strToUpper"
             // Both are length 10. Check the 4th character ('L' vs 'U') to differentiate instantly.
-            if (val[5] == 'L' && memcmp(val, "strToLower", 10) == 0) return 1;
-            if (val[5] == 'U' && memcmp(val, "strToUpper", 10) == 0) return 2;
+            if (val[5] == 'L' && memcmp(val, "strToLower", 10) == 0)
+                return 1;
+            if (val[5] == 'U' && memcmp(val, "strToUpper", 10) == 0)
+                return 2;
             break;
 
         case 15: // "stripWhitespace"
-            if (memcmp(val, "stripWhitespace", 15) == 0) return 3;
+            if (memcmp(val, "stripWhitespace", 15) == 0)
+                return 3;
             break;
 
         case 5: // "extra"
-            if (memcmp(val, "extra", 5) == 0) return 4;
+            if (memcmp(val, "extra", 5) == 0)
+                return 4;
             break;
 
         case 6: // "strict"
-            if (memcmp(val, "strict", 6) == 0) return 5;
+            if (memcmp(val, "strict", 6) == 0)
+                return 5;
             break;
 
         case 16: // "stopAtFirstError"
-            if (memcmp(val, "stopAtFirstError", 16) == 0) return 6;
+            if (memcmp(val, "stopAtFirstError", 16) == 0)
+                return 6;
             break;
     }
-    
+
     zend_throw_exception_ex(zend_ce_error, 0, "Unknown named parameter $%s", ZSTR_VAL(name));
     return -1;
 }

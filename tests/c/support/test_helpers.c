@@ -7,7 +7,8 @@
 // Stub implementations for av_wrappers to be used in tests
 // These provide real implementations that the tests can use
 
-zend_string* string_init_stub(const char *str, size_t len, bool persistent, int num_calls) {
+zend_string *string_init_stub(const char *str, size_t len, bool persistent, int num_calls)
+{
     // zend_string has val[1] so we need sizeof(zend_string) - 1 + len + 1 = sizeof(zend_string) + len
     zend_string *s = malloc(sizeof(zend_string) + len);
     if (s) {
@@ -23,16 +24,19 @@ zend_string* string_init_stub(const char *str, size_t len, bool persistent, int 
     return s;
 }
 
-void string_release_stub(zend_string *s, int num_calls) {
+void string_release_stub(zend_string *s, int num_calls)
+{
     if (s) {
         free(s);
     }
 }
 
-void* emalloc_stub(size_t size, int num_calls) {
+void *emalloc_stub(size_t size, int num_calls)
+{
     return malloc(size);
 }
 
-void efree_stub(void *ptr, int num_calls) {
+void efree_stub(void *ptr, int num_calls)
+{
     free(ptr);
 }

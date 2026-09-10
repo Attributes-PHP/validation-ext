@@ -1,0 +1,73 @@
+# Formatting configuration for the C sources of the attributes-validation
+# PHP extension. Derived from the LLVM preset and tuned to match the existing
+# code style with minimal churn.
+---
+BasedOnStyle: LLVM
+Language: Cpp
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+IndentCaseLabels: true
+IndentCaseBlocks: false
+IndentGotoLabels: false
+NamespaceIndentation: None
+IndentPPDirectives: None
+
+# Braces and line breaks
+# Functions put the opening brace on a new line; all other constructs
+# (control statements, struct/enum/class bodies, blocks) keep it attached.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeElse: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+# Set generously so existing intentionally-long lines (e.g. macro-heavy Zend
+# declarations and error-message string literals) are left intact. clang-format
+# still enforces indentation, brace placement and whitespace.
+ColumnLimit: 220
+ReflowComments: false
+
+# Pointers and references (Zend style: `zval *value`)
+PointerAlignment: Right
+
+# Includes: keep relative groups, sort within groups
+IncludeBlocks: Preserve
+SortIncludes: Never
+
+# Whitespace
+SpaceAfterCStyleCast: false
+SpaceBeforeParens: ControlStatements
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpaceInEmptyParentheses: false
+SpaceInEmptyBlock: false
+BitFieldColonSpacing: Both
+
+# Alignment
+AlignAfterOpenBracket: BlockIndent
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: true
+AlignEscapedNewlines: Left
+AlignOperands: Align
+AlignTrailingComments: true
+
+# Misc
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+FixNamespaceComments: false

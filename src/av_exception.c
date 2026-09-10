@@ -38,7 +38,7 @@ static void register_ValidationException_class(void)
     zval property_allErrors_default_value;
     ZVAL_EMPTY_ARRAY(&property_allErrors_default_value);
     zend_string *property_allErrors_name = zend_string_init("allErrors", sizeof("allErrors") - 1, 1);
-    zend_declare_typed_property(class_AV_Exceptions_ValidationException, property_allErrors_name, &property_allErrors_default_value, ZEND_ACC_PRIVATE, NULL, (zend_type) ZEND_TYPE_INIT_MASK(MAY_BE_ARRAY));
+    zend_declare_typed_property(class_AV_Exceptions_ValidationException, property_allErrors_name, &property_allErrors_default_value, ZEND_ACC_PRIVATE, NULL, (zend_type)ZEND_TYPE_INIT_MASK(MAY_BE_ARRAY));
     zend_string_release(property_allErrors_name);
 }
 
@@ -46,7 +46,7 @@ ZEND_METHOD(AV_Exceptions_ValidationException, __construct)
 {
     zval *all_errors;
     ZEND_PARSE_PARAMETERS_START(1, 1)
-        Z_PARAM_ARRAY(all_errors)
+    Z_PARAM_ARRAY(all_errors)
     ZEND_PARSE_PARAMETERS_END();
 
     zend_object *this = Z_OBJ_P(getThis());

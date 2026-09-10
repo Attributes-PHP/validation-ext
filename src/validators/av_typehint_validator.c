@@ -18,7 +18,8 @@ zend_class_entry *datetime_interface_ce;
 /**
  * Initializes necessary class entries.
  */
-void av_init_typehint_validator() {
+void av_init_typehint_validator()
+{
     zend_string *datetime_str = zend_string_init("DateTime", sizeof("DateTime") - 1, 0);
     datetime_ce = zend_lookup_class_ex(datetime_str, NULL, ZEND_FETCH_CLASS_NO_AUTOLOAD);
     zend_string_release(datetime_str);
@@ -32,7 +33,8 @@ void av_init_typehint_validator() {
     }
 }
 
-static zend_class_entry *resolve_single_class_type(zend_string *name, zend_class_entry *self_ce) {
+static zend_class_entry *resolve_single_class_type(zend_string *name, zend_class_entry *self_ce)
+{
     if (zend_string_equals_literal_ci(name, "self")) {
         return self_ce;
     } else if (zend_string_equals_literal_ci(name, "parent")) {
@@ -42,7 +44,8 @@ static zend_class_entry *resolve_single_class_type(zend_string *name, zend_class
     }
 }
 
-static zend_always_inline zend_class_entry *get_ce_from_type(zend_property_info *info, const zend_type *type) {
+static zend_always_inline zend_class_entry *get_ce_from_type(zend_property_info *info, const zend_type *type)
+{
     ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*type));
     zend_string *name = ZEND_TYPE_NAME(*type);
     if (ZSTR_HAS_CE_CACHE(name)) {
@@ -55,31 +58,36 @@ static zend_always_inline zend_class_entry *get_ce_from_type(zend_property_info 
     return resolve_single_class_type(name, info->ce);
 }
 
-static bool handle_intersection(av_field *field, av_property_info *prop_info, const zend_type *value_type) {
+static bool handle_intersection(av_field *field, av_property_info *prop_info, const zend_type *value_type)
+{
     const zend_type *intersection_type;
     ZEND_ASSERT(ZEND_TYPE_IS_INTERSECTION(*value_type));
 
-    ZEND_TYPE_LIST_FOREACH(ZEND_TYPE_LIST(*value_type), intersection_type) {
+    ZEND_TYPE_LIST_FOREACH(ZEND_TYPE_LIST(*value_type), intersection_type)
+    {
         ZEND_ASSERT(!ZEND_TYPE_HAS_LIST(*intersection_type));
 
         zend_class_entry *ce = get_ce_from_type(prop_info->property, intersection_type);
         if (!ce || !instanceof_function(Z_OBJCE_P(field->value), ce)) {
             return false;
         }
-    } ZEND_TYPE_LIST_FOREACH_END();
+    }
+    ZEND_TYPE_LIST_FOREACH_END();
     return false;
 }
 
 /**
  * Check if a class entry is DateTime or implements DateTimeInterface.
  */
-static bool is_datetime_class(zend_class_entry *ce) {
-    if (!ce) return false;
-    return (ce == datetime_ce || ce == datetime_interface_ce || 
-            instanceof_function(ce, datetime_interface_ce));
+static bool is_datetime_class(zend_class_entry *ce)
+{
+    if (!ce)
+        return false;
+    return (ce == datetime_ce || ce == datetime_interface_ce || instanceof_function(ce, datetime_interface_ce));
 }
 
-static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_configs_properties *properties) {
+static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_configs_properties *properties)
+{
     const zend_string *str = Z_STR_P(value);
     if (ZSTR_LEN(str) <= 12) {
         return false;
@@ -129,7 +137,8 @@ static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_c
     return false;
 }
 
-static bool handle_class(av_field *field, av_property_info *prop_info, const zend_type *value_type, av_model_configs_properties *properties, zval *errors) {
+static bool handle_class(av_field *field, av_property_info *prop_info, const zend_type *value_type, av_model_configs_properties *properties, zval *errors)
+{
     ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*value_type));
 
     zend_class_entry *ce = get_ce_from_type(prop_info->property, value_type);
@@ -146,14 +155,13 @@ static bool handle_class(av_field *field, av_property_info *prop_info, const zen
     }
 
     if (Z_TYPE_P(field->value) == IS_ARRAY) {
-        if (!ce || ce == AV_BaseModel_ce || !instanceof_function(ce, AV_BaseModel_ce)) return false;
+        if (!ce || ce == AV_BaseModel_ce || !instanceof_function(ce, AV_BaseModel_ce))
+            return false;
 
         zval model_obj;
         object_init_ex(&model_obj, ce);
 
-        zend_string *nested_path = field->parent ?
-            zend_string_copy(field->parent) :
-            zend_string_copy(field->name);
+        zend_string *nested_path = field->parent ? zend_string_copy(field->parent) : zend_string_copy(field->name);
 
         bool result = av_validate_model_internal(field->value, prop_info, properties, errors, nested_path);
 
@@ -172,7 +180,8 @@ static bool handle_class(av_field *field, av_property_info *prop_info, const zen
     return false;
 }
 
-static bool coerce_bool(av_field *field) {
+static bool coerce_bool(av_field *field)
+{
     zend_uchar type_code = Z_TYPE_P(field->value);
 
     switch (type_code) {
@@ -284,30 +293,38 @@ bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_mode
 {
     zend_type property_type = prop_info->property->type;
 
-    if (!ZEND_TYPE_IS_SET(property_type)) return true;
+    if (!ZEND_TYPE_IS_SET(property_type))
+        return true;
 
-    if (ZEND_TYPE_CONTAINS_CODE(property_type, Z_TYPE_P(field->value))) return true;
+    if (ZEND_TYPE_CONTAINS_CODE(property_type, Z_TYPE_P(field->value)))
+        return true;
 
     const zend_type *type;
-    ZEND_TYPE_FOREACH(property_type, type) {
+    ZEND_TYPE_FOREACH(property_type, type)
+    {
         if (ZEND_TYPE_IS_INTERSECTION(*type)) {
-            if (handle_intersection(field, prop_info, type)) return true;
+            if (handle_intersection(field, prop_info, type))
+                return true;
             continue;
         }
 
         if (ZEND_TYPE_HAS_NAME(*type)) {
-            if (handle_class(field, prop_info, type, properties, errors)) return true;
+            if (handle_class(field, prop_info, type, properties, errors))
+                return true;
             continue;
         }
 
         uint32_t type_mask = ZEND_TYPE_PURE_MASK(*type);
         if (!properties->strict && type_mask & MAY_BE_BOOL) {
-            if (coerce_bool(field)) return true;
+            if (coerce_bool(field))
+                return true;
             continue;
         }
 
-        if (zend_verify_scalar_type_hint(type_mask, field->value, properties->strict, 0)) return true;
-    }  ZEND_TYPE_FOREACH_END();
+        if (zend_verify_scalar_type_hint(type_mask, field->value, properties->strict, 0))
+            return true;
+    }
+    ZEND_TYPE_FOREACH_END();
 
     av_add_field_error_with_prefix(AV_ERROR_TYPE, field, prop_info, errors);
     return false;
