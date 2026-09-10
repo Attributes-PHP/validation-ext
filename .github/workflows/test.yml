@@ -45,7 +45,7 @@ jobs:
           printf 'Analysing %d source files\n' "${#sources[@]}"
           clang-tidy --config-file=.clang-tidy -p . "${sources[@]}"
 
-test:
+  test:
     name: Run tests (PHP ${{ matrix.php-version }})
     runs-on: ubuntu-latest
     strategy:
