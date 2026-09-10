@@ -42,7 +42,7 @@ static zend_class_entry *resolve_single_class_type(zend_string *name, zend_class
     }
 }
 
-static zend_always_inline zend_class_entry *get_ce_from_type(zend_property_info *info, zend_type *type) {
+static zend_always_inline zend_class_entry *get_ce_from_type(zend_property_info *info, const zend_type *type) {
     ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*type));
     zend_string *name = ZEND_TYPE_NAME(*type);
     if (ZSTR_HAS_CE_CACHE(name)) {
@@ -55,8 +55,8 @@ static zend_always_inline zend_class_entry *get_ce_from_type(zend_property_info 
     return resolve_single_class_type(name, info->ce);
 }
 
-static bool handle_intersection(av_field *field, av_property_info *prop_info, zend_type *value_type) {
-    zend_type *intersection_type;
+static bool handle_intersection(av_field *field, av_property_info *prop_info, const zend_type *value_type) {
+    const zend_type *intersection_type;
     ZEND_ASSERT(ZEND_TYPE_IS_INTERSECTION(*value_type));
 
     ZEND_TYPE_LIST_FOREACH(ZEND_TYPE_LIST(*value_type), intersection_type) {
@@ -129,7 +129,7 @@ static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_c
     return false;
 }
 
-static bool handle_class(av_field *field, av_property_info *prop_info, zend_type *value_type, av_model_configs_properties *properties, zval *errors) {
+static bool handle_class(av_field *field, av_property_info *prop_info, const zend_type *value_type, av_model_configs_properties *properties, zval *errors) {
     ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*value_type));
 
     zend_class_entry *ce = get_ce_from_type(prop_info->property, value_type);
@@ -288,7 +288,7 @@ bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_mode
 
     if (ZEND_TYPE_CONTAINS_CODE(property_type, Z_TYPE_P(field->value))) return true;
 
-    zend_type *type;
+    const zend_type *type;
     ZEND_TYPE_FOREACH(property_type, type) {
         if (ZEND_TYPE_IS_INTERSECTION(*type)) {
             if (handle_intersection(field, prop_info, type)) return true;
