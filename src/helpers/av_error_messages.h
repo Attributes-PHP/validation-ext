@@ -19,6 +19,9 @@ static zend_string* build_union_type_string(zend_type property_type);
 static zend_string* generate_error_message(av_field *field, zend_type property_type);
 static bool av_vowel_sound(char c);
 
+// Value conversion
+zend_string* av_value_to_string(zval *value);
+
 // Updates errors
 static zend_always_inline void add_field_error_to_array(zval *errors_array, const char *error_message, size_t length);
 static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, const char *error_message, size_t length);

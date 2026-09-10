@@ -17,15 +17,6 @@ static const char* av_error_type_messages[] = {
     [AV_ERROR_TYPE] = "The {field} must be {expected}.",
 };
 
-static zend_string* av_value_to_string(zval *value)
-{
-    // TODO: Implement zval to zend_string implementation
-    if (value == NULL) {
-        return zend_string_init("null", 4, 0);
-    }
-    return zval_get_string(value);
-}
-
 static zend_string* av_replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info)
 {
     struct { const char *search; size_t len; size_t counts; zend_string *replace; } table[] = {
