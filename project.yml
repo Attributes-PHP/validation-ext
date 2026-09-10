@@ -186,7 +186,12 @@
     int8:     INT8
     bool:     UINT8
   #:treat_as_array:  {}            # hint to cmock that these types are pointers to something
-  #:treat_as_void:  []             # hint to cmock that these types are actually aliases of void
+  # Treat opaque Zend types as void so CMock compares pointers by value instead
+  # of trying to sizeof an incomplete struct definition.
+  :treat_as_void:
+    - zend_class_entry
+    - zend_object
+    - zend_resource
   :memcmp_if_unknown:  true        # allow cmock to use the memory comparison assertions for unknown types
   :when_ptr:  :compare_data        # hint to cmock how to handle pointers in general, the options being :compare_ptr, :compare_data, or :smart
 
