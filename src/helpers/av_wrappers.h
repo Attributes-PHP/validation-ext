@@ -6,7 +6,6 @@
 #define AV_HELPERS_AV_WRAPPERS_H
 
 #include <Zend/zend_types.h>
-#include <Zend/zend_string.h>
 
 zend_string* av_string_init(const char *str, size_t len, bool persistent);
 void av_string_release(zend_string *s);
