@@ -11,11 +11,14 @@ typedef enum {
     AV_ERROR_TYPE
 } av_error_type;
 
+// Placeholder substitution
+zend_string *av_replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info);
+
 // Error message generation
 static zend_string *generate_type_name(const zend_type *type);
 static bool is_type_enum(const zend_type *type);
 static zend_string *build_single_type_with_article(const zend_type *type);
-static zend_string *build_union_type_string(zend_type property_type);
+zend_string *build_union_type_string(zend_type property_type);
 static zend_string *generate_error_message(av_field *field, zend_type property_type);
 static bool av_vowel_sound(char c);
 
