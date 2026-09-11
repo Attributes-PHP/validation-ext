@@ -12,4 +12,11 @@ extern zend_string *string_alloc_stub(size_t length, bool persistent, int num_ca
 extern zend_string *string_truncate_stub(zend_string *s, size_t length, bool persistent, int num_calls);
 extern const char *memnstr_stub(const char *haystack, const char *needle, size_t needle_len, const char *end, int num_calls);
 
+// Stubs for the PHP snprintf API (php.h #defines snprintf/vsnprintf to
+// ap_php_snprintf/ap_php_vsnprintf). The Ceedling unit-test build has no
+// Zend library to link against, so these delegate to the compiler builtins so
+// the test files can keep using snprintf() naturally after including php.h.
+extern int ap_php_snprintf(char *buf, size_t len, const char *format, ...);
+extern int ap_php_vsnprintf(char *buf, size_t len, const char *format, va_list ap);
+
 #endif /* TEST_HELPERS_H */

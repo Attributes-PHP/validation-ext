@@ -1,6 +1,7 @@
 #include "unity.h"
 #include "helpers/mock_av_wrappers.h"
 #include <Zend/zend_types.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -78,4 +79,21 @@ const char *memnstr_stub(const char *haystack, const char *needle, size_t needle
             return p;
     }
     return NULL;
+}
+
+// PHP's php.h #defines snprintf -> ap_php_snprintf and vsnprintf ->
+// ap_php_vsnprintf. The unit-test build has no Zend library, so provide these
+// symbols delegating to the compiler builtins (which ignore the macros).
+int ap_php_snprintf(char *buf, size_t len, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int result = __builtin_vsnprintf(buf, len, format, args);
+    va_end(args);
+    return result;
+}
+
+int ap_php_vsnprintf(char *buf, size_t len, const char *format, va_list ap)
+{
+    return __builtin_vsnprintf(buf, len, format, ap);
 }

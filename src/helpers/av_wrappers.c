@@ -1,10 +1,14 @@
 #include "av_wrappers.h"
 #include "php.h"
 #include "Zend/zend_API.h"
+#include "Zend/zend_compile.h"
+#include "Zend/zend_hash.h"
 #include "Zend/zend_interfaces.h"
 #include "Zend/zend_list.h"
 #include "Zend/zend_operators.h"
 #include "Zend/zend_variables.h"
+#include <math.h>
+#include <stdarg.h>
 
 /*
  * Wrapper implementations for Zend internals.
@@ -99,4 +103,48 @@ void av_zval_ptr_dtor(zval *zval_ptr)
 const char *av_memnstr(const char *haystack, const char *needle, size_t needle_len, const char *end)
 {
     return php_memnstr(haystack, needle, needle_len, end);
+}
+
+zval *av_hash_find(const HashTable *ht, zend_string *key)
+{
+    return zend_hash_find(ht, key);
+}
+
+zval *av_hash_next_index_insert(HashTable *ht, zval *pData)
+{
+    return zend_hash_next_index_insert(ht, pData);
+}
+
+zval *av_hash_add(HashTable *ht, zend_string *key, zval *pData)
+{
+    return zend_hash_add(ht, key, pData);
+}
+
+HashTable *av_new_array(uint32_t size)
+{
+    return zend_new_array(size);
+}
+
+void av_zval_stringl(zval *z, const char *str, size_t len)
+{
+    ZVAL_NEW_STR(z, av_string_init(str, len, 0));
+}
+
+zend_class_entry *av_lookup_class_ex(zend_string *name, zend_string *lcname, uint32_t flags)
+{
+    return zend_lookup_class_ex(name, lcname, flags);
+}
+
+int av_snprintf(char *buffer, size_t size, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    int result = vsnprintf(buffer, size, format, args);
+    va_end(args);
+    return result;
+}
+
+double av_fmax(double a, double b)
+{
+    return fmax(a, b);
 }
