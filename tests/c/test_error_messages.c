@@ -1,9 +1,9 @@
 #include "unity.h"
 #include "test_helpers.h"
 #include "helpers/mock_av_wrappers.h"
-#include "helpers/av_replace_placeholders.h"
-#include "helpers/av_value_to_string.h"
+#include "helpers/av_error_messages.h"
 #include <Zend/zend.h>
+#include <Zend/zend_type_info.h>
 #include <Zend/zend_types.h>
 #include <Zend/zend_string.h>
 #include <string.h>
@@ -73,22 +73,6 @@ static zend_string *double_to_str_stub(double num, int num_calls)
 }
 
 // ---------------------------------------------------------------------------
-// Hand-written stub for build_union_type_string (the {expected} provider).
-// The real implementation lives in av_error_messages.c, which pulls in the full
-// Zend engine and is therefore not linked into this unit test. CMock cannot
-// mock it in isolation because it shares its header with the function under
-// test, so we provide a minimal definition returning a configurable string.
-// ---------------------------------------------------------------------------
-
-static const char *g_expected_type_string;
-
-zend_string *build_union_type_string(zend_type property_type)
-{
-    (void)property_type;
-    return string_init_stub(g_expected_type_string, strlen(g_expected_type_string), 0, 0);
-}
-
-// ---------------------------------------------------------------------------
 // Helpers to build av_field / av_property_info without a running Zend engine.
 // ---------------------------------------------------------------------------
 
@@ -101,10 +85,16 @@ static av_field make_field(const char *name, zval *value)
     return field;
 }
 
-static av_property_info make_prop_info(zend_property_info *prop, zend_type *type)
+// Builds an av_property_info carrying a single basic type mask. The real
+// build_union_type_string() (now linked from av_error_messages.c) derives the
+// {expected} string from this mask, so the placeholder tests exercise the real
+// type-to-article logic instead of a stub.
+static av_property_info make_prop_info(zend_property_info *prop, zend_type *type, uint32_t type_mask)
 {
     memset(prop, 0, sizeof(*prop));
     memset(type, 0, sizeof(*type));
+    type->type_mask = type_mask;
+    type->ptr = NULL;
     prop->type = *type;
     av_property_info info;
     info.model = NULL;
@@ -130,8 +120,6 @@ void setUp(void)
     av_long_to_str_Stub(long_to_str_stub);
     av_double_to_str_Stub(double_to_str_stub);
     av_memnstr_Stub(memnstr_stub);
-
-    g_expected_type_string = "an integer";
 }
 
 void tearDown(void)
@@ -281,20 +269,18 @@ void test_value_placeholder_replaced_with_boolean_value(void)
 }
 
 // ---------------------------------------------------------------------------
-// {expected} placeholder (delegates to build_union_type_string, stubbed here)
+// {expected} placeholder (delegates to the real build_union_type_string)
 // ---------------------------------------------------------------------------
 
 void test_expected_placeholder_replaced_with_type_string(void)
 {
-    g_expected_type_string = "an integer";
-
     zval value;
     ZVAL_NULL(&value);
     av_field field = make_field("age", &value);
 
     zend_property_info prop;
     zend_type type;
-    av_property_info prop_info = make_prop_info(&prop, &type);
+    av_property_info prop_info = make_prop_info(&prop, &type, MAY_BE_LONG);
 
     const char *template = "The {field} must be {expected}.";
     zend_string *result = av_replace_placeholders(template, strlen(template), &field, &prop_info);
@@ -305,15 +291,13 @@ void test_expected_placeholder_replaced_with_type_string(void)
 
 void test_expected_placeholder_repeated(void)
 {
-    g_expected_type_string = "a string";
-
     zval value;
     ZVAL_NULL(&value);
     av_field field = make_field("name", &value);
 
     zend_property_info prop;
     zend_type type;
-    av_property_info prop_info = make_prop_info(&prop, &type);
+    av_property_info prop_info = make_prop_info(&prop, &type, MAY_BE_STRING);
 
     const char *template = "{field} must be {expected} or {expected}";
     zend_string *result = av_replace_placeholders(template, strlen(template), &field, &prop_info);
@@ -328,15 +312,13 @@ void test_expected_placeholder_repeated(void)
 
 void test_all_three_placeholders_replaced(void)
 {
-    g_expected_type_string = "an integer";
-
     zval value;
     ZVAL_LONG(&value, 7);
     av_field field = make_field("count", &value);
 
     zend_property_info prop;
     zend_type type;
-    av_property_info prop_info = make_prop_info(&prop, &type);
+    av_property_info prop_info = make_prop_info(&prop, &type, MAY_BE_LONG);
 
     const char *template = "The {field} must be {expected}, got {value}.";
     zend_string *result = av_replace_placeholders(template, strlen(template), &field, &prop_info);
@@ -347,15 +329,13 @@ void test_all_three_placeholders_replaced(void)
 
 void test_non_placeholder_braced_text_is_preserved(void)
 {
-    g_expected_type_string = "a float";
-
     zval value;
     ZVAL_LONG(&value, 1);
     av_field field = make_field("price", &value);
 
     zend_property_info prop;
     zend_type type;
-    av_property_info prop_info = make_prop_info(&prop, &type);
+    av_property_info prop_info = make_prop_info(&prop, &type, MAY_BE_DOUBLE);
 
     // "{fieldx}" is not a placeholder and must be left untouched.
     const char *template = "{field} {fieldx} must be {expected}; got {value}";
