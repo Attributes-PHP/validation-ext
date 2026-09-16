@@ -1,7 +1,10 @@
 #include "av_error_messages.h"
 #include "av_wrappers.h"
 #include "Zend/zend_API.h"
+#include "Zend/zend_compile.h"
+#include "Zend/zend_enum.h"
 #include "Zend/zend_exceptions.h"
+#include "Zend/zend_hash.h"
 #include "Zend/zend_interfaces.h"
 #include "Zend/zend_operators.h"
 #include "Zend/zend_string.h"
@@ -217,20 +220,106 @@ static bool is_type_enum(const zend_type *type)
     return (ce->ce_flags & ZEND_ACC_ENUM);
 }
 
-static zend_string *generate_error_message(av_field *field, zend_type property_type)
+static zend_class_entry *resolve_enum_ce(const zend_type *type)
 {
-    zend_string *full_path = field->name;
-    if (field->parent && ZSTR_LEN(field->parent) > 0) {
-        full_path = av_string_concat3(ZSTR_VAL(field->parent), ZSTR_LEN(field->parent), ".", 1, ZSTR_VAL(field->name), ZSTR_LEN(field->name));
+    ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*type));
+
+    return av_lookup_class_ex(ZEND_TYPE_NAME(*type), NULL, ZEND_FETCH_CLASS_NO_AUTOLOAD);
+}
+
+static zend_string *enum_case_label(zend_class_entry *ce, zend_object *case_obj)
+{
+    if (ce->enum_backing_type != IS_UNDEF) {
+        return av_value_to_string(zend_enum_fetch_case_value(case_obj));
     }
 
+    return av_value_to_string(zend_enum_fetch_case_name(case_obj));
+}
+
+static zend_string *build_enum_values_string(zend_class_entry *ce)
+{
+    if (ce->type == ZEND_USER_CLASS && !(ce->ce_flags & ZEND_ACC_CONSTANTS_UPDATED)) {
+        av_update_class_constants(ce);
+    }
+
+    uint32_t total = 0;
+    zend_class_constant *c;
+
+    ZEND_HASH_MAP_FOREACH_PTR(&ce->constants_table, c)
+    {
+        if ((ZEND_CLASS_CONST_FLAGS(c) & ZEND_CLASS_CONST_IS_CASE) == 0) {
+            continue;
+        }
+        total += 1;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    if (total == 0) {
+        return av_string_init("", 0, 0);
+    }
+
+    zend_string *result = NULL;
+    uint32_t index = 0;
+
+    ZEND_HASH_MAP_FOREACH_PTR(&ce->constants_table, c)
+    {
+        if ((ZEND_CLASS_CONST_FLAGS(c) & ZEND_CLASS_CONST_IS_CASE) == 0) {
+            continue;
+        }
+
+        zval *case_zv = &c->value;
+        if (Z_TYPE_P(case_zv) == IS_CONSTANT_AST) {
+            if (av_zval_update_constant_ex(case_zv, c->ce) == FAILURE) {
+                if (result) {
+                    av_string_release(result);
+                }
+                return NULL;
+            }
+        }
+
+        zend_string *label = enum_case_label(ce, Z_OBJ_P(case_zv));
+
+        if (!result) {
+            result = label;
+        } else {
+            const char *sep_str;
+            size_t sep_len;
+            if (index == total - 1) {
+                sep_str = " or ";
+                sep_len = sizeof(" or ") - 1;
+            } else {
+                sep_str = ", ";
+                sep_len = sizeof(", ") - 1;
+            }
+
+            zend_string *separator = av_string_init(sep_str, sep_len, 0);
+            zend_string *temp = av_string_concat3(ZSTR_VAL(result), ZSTR_LEN(result), ZSTR_VAL(separator), ZSTR_LEN(separator), ZSTR_VAL(label), ZSTR_LEN(label));
+            av_string_release(result);
+            av_string_release(separator);
+            av_string_release(label);
+            result = temp;
+        }
+
+        index += 1;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    return result;
+}
+
+static zend_string *generate_error_message(av_field *field, zend_type property_type)
+{
     const zend_type *type;
     ZEND_TYPE_FOREACH(property_type, type)
     {
         if (ZEND_TYPE_HAS_NAME(*type) && is_type_enum(type)) {
-            zend_string *msg = av_string_concat3("The selected ", sizeof("The selected ") - 1, ZSTR_VAL(full_path), ZSTR_LEN(full_path), " is invalid.", sizeof(" is invalid.") - 1);
-            if (full_path != field->name)
-                av_string_release(full_path);
+            zend_class_entry *ce = resolve_enum_ce(type);
+            zend_string *values = build_enum_values_string(ce);
+            if (!values) {
+                values = av_string_init("", 0, 0);
+            }
+            zend_string *msg = av_string_concat3("Should be ", sizeof("Should be ") - 1, ZSTR_VAL(values), ZSTR_LEN(values), "", 0);
+            av_string_release(values);
             return msg;
         }
     }
@@ -247,16 +336,33 @@ static zend_string *generate_error_message(av_field *field, zend_type property_t
     av_snprintf(ZSTR_VAL(message), message_len + 1, "The %s must be %s.", ZSTR_VAL(field->name), ZSTR_VAL(type_string));
 
     av_string_release(type_string);
-    if (full_path != field->name)
-        av_string_release(full_path);
 
     return message;
 }
 
+static bool property_is_enum_type(av_property_info *property)
+{
+    const zend_type *type;
+    ZEND_TYPE_FOREACH(property->property->type, type)
+    {
+        if (is_type_enum(type)) {
+            return true;
+        }
+    }
+    ZEND_TYPE_FOREACH_END();
+
+    return false;
+}
+
 void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_property_info *property, zval *errors)
 {
-    const char *template = av_error_type_messages[type];
-    zend_string *replaced_message = av_replace_placeholders(template, strlen(template), field, property);
+    zend_string *replaced_message;
+    if (type == AV_ERROR_TYPE && property != NULL && property_is_enum_type(property)) {
+        replaced_message = generate_error_message(field, property->property->type);
+    } else {
+        const char *template = av_error_type_messages[type];
+        replaced_message = av_replace_placeholders(template, strlen(template), field, property);
+    }
 
     if (!field->parent || ZSTR_LEN(field->parent) == 0) {
         add_field_error(errors, field->name, ZSTR_VAL(replaced_message), ZSTR_LEN(replaced_message));

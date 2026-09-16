@@ -47,6 +47,8 @@
 #define av_hash_add(ht, key, pData) zend_hash_add(ht, key, pData)
 #define av_new_array(size) zend_new_array(size)
 #define av_lookup_class_ex(name, lcname, flags) zend_lookup_class_ex(name, lcname, flags)
+#define av_update_class_constants(ce) zend_update_class_constants(ce)
+#define av_zval_update_constant_ex(zv, scope) zval_update_constant_ex(zv, scope)
 #define av_fmax(a, b) fmax(a, b)
 
 #else
@@ -81,6 +83,8 @@ zval *av_hash_next_index_insert(HashTable *ht, zval *pData);
 zval *av_hash_add(HashTable *ht, zend_string *key, zval *pData);
 HashTable *av_new_array(uint32_t size);
 zend_class_entry *av_lookup_class_ex(zend_string *name, zend_string *lcname, uint32_t flags);
+zend_result av_update_class_constants(zend_class_entry *ce);
+zend_result av_zval_update_constant_ex(zval *zv, zend_class_entry *scope);
 int av_snprintf(char *buffer, size_t size, const char *format, ...) ZEND_ATTRIBUTE_FORMAT(printf, 3, 4);
 double av_fmax(double a, double b);
 
