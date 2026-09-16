@@ -12,9 +12,16 @@
 
 /*
  * Wrapper implementations for Zend internals.
- * 
- * These provide a mockable interface to Zend functions for testing.
+ *
+ * Simple passthrough functions are only compiled in TESTING mode.
+ * In production, they are macros defined in av_wrappers.h.
+ *
+ * Functions with actual logic remain as real functions in both modes.
  */
+
+#ifdef TESTING
+
+/* Simple passthrough wrappers - only needed for testing/mocking */
 
 zend_string *av_string_init(const char *str, size_t len, bool persistent)
 {
@@ -81,20 +88,6 @@ const char *av_rsrc_list_get_rsrc_type(zend_resource *res)
     return zend_rsrc_list_get_rsrc_type(res);
 }
 
-zend_result av_call_tostring(zend_object *object, zval *retval)
-{
-    ZVAL_UNDEF(retval);
-    zend_call_method_with_0_params(object, NULL, NULL, "__tostring", retval);
-    if (Z_TYPE_P(retval) != IS_STRING) {
-        if (Z_TYPE_P(retval) != IS_UNDEF) {
-            zval_ptr_dtor(retval);
-            ZVAL_UNDEF(retval);
-        }
-        return FAILURE;
-    }
-    return SUCCESS;
-}
-
 void av_zval_ptr_dtor(zval *zval_ptr)
 {
     zval_ptr_dtor(zval_ptr);
@@ -125,14 +118,43 @@ HashTable *av_new_array(uint32_t size)
     return zend_new_array(size);
 }
 
-void av_zval_stringl(zval *z, const char *str, size_t len)
-{
-    ZVAL_NEW_STR(z, av_string_init(str, len, 0));
-}
-
 zend_class_entry *av_lookup_class_ex(zend_string *name, zend_string *lcname, uint32_t flags)
 {
     return zend_lookup_class_ex(name, lcname, flags);
+}
+
+double av_fmax(double a, double b)
+{
+    return fmax(a, b);
+}
+
+#endif /* TESTING */
+
+/*
+ * =============================================================================
+ * FUNCTIONS WITH LOGIC
+ * =============================================================================
+ * These always remain as real functions because they contain actual logic,
+ * not just passthrough to Zend functions. They are needed in both modes.
+ */
+
+zend_result av_call_tostring(zend_object *object, zval *retval)
+{
+    ZVAL_UNDEF(retval);
+    zend_call_method_with_0_params(object, NULL, NULL, "__tostring", retval);
+    if (Z_TYPE_P(retval) != IS_STRING) {
+        if (Z_TYPE_P(retval) != IS_UNDEF) {
+            zval_ptr_dtor(retval);
+            ZVAL_UNDEF(retval);
+        }
+        return FAILURE;
+    }
+    return SUCCESS;
+}
+
+void av_zval_stringl(zval *z, const char *str, size_t len)
+{
+    ZVAL_NEW_STR(z, av_string_init(str, len, 0));
 }
 
 int av_snprintf(char *buffer, size_t size, const char *format, ...)
@@ -142,9 +164,4 @@ int av_snprintf(char *buffer, size_t size, const char *format, ...)
     int result = vsnprintf(buffer, size, format, args);
     va_end(args);
     return result;
-}
-
-double av_fmax(double a, double b)
-{
-    return fmax(a, b);
 }
