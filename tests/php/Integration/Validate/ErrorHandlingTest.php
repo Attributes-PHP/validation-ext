@@ -12,6 +12,7 @@ enum TestRole: string
 {
     case Admin = 'admin';
     case User = 'user';
+    case Moderator = 'moderator';
 }
 
 enum TeamRole: string
@@ -94,7 +95,7 @@ describe('validate function error handling', function () {
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
             expect($e->getMessage())->toBe('Invalid data');
-            expect($e->getErrors()['role'][0])->toBe("Should be 'admin' or 'user'");
+            expect($e->getErrors()['role'][0])->toBe("Should be 'admin', 'user' or 'moderator'");
         }
     });
 
