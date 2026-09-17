@@ -48,6 +48,7 @@
 #define av_lookup_class_ex(name, lcname, flags)                           zend_lookup_class_ex(name, lcname, flags)
 #define av_update_class_constants(ce)                                     zend_update_class_constants(ce)
 #define av_zval_update_constant_ex(zv, scope)                             zval_update_constant_ex(zv, scope)
+#define av_snprintf(buffer, size, ...)                                    snprintf(buffer, size, __VA_ARGS__)
 #define av_fmax(a, b)                                                     fmax(a, b)
 
 #else
