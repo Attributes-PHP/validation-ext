@@ -163,7 +163,13 @@ static bool handle_class(av_field *field, av_property_info *prop_info, const zen
 
         zend_string *nested_path = field->parent ? zend_string_copy(field->parent) : zend_string_copy(field->name);
 
-        bool result = av_validate_model_internal(field->value, prop_info, properties, errors, nested_path);
+        av_property_info nested_prop_info = {
+            .model = &model_obj,
+            .model_ce = ce,
+            .property = NULL,
+        };
+
+        bool result = av_validate_model_internal(field->value, &nested_prop_info, properties, errors, nested_path);
 
         zend_string_release(nested_path);
 
@@ -299,6 +305,8 @@ bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_mode
     if (ZEND_TYPE_CONTAINS_CODE(property_type, Z_TYPE_P(field->value)))
         return true;
 
+    const uint32_t initial_error_count = zend_hash_num_elements(Z_ARRVAL_P(errors));
+
     const zend_type *type;
     ZEND_TYPE_FOREACH(property_type, type)
     {
@@ -325,6 +333,9 @@ bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_mode
             return true;
     }
     ZEND_TYPE_FOREACH_END();
+
+    if (zend_hash_num_elements(Z_ARRVAL_P(errors)) > initial_error_count)
+        return false;
 
     av_add_field_error_with_prefix(AV_ERROR_TYPE, field, prop_info, errors);
     return false;
