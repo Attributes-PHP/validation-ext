@@ -26,28 +26,30 @@
 #ifndef TESTING
 /* Production mode: macros that directly call Zend functions */
 
-#define av_string_init(str, len, persistent) zend_string_init(str, len, persistent)
-#define av_string_release(s) zend_string_release(s)
-#define av_emalloc(size) emalloc(size)
-#define av_efree(ptr) efree(ptr)
-#define av_string_alloc(length, persistent) zend_string_alloc(length, persistent)
-#define av_string_truncate(s, length, persistent) zend_string_truncate(s, length, persistent)
-#define av_string_concat3(str1, str1_len, str2, str2_len, str3, str3_len) \
-    zend_string_concat3(str1, str1_len, str2, str2_len, str3, str3_len)
-#define av_string_copy(s) zend_string_copy(s)
-#define av_long_to_str(num) zend_long_to_str(num)
-#define av_double_to_str(num) zend_double_to_str(num)
-#define av_instanceof_function(instance_ce, ce) instanceof_function(instance_ce, ce)
-#define av_is_stringable(instance_ce) instanceof_function(instance_ce, zend_ce_stringable)
-#define av_rsrc_list_get_rsrc_type(res) zend_rsrc_list_get_rsrc_type(res)
-#define av_zval_ptr_dtor(zval_ptr) zval_ptr_dtor(zval_ptr)
-#define av_memnstr(haystack, needle, needle_len, end) php_memnstr(haystack, needle, needle_len, end)
-#define av_hash_find(ht, key) zend_hash_find(ht, key)
-#define av_hash_next_index_insert(ht, pData) zend_hash_next_index_insert(ht, pData)
-#define av_hash_add(ht, key, pData) zend_hash_add(ht, key, pData)
-#define av_new_array(size) zend_new_array(size)
-#define av_lookup_class_ex(name, lcname, flags) zend_lookup_class_ex(name, lcname, flags)
-#define av_fmax(a, b) fmax(a, b)
+#define av_string_init(str, len, persistent)                              zend_string_init(str, len, persistent)
+#define av_string_release(s)                                              zend_string_release(s)
+#define av_emalloc(size)                                                  emalloc(size)
+#define av_efree(ptr)                                                     efree(ptr)
+#define av_string_alloc(length, persistent)                               zend_string_alloc(length, persistent)
+#define av_string_truncate(s, length, persistent)                         zend_string_truncate(s, length, persistent)
+#define av_string_concat3(str1, str1_len, str2, str2_len, str3, str3_len) zend_string_concat3(str1, str1_len, str2, str2_len, str3, str3_len)
+#define av_string_copy(s)                                                 zend_string_copy(s)
+#define av_long_to_str(num)                                               zend_long_to_str(num)
+#define av_double_to_str(num)                                             zend_double_to_str(num)
+#define av_instanceof_function(instance_ce, ce)                           instanceof_function(instance_ce, ce)
+#define av_is_stringable(instance_ce)                                     instanceof_function(instance_ce, zend_ce_stringable)
+#define av_rsrc_list_get_rsrc_type(res)                                   zend_rsrc_list_get_rsrc_type(res)
+#define av_zval_ptr_dtor(zval_ptr)                                        zval_ptr_dtor(zval_ptr)
+#define av_memnstr(haystack, needle, needle_len, end)                     php_memnstr(haystack, needle, needle_len, end)
+#define av_hash_find(ht, key)                                             zend_hash_find(ht, key)
+#define av_hash_next_index_insert(ht, pData)                              zend_hash_next_index_insert(ht, pData)
+#define av_hash_add(ht, key, pData)                                       zend_hash_add(ht, key, pData)
+#define av_new_array(size)                                                zend_new_array(size)
+#define av_lookup_class_ex(name, lcname, flags)                           zend_lookup_class_ex(name, lcname, flags)
+#define av_update_class_constants(ce)                                     zend_update_class_constants(ce)
+#define av_zval_update_constant_ex(zv, scope)                             zval_update_constant_ex(zv, scope)
+#define av_snprintf(buffer, size, ...)                                    snprintf(buffer, size, __VA_ARGS__)
+#define av_fmax(a, b)                                                     fmax(a, b)
 
 #else
 /* Testing mode: function declarations for CMock */
@@ -81,6 +83,8 @@ zval *av_hash_next_index_insert(HashTable *ht, zval *pData);
 zval *av_hash_add(HashTable *ht, zend_string *key, zval *pData);
 HashTable *av_new_array(uint32_t size);
 zend_class_entry *av_lookup_class_ex(zend_string *name, zend_string *lcname, uint32_t flags);
+zend_result av_update_class_constants(zend_class_entry *ce);
+zend_result av_zval_update_constant_ex(zval *zv, zend_class_entry *scope);
 int av_snprintf(char *buffer, size_t size, const char *format, ...) ZEND_ATTRIBUTE_FORMAT(printf, 3, 4);
 double av_fmax(double a, double b);
 

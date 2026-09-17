@@ -165,7 +165,7 @@ describe('validate function error handling', function () {
             expect($errors)->toHaveKey('role');
 
             expect($errors['team_id'][0])->toBe('The team_id must be integer or float.');
-            expect($errors['role'][0])->toBe('The selected role is invalid.');
+            expect($errors['role'][0])->toBe("Should be 'coach' or 'player'");
 
             expect($e->getMessage())->toBe('Invalid data');
         }

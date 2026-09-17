@@ -123,6 +123,16 @@ zend_class_entry *av_lookup_class_ex(zend_string *name, zend_string *lcname, uin
     return zend_lookup_class_ex(name, lcname, flags);
 }
 
+zend_result av_update_class_constants(zend_class_entry *ce)
+{
+    return zend_update_class_constants(ce);
+}
+
+zend_result av_zval_update_constant_ex(zval *zv, zend_class_entry *scope)
+{
+    return zval_update_constant_ex(zv, scope);
+}
+
 double av_fmax(double a, double b)
 {
     return fmax(a, b);
