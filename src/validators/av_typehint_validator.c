@@ -137,7 +137,7 @@ static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_c
     return false;
 }
 
-static bool handle_class(av_field *field, av_property_info *prop_info, const zend_type *value_type, av_model_configs_properties *properties, zval *errors)
+static bool handle_class(av_field *field, av_property_info *prop_info, const zend_type *value_type, av_model_configs_properties *properties)
 {
     ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*value_type));
 
@@ -158,29 +158,8 @@ static bool handle_class(av_field *field, av_property_info *prop_info, const zen
         if (!ce || ce == AV_BaseModel_ce || !instanceof_function(ce, AV_BaseModel_ce))
             return false;
 
-        zval model_obj;
-        object_init_ex(&model_obj, ce);
-
-        zend_string *nested_path = field->parent ? zend_string_copy(field->parent) : zend_string_copy(field->name);
-
-        av_property_info nested_prop_info = {
-            .model = &model_obj,
-            .model_ce = ce,
-            .property = NULL,
-        };
-
-        bool result = av_validate_model_internal(field->value, &nested_prop_info, properties, errors, nested_path);
-
-        zend_string_release(nested_path);
-
-        if (result) {
-            zval_ptr_dtor(field->value);
-            ZVAL_COPY(field->value, &model_obj);
-        } else {
-            zval_ptr_dtor(&model_obj);
-        }
-
-        return result;
+        field->nested_model_ce = ce;
+        return true;
     }
 
     return false;
@@ -305,8 +284,6 @@ bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_mode
     if (ZEND_TYPE_CONTAINS_CODE(property_type, Z_TYPE_P(field->value)))
         return true;
 
-    const uint32_t initial_error_count = zend_hash_num_elements(Z_ARRVAL_P(errors));
-
     const zend_type *type;
     ZEND_TYPE_FOREACH(property_type, type)
     {
@@ -317,7 +294,7 @@ bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_mode
         }
 
         if (ZEND_TYPE_HAS_NAME(*type)) {
-            if (handle_class(field, prop_info, type, properties, errors))
+            if (handle_class(field, prop_info, type, properties))
                 return true;
             continue;
         }
@@ -333,9 +310,6 @@ bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_mode
             return true;
     }
     ZEND_TYPE_FOREACH_END();
-
-    if (zend_hash_num_elements(Z_ARRVAL_P(errors)) > initial_error_count)
-        return false;
 
     av_add_field_error_with_prefix(AV_ERROR_TYPE, field, prop_info, errors);
     return false;

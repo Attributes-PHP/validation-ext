@@ -146,6 +146,7 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_
                 continue;
 
             field.name = get_property_name(prop_info, property_name, properties->alias_generator);
+            field.nested_model_ce = NULL;
             bool is_to_release_field_name = (field.name != property_name && field.name != NULL);
 
             if (UNEXPECTED(EG(exception))) {
@@ -177,6 +178,31 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_
 
             const bool is_valid = validate_field_value(&field, prop_info, properties, errors);
 
+            bool is_nested_valid = true;
+            if (is_valid && field.nested_model_ce != NULL) {
+                zval model_obj;
+                object_init_ex(&model_obj, field.nested_model_ce);
+
+                zend_string *nested_path = field.parent ? zend_string_copy(field.parent) : zend_string_copy(field.name);
+
+                av_property_info nested_prop_info = {
+                    .model = &model_obj,
+                    .model_ce = field.nested_model_ce,
+                    .property = NULL,
+                };
+
+                is_nested_valid = av_validate_model_internal(field.value, &nested_prop_info, properties, errors, nested_path);
+
+                zend_string_release(nested_path);
+
+                if (is_nested_valid) {
+                    zval_ptr_dtor(field.value);
+                    ZVAL_COPY(field.value, &model_obj);
+                } else {
+                    zval_ptr_dtor(&model_obj);
+                }
+            }
+
             if (field.parent) {
                 zend_string_release(field.parent);
                 field.parent = parent_path;
@@ -184,7 +210,7 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_
             if (is_to_release_field_name)
                 zend_string_release(field.name);
 
-            if (!is_valid) {
+            if (!is_valid || !is_nested_valid) {
                 if (properties->stop_first_error)
                     return false;
                 continue;
