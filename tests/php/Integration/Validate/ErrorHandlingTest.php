@@ -109,8 +109,10 @@ describe('validate function error handling', function () {
             validate(['auth' => []], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            expect($e->getErrors())->toHaveKey('auth');
-            expect($e->getErrors()['auth'][0])->toBe('The auth must be an Attributes\Validation\Tests\Integration\Validate\TestAuthModel.');
+            $errors = $e->getErrors();
+            expect($errors)->toHaveKey('auth.token');
+            expect(count($errors))->toBe(1);
+            expect($errors['auth.token'][0])->toContain('field is required');
         }
     });
 

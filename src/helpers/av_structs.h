@@ -7,6 +7,7 @@ typedef struct {
     zend_string *parent;
     zend_string *name;
     zval *value;
+    zend_class_entry *nested_model_ce;
 } av_field;
 
 typedef struct {

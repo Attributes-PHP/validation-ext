@@ -82,6 +82,7 @@ static av_field make_field(const char *name, zval *value)
     field.parent = NULL;
     field.name = string_init_stub(name, strlen(name), 0, 0);
     field.value = value;
+    field.nested_model_ce = NULL;
     return field;
 }
 
