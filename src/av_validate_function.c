@@ -173,7 +173,7 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_
                 continue;
             }
 
-            field.parent = parent_path ? zend_string_concat3(ZSTR_VAL(parent_path), ZSTR_LEN(parent_path), ".", 1, ZSTR_VAL(field.name), ZSTR_LEN(field.name)) : NULL;
+            field.parent = av_string_dot_concat(parent_path, field.name);
 
             const bool is_valid = validate_field_value(&field, prop_info, properties, errors);
 

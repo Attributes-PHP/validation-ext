@@ -80,7 +80,7 @@ describe('validate function error handling', function () {
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
-            expect($errors['name'][0] ?? null)->toContain('field is required');
+            expect($errors['name'][0] ?? null)->toContain('Field is required');
         }
     });
 
@@ -109,8 +109,14 @@ describe('validate function error handling', function () {
             validate(['auth' => []], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            expect($e->getErrors())->toHaveKey('auth');
-            expect($e->getErrors()['auth'][0])->toBe('The auth must be an Attributes\Validation\Tests\Integration\Validate\TestAuthModel.');
+            var_dump($e);
+            expect($e->getErrors())
+                ->toHaveKey('auth.token')
+                ->toHaveCount(1);
+
+            expect($e->getErrors()['auth.token'])
+                ->toHaveCount(1)
+                ->and($e->getErrors()['auth.token'][0])->toBe('Field is required');
         }
     });
 
@@ -124,7 +130,7 @@ describe('validate function error handling', function () {
             validate(['value' => 'invalid'], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            expect($e->getErrors()['value'][0])->toBe('The value must be integer or float.');
+            expect($e->getErrors()['value'][0])->toBe('Must be integer or float');
         }
     });
 
@@ -138,7 +144,7 @@ describe('validate function error handling', function () {
             validate([], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            expect($e->getErrors()['name'][0])->toBe('The name field is required.');
+            expect($e->getErrors()['name'][0])->toBe('Field is required');
         }
     });
 
@@ -164,7 +170,7 @@ describe('validate function error handling', function () {
             expect($errors)->toHaveKey('team_id');
             expect($errors)->toHaveKey('role');
 
-            expect($errors['team_id'][0])->toBe('The team_id must be integer or float.');
+            expect($errors['team_id'][0])->toBe('Must be integer or float');
             expect($errors['role'][0])->toBe("Should be 'coach' or 'player'");
 
             expect($e->getMessage())->toBe('Invalid data');

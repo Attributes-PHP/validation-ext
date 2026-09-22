@@ -4,6 +4,7 @@
 #include "testing.h"
 #include <ctype.h>
 #include <stddef.h>
+#include "av_structs.h"
 
 /**
  * Checks if a character is uppercase
@@ -211,4 +212,17 @@ zend_string *av_to_kebab_case(zend_string *str)
     zend_string *result = av_string_init(output.value, output.length, 0);
     av_efree(output.value);
     return result;
+}
+
+/**
+ * Concats two strings with a dot
+ * Example: ("first", "second") -> "first.second"
+ */
+zend_string *av_string_dot_concat(zend_string *first, zend_string *second)
+{
+    if (!first || !second) {
+        return NULL;
+    }
+
+    return zend_string_concat3(ZSTR_VAL(first), ZSTR_LEN(first), ".", 1, ZSTR_VAL(second), ZSTR_LEN(second));
 }

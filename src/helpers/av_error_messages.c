@@ -12,9 +12,10 @@
 #include <stddef.h>
 #include <string.h>
 
+// Supported placeholders: {value}, {field} and {expected}
 static const char *av_error_type_messages[] = {
-    [AV_ERROR_REQUIRED] = "The {field} field is required.",
-    [AV_ERROR_TYPE] = "The {field} must be {expected}.",
+    [AV_ERROR_REQUIRED] = "Field is required",
+    [AV_ERROR_TYPE] = "Must be {expected}",
 };
 
 static zend_always_inline void add_field_error_to_array(zval *errors_array, const char *error_message, size_t length)
@@ -330,10 +331,10 @@ static zend_string *generate_error_message(av_field *field, zend_type property_t
         type_string = av_string_init("mixed", sizeof("mixed") - 1, 0);
     }
 
-    size_t message_len = sizeof("The ") - 1 + ZSTR_LEN(field->name) + sizeof(" must be ") - 1 + ZSTR_LEN(type_string) + sizeof(".") - 1;
+    size_t message_len = sizeof("Must be ") - 1 + ZSTR_LEN(type_string);
     zend_string *message = av_string_alloc(message_len, 0);
 
-    av_snprintf(ZSTR_VAL(message), message_len + 1, "The %s must be %s.", ZSTR_VAL(field->name), ZSTR_VAL(type_string));
+    av_snprintf(ZSTR_VAL(message), message_len + 1, "Must be %s", ZSTR_VAL(type_string));
 
     av_string_release(type_string);
 

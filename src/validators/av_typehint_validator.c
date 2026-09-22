@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include "av_typehint_validator.h"
 #include <math.h>
+#include "../helpers/av_string.h"
 
 zend_class_entry *datetime_ce;
 zend_class_entry *datetime_interface_ce;
@@ -161,11 +162,16 @@ static bool handle_class(av_field *field, av_property_info *prop_info, const zen
         zval model_obj;
         object_init_ex(&model_obj, ce);
 
-        zend_string *nested_path = field->parent ? zend_string_copy(field->parent) : zend_string_copy(field->name);
+        zend_string *nested_path = field->parent ? av_string_dot_concat(field->parent, field->name) : field->name;
 
-        bool result = av_validate_model_internal(field->value, prop_info, properties, errors, nested_path);
+        av_property_info property_info = {
+            .model = &model_obj,
+            .model_ce = ce,
+        };
+        bool result = av_validate_model_internal(field->value, &property_info, properties, errors, nested_path);
 
-        zend_string_release(nested_path);
+        if (field->parent)
+            zend_string_release(nested_path);
 
         if (result) {
             zval_ptr_dtor(field->value);
@@ -278,6 +284,17 @@ static bool coerce_bool(av_field *field)
     return false;
 }
 
+static bool is_basemodel_class_type_hint(av_property_info *prop_info, const zend_type *property_type)
+{
+    uint32_t pure_mask = ZEND_TYPE_PURE_MASK(*property_type);
+    bool is_single_class = !ZEND_TYPE_HAS_LIST(*property_type) && ZEND_TYPE_HAS_NAME(*property_type) && (pure_mask & (pure_mask - 1)) == 0;
+    if (!is_single_class)
+        return false;
+
+    zend_class_entry *model_ce = get_ce_from_type(prop_info->property, property_type);
+    return model_ce && instanceof_function(model_ce, AV_BaseModel_ce);
+}
+
 /**
  * Validates that a value matches the property's type hint.
  *
@@ -326,6 +343,9 @@ bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_mode
     }
     ZEND_TYPE_FOREACH_END();
 
-    av_add_field_error_with_prefix(AV_ERROR_TYPE, field, prop_info, errors);
+    if (!is_basemodel_class_type_hint(prop_info, &property_type)) {
+        av_add_field_error_with_prefix(AV_ERROR_TYPE, field, prop_info, errors);
+    }
+
     return false;
 }

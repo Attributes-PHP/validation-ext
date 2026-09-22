@@ -25,6 +25,7 @@ static bool handle_class(av_field *field, av_property_info *prop_info, const zen
 static bool coerce_bool(av_field *field);
 static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_configs_properties *properties);
 static bool is_datetime_class(zend_class_entry *ce);
+static bool is_basemodel_class_type_hint(av_property_info *prop_info, const zend_type *property_type);
 
 void av_init_typehint_validator(void);
 /**
