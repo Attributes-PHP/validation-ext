@@ -64,6 +64,61 @@ zend_string *string_truncate_stub(zend_string *s, size_t length, bool persistent
     return s;
 }
 
+zend_string *concat3_stub(const char *str1, size_t str1_len, const char *str2, size_t str2_len, const char *str3, size_t str3_len, int num_calls)
+{
+    size_t total = str1_len + str2_len + str3_len;
+    zend_string *s = string_alloc_stub(total, 0, num_calls);
+    char *p = s->val;
+    memcpy(p, str1, str1_len);
+    p += str1_len;
+    memcpy(p, str2, str2_len);
+    p += str2_len;
+    memcpy(p, str3, str3_len);
+    p += str3_len;
+    s->val[total] = '\0';
+    s->len = total;
+    return s;
+}
+
+zend_string *string_copy_stub(zend_string *s, int num_calls)
+{
+    return string_init_stub(s->val, s->len, 0, num_calls);
+}
+
+zend_string *long_to_str_stub(zend_long num, int num_calls)
+{
+    char buf[32];
+    size_t len = 0;
+
+    if (num == 0) {
+        buf[len++] = '0';
+    } else {
+        zend_long n = num;
+        if (n < 0) {
+            buf[len++] = '-';
+            n = -n;
+        }
+        char tmp[32];
+        size_t tmp_len = 0;
+        while (n > 0) {
+            tmp[tmp_len++] = (char)('0' + (n % 10));
+            n /= 10;
+        }
+        while (tmp_len > 0)
+            buf[len++] = tmp[--tmp_len];
+    }
+
+    return string_init_stub(buf, len, 0, num_calls);
+}
+
+zend_string *double_to_str_stub(double num, int num_calls)
+{
+    // Use compiler builtin to avoid PHP's snprintf macro
+    char buf[64];
+    int len = __builtin_snprintf(buf, sizeof(buf), "%.14g", num);
+    return string_init_stub(buf, (size_t)len, 0, num_calls);
+}
+
 const char *memnstr_stub(const char *haystack, const char *needle, size_t needle_len, const char *end, int num_calls)
 {
     (void)num_calls;

@@ -8,47 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// ---------------------------------------------------------------------------
-// Mock callbacks for the wrappers used by av_value_to_string.
-// They build real zend_string allocations through the malloc-based stub so the
-// produced strings can be inspected and freed with av_string_release.
-// ---------------------------------------------------------------------------
-
-static zend_string *concat3_stub(const char *str1, size_t str1_len, const char *str2, size_t str2_len, const char *str3, size_t str3_len, int num_calls)
-{
-    size_t total = str1_len + str2_len + str3_len;
-    zend_string *s = string_init_stub("", total, 0, num_calls);
-    char *p = s->val;
-    memcpy(p, str1, str1_len);
-    p += str1_len;
-    memcpy(p, str2, str2_len);
-    p += str2_len;
-    memcpy(p, str3, str3_len);
-    p += str3_len;
-    s->val[total] = '\0';
-    s->len = total;
-    return s;
-}
-
-static zend_string *string_copy_stub(zend_string *s, int num_calls)
-{
-    return string_init_stub(s->val, s->len, 0, num_calls);
-}
-
-static zend_string *long_to_str_stub(zend_long num, int num_calls)
-{
-    char buf[32];
-    int len = snprintf(buf, sizeof(buf), ZEND_LONG_FMT, num);
-    return string_init_stub(buf, (size_t)len, 0, num_calls);
-}
-
-static zend_string *double_to_str_stub(double num, int num_calls)
-{
-    char buf[64];
-    int len = snprintf(buf, sizeof(buf), "%.14g", num);
-    return string_init_stub(buf, (size_t)len, 0, num_calls);
-}
-
 // Test-controlled state for the instanceof / resource / __toString paths.
 static bool g_instanceof_result;
 static const char *g_resource_type_name;

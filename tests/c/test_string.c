@@ -10,6 +10,7 @@ void setUp(void)
     av_string_release_Stub(string_release_stub);
     av_emalloc_Stub(emalloc_stub);
     av_efree_Stub(efree_stub);
+    av_string_concat3_Stub(concat3_stub);
 }
 
 void tearDown(void)
@@ -168,4 +169,51 @@ TEST_MATRIX([ ' ', '!', '+', '_', '-', '/', '@', '#' ])
 void test_is_alphanumeric_non_alphanumeric(char letter)
 {
     TEST_ASSERT_FALSE(is_alphanumeric(letter));
+}
+
+// ============= av_string_dot_concat Tests =============
+
+TEST_CASE("first", "second", "first.second")
+TEST_CASE("", "second", ".second")
+TEST_CASE("first", "", "first.")
+TEST_CASE("", "", ".")
+TEST_CASE("123", "456", "123.456")
+TEST_CASE("hello-world", "test_case", "hello-world.test_case")
+TEST_CASE("a", "b", "a.b")
+TEST_CASE("prefix", "suffix", "prefix.suffix")
+void test_av_string_dot_concat(const char *first, const char *second, const char *expected)
+{
+    zend_string *first_str = av_string_init(first, strlen(first), 0);
+    zend_string *second_str = av_string_init(second, strlen(second), 0);
+
+    zend_string *result = av_string_dot_concat(first_str, second_str);
+
+    TEST_ASSERT_NOT_NULL(result);
+    TEST_ASSERT_EQUAL_STRING(expected, result->val);
+    TEST_ASSERT_EQUAL(strlen(expected), result->len);
+
+    av_string_release(first_str);
+    av_string_release(second_str);
+    av_string_release(result);
+}
+
+TEST_CASE(NULL, "second")
+TEST_CASE("first", NULL)
+TEST_CASE(NULL, NULL)
+void test_av_string_dot_concat_null_inputs(const char *first_str, const char *second_str)
+{
+    zend_string *first = NULL, *second = NULL, *result;
+
+    if (first_str != NULL) {
+        first = av_string_init(first_str, strlen(first_str), 0);
+    }
+    if (second_str != NULL) {
+        second = av_string_init(second_str, strlen(second_str), 0);
+    }
+
+    result = av_string_dot_concat(first, second);
+    TEST_ASSERT_NULL(result);
+
+    av_string_release(first);
+    av_string_release(second);
 }
