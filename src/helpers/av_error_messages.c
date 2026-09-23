@@ -213,7 +213,7 @@ static bool is_type_enum(const zend_type *type)
         return false;
     }
 
-    zend_class_entry *ce = av_lookup_class_ex(ZEND_TYPE_NAME(*type), NULL, ZEND_FETCH_CLASS_NO_AUTOLOAD);
+    zend_class_entry *ce = av_lookup_class_ex(ZEND_TYPE_NAME(*type), NULL, 0);
     if (!ce) {
         return false;
     }
@@ -225,7 +225,7 @@ static zend_class_entry *resolve_enum_ce(const zend_type *type)
 {
     ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*type));
 
-    return av_lookup_class_ex(ZEND_TYPE_NAME(*type), NULL, ZEND_FETCH_CLASS_NO_AUTOLOAD);
+    return av_lookup_class_ex(ZEND_TYPE_NAME(*type), NULL, 0);
 }
 
 static zend_string *enum_case_label(zend_class_entry *ce, zend_object *case_obj)
