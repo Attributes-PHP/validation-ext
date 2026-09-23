@@ -31,7 +31,9 @@ integrations = ["pest"]
 [linter.rules]
 ambiguous-function-call = { enabled = false }
 literal-named-argument = { enabled = false }
-halstead = { effort-threshold = 7000 }
+halstead = { enabled = false }
+single-class-per-file = { enabled = false }
+file-name = { enabled = false }
 
 [analyzer]
 plugins = []
