@@ -3,7 +3,6 @@
 # code style with minimal churn.
 ---
 BasedOnStyle: LLVM
-Language: Cpp
 
 # Indentation
 IndentWidth: 4
