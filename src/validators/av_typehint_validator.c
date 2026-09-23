@@ -162,7 +162,7 @@ static bool handle_class(av_field *field, av_property_info *prop_info, const zen
         zval model_obj;
         object_init_ex(&model_obj, ce);
 
-        zend_string *nested_path = field->parent ? av_string_dot_concat(field->parent, field->name) : field->name;
+        zend_string *nested_path = field->parent ? zend_string_copy(field->parent) : field->name;
 
         av_property_info property_info = {
             .model = &model_obj,

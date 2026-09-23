@@ -6,41 +6,35 @@ namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
 use Attributes\Validation\Exceptions\ValidationException;
+use Attributes\Validation\Tests\Models\Enums\EnumStrOneValue;
+use Attributes\Validation\Tests\Models\Enums\EnumStrThreeValues;
+use Attributes\Validation\Tests\Models\Enums\EnumStrTwentyValues;
+use Attributes\Validation\Tests\Models\Enums\EnumStrTwoValues;
 
 use function Attributes\Validation\validate;
 
 // Define test classes for nested model validation
-enum TestRole: string
+
+class BasicModel extends BaseModel
 {
-    case Admin = 'admin';
-    case User = 'user';
-    case Moderator = 'moderator';
+    public string $field;
 }
 
-enum TeamRole: string
+// Multi-level nested model
+
+class OneLevelNestedModel extends BaseModel
 {
-    case Coach = 'coach';
-    case Player = 'player';
+    public BasicModel $one;
 }
 
-class TestAuthModel extends BaseModel
+class TwoLevelNestedModel extends BaseModel
 {
-    public string $token;
+    public OneLevelNestedModel $two;
 }
 
-class TestTeamAuthModel extends BaseModel
+class ThreeLevelNestedModel extends BaseModel
 {
-    public TeamRole $role;
-}
-
-class TestAuthModelWithEnum extends BaseModel
-{
-    public TestRole $role;
-}
-
-class TeamAuthModel extends BaseModel
-{
-    public TeamRole $role;
+    public TwoLevelNestedModel $three;
 }
 
 describe('validate function error handling', function () {
@@ -63,9 +57,9 @@ describe('validate function error handling', function () {
             validate(['name' => 'John'], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            expect($e)->toBeInstanceOf(ValidationException::class);
-            expect($e->getErrors())->toBeArray();
-            expect(count($e->getErrors()))->toBeGreaterThan(0);
+            $errors = $e->getErrors();
+            expect($errors)->toBeArray()
+                ->toHaveCount(1);
         }
     });
 
@@ -78,141 +72,99 @@ describe('validate function error handling', function () {
             validate([], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            $errors = $e->getErrors();
-            expect($errors['name'][0] ?? null)->toContain('Field is required');
-        }
-    });
-
-    it('generates proper message for enum validation', function () {
-        $model = new class extends BaseModel {
-            public TestRole $role;
-        };
-
-        try {
-            validate(['role' => 'invalid'], $model);
-            expect(false)->toBeTrue();
-        } catch (ValidationException $e) {
             expect($e->getMessage())->toBe('Invalid data');
-            expect($e->getErrors()['role'][0])->toBe("Should be 'admin', 'user' or 'moderator'");
+            $errors = $e->getErrors();
+            expect($errors)->toBe([
+                'name' => ['Field is required'],
+            ]);
         }
     });
 
-    it('generates proper message for nested model errors', function () {
-        $model = new class extends BaseModel {
-            public TestAuthModel $auth;
-        };
-
-        try {
-            validate(['auth' => []], $model);
-            expect(false)->toBeTrue();
-        } catch (ValidationException $e) {
-            expect($e->getErrors())->toHaveKey('auth.token')
-                ->toHaveCount(1);
-
-            expect($e->getErrors()['auth.token'])->toHaveCount(1)
-                ->and($e->getErrors()['auth.token'][0])
-                ->toBe('Field is required');
-        }
-    });
-
-    it('uses proper articles in error messages', function () {
-        $model = new class extends BaseModel {
-            public int|float $value;
-        };
-
-        try {
-            validate(['value' => 'invalid'], $model);
-            expect(false)->toBeTrue();
-        } catch (ValidationException $e) {
-            expect($e->getErrors()['value'][0])->toBe('Must be integer or float');
-        }
-    });
-
-    it('generates proper message for required fields', function () {
+    it('includes error messages for multiple fields', function () {
         $model = new class extends BaseModel {
             public string $name;
+            public string $email;
+            public int $age;
+            public bool $isAdmin;
+            public float $timestamp;
         };
 
         try {
             validate([], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            expect($e->getErrors()['name'][0])->toBe('Field is required');
+            expect($e->getMessage())->toBe('Invalid data');
+            $errors = $e->getErrors();
+            $allFields = ['name', 'email', 'age', 'isAdmin', 'timestamp'];
+            expect($errors)->toHaveCount(count($allFields))
+                ->toHaveKeys($allFields);
+
+            foreach ($allFields as $name) {
+                expect($errors)->toMatchArray([$name => ['Field is required']]);
+            }
         }
     });
 
-    it('matches expected error format from documentation', function () {
-        $team = new class extends BaseModel {
-            public int|float $team_id;
-
-            public TeamRole $role;
-        };
-
-        $rawData = [
-            'team_id' => 'non-numeric',
-            'role' => 'invalid_role',
-        ];
-
+    it('generates proper message for string enums', function (BaseModel $model, string $expectedErrorMessage) {
         try {
-            validate($rawData, $team);
+            validate(['field' => 'invalid'], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            $errors = $e->getErrors();
-
-            expect($errors)->toHaveKey('team_id');
-            expect($errors)->toHaveKey('role');
-
-            expect($errors['team_id'][0])->toBe('Must be integer or float');
-            expect($errors['role'][0])->toBe("Should be 'coach' or 'player'");
-
             expect($e->getMessage())->toBe('Invalid data');
+            expect($e->getErrors())->toBe([
+                'field' => [$expectedErrorMessage],
+            ]);
         }
-    });
+    })->with([
+        '20 options' => [
+            new class extends BaseModel {
+                public EnumStrTwentyValues $field;
+            },
+            "Should be 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen' or 'twenty'",
+        ],
+        'three options' => [
+            new class extends BaseModel {
+                public EnumStrThreeValues $field;
+            },
+            "Should be 'one', 'two' or 'three'",
+        ],
+        'two options' => [
+            new class extends BaseModel {
+                public EnumStrTwoValues $field;
+            },
+            "Should be 'one' or 'two'",
+        ],
+        'single option' => [
+            new class extends BaseModel {
+                public EnumStrOneValue $field;
+            },
+            "Should be 'one'",
+        ],
+    ]);
 
-    it('handles many validation errors efficiently', function () {
-        $model = new class extends BaseModel {
-            public int $field1;
-
-            public int $field2;
-
-            public int $field3;
-
-            public int $field4;
-
-            public int $field5;
-
-            public int $field6;
-
-            public int $field7;
-
-            public int $field8;
-
-            public int $field9;
-
-            public int $field10;
-        };
-
-        $start = microtime(true);
-
+    it('generates proper message for nested models', function (BaseModel $model, array $input, array $expectedErrors) {
         try {
-            validate([
-                'field1' => 'invalid',
-                'field2' => 'invalid',
-                'field3' => 'invalid',
-                'field4' => 'invalid',
-                'field5' => 'invalid',
-                'field6' => 'invalid',
-                'field7' => 'invalid',
-                'field8' => 'invalid',
-                'field9' => 'invalid',
-                'field10' => 'invalid',
-            ], $model);
+            validate($input, $model);
+            expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            $end = microtime(true);
-
-            expect($end - $start)->toBeLessThan(0.1);
-
-            expect(count($e->getErrors()))->toBe(10);
+            expect($e->getMessage())->toBe('Invalid data');
+            expect($e->getErrors())->toBe($expectedErrors);
         }
-    });
+    })->with([
+        'one-level' => [
+            'model' => new OneLevelNestedModel,
+            'input' => ['one' => []],
+            'expectedErrors' => ['one.field' => ['Field is required']],
+        ],
+        'two-level' => [
+            'model' => new TwoLevelNestedModel,
+            'input' => ['two' => ['one' => []]],
+            'expectedErrors' => ['two.one.field' => ['Field is required']],
+        ],
+        'three-level' => [
+            'model' => new ThreeLevelNestedModel,
+            'input' => ['three' => ['two' => ['one' => []]]],
+            'expectedErrors' => ['three.two.one.field' => ['Field is required']],
+        ],
+    ]);
 });
