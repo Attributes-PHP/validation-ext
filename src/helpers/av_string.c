@@ -224,5 +224,5 @@ zend_string *av_string_dot_concat(zend_string *first, zend_string *second)
         return NULL;
     }
 
-    return zend_string_concat3(ZSTR_VAL(first), ZSTR_LEN(first), ".", 1, ZSTR_VAL(second), ZSTR_LEN(second));
+    return av_string_concat3(ZSTR_VAL(first), ZSTR_LEN(first), ".", 1, ZSTR_VAL(second), ZSTR_LEN(second));
 }
