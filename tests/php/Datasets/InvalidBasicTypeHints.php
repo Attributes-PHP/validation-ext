@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once __DIR__.'/../helpers.php';
 
 $invalidStringLoose = [
@@ -73,14 +75,14 @@ dataset('invalid float strict', [
 dataset('invalid float loose', $invalidFloatLoose);
 
 $invalidBoolLoose = [
-    ...allCaseCombinations('noo'),
-    ...allCaseCombinations('yess'),
-    ...allCaseCombinations('ye'),
-    ...allCaseCombinations('truee'),
-    ...allCaseCombinations('falsee'),
+    ...all_case_combinations('noo'),
+    ...all_case_combinations('yess'),
+    ...all_case_combinations('ye'),
+    ...all_case_combinations('truee'),
+    ...all_case_combinations('falsee'),
     'fals$',
     'hello',
-    12345,
+    12_345,
     -982,
     -10e10,
     10e10,
@@ -93,14 +95,14 @@ $invalidBoolLoose = [
 ];
 
 dataset('invalid bool strict', [
-    ...allCaseCombinations('no'),
-    ...allCaseCombinations('yes'),
-    ...allCaseCombinations('y'),
-    ...allCaseCombinations('n'),
-    ...allCaseCombinations('t'),
-    ...allCaseCombinations('f'),
-    ...allCaseCombinations('true'),
-    ...allCaseCombinations('false'),
+    ...all_case_combinations('no'),
+    ...all_case_combinations('yes'),
+    ...all_case_combinations('y'),
+    ...all_case_combinations('n'),
+    ...all_case_combinations('t'),
+    ...all_case_combinations('f'),
+    ...all_case_combinations('true'),
+    ...all_case_combinations('false'),
     0,
     1,
     ...$invalidBoolLoose,

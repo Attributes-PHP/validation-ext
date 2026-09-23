@@ -20,8 +20,8 @@
         ]
     },
     "require-dev": {
-        "laravel/pint": "1.30",
-        "pestphp/pest": "^3.0"
+        "pestphp/pest": "^3.0",
+        "carthage-software/mago": "^1.50.0"
     },
     "prefer-stable": true,
     "config": {

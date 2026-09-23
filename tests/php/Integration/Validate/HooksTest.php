@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
@@ -16,11 +18,11 @@ describe('validate function hook handling', function () {
     });
 
     it('calls beforeValidation before validation', function () {
-        $model = new class extends NoHooks
-        {
+        $model = new class extends NoHooks {
             public function beforeValidation(array $rawData, ModelConfigs $configs): array
             {
-                expect(isset($this->number))->toBeFalse();
+                $property = new ReflectionProperty($this, 'number');
+                expect($property->isInitialized($this))->toBeFalse();
                 expect($this->calledBeforeValidation)->toBeFalse();
                 expect($this->calledAfterValidation)->toBeFalse();
 
@@ -37,8 +39,7 @@ describe('validate function hook handling', function () {
     });
 
     it('calls afterValidation after validation', function () {
-        $model = new class(['number' => '1.23']) extends NoHooks
-        {
+        $model = new class(['number' => '1.23']) extends NoHooks {
             public function afterValidation(array $rawData, ModelConfigs $configs): void
             {
                 expect($this->number)->toBe('1.23');
@@ -56,11 +57,11 @@ describe('validate function hook handling', function () {
     });
 
     it('calls both beforeValidation and afterValidation', function () {
-        $model = new class(['number' => '1.23']) extends NoHooks
-        {
+        $model = new class(['number' => '1.23']) extends NoHooks {
             public function beforeValidation(array $rawData, ModelConfigs $configs): array
             {
-                expect(isset($this->number))->toBeFalse();
+                $property = new ReflectionProperty($this, 'number');
+                expect($property->isInitialized($this))->toBeFalse();
                 expect($this->calledBeforeValidation)->toBeFalse();
                 expect($this->calledAfterValidation)->toBeFalse();
 
@@ -85,8 +86,7 @@ describe('validate function hook handling', function () {
     });
 
     it('does not call afterValidation when validation fails', function () {
-        $model = new class(['number' => '1.23']) extends NoHooks
-        {
+        $model = new class(['number' => '1.23']) extends NoHooks {
             public function afterValidation(array $rawData, ModelConfigs $configs): void
             {
                 $this->calledAfterValidation = true;
@@ -102,8 +102,7 @@ describe('validate function hook handling', function () {
     });
 
     it('passes raw data to beforeValidation and afterValidation', function () {
-        $model = new class extends NoHooks
-        {
+        $model = new class extends NoHooks {
             private array $expectedRawData = ['number' => '1.23'];
 
             public function beforeValidation(array $rawData, ModelConfigs $configs): array
@@ -128,8 +127,7 @@ describe('validate function hook handling', function () {
     });
 
     it('changes raw data in beforeValidation', function () {
-        $model = new class extends NoHooks
-        {
+        $model = new class extends NoHooks {
             private array $expectedRawData = ['number' => '1.23'];
 
             public function beforeValidation(array $rawData, ModelConfigs $configs): array

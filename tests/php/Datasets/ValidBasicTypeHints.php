@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 require_once __DIR__.'/../helpers.php';
 
 $validStringStrict = [
@@ -77,14 +79,14 @@ dataset('valid bool strict', $validBoolStrict);
 
 dataset('valid bool loose', [
     ...$validBoolStrict,
-    ...allCaseCombinations('yes'),
-    ...allCaseCombinations('no'),
-    ...allCaseCombinations('y'),
-    ...allCaseCombinations('n'),
-    ...allCaseCombinations('t'),
-    ...allCaseCombinations('f'),
-    ...allCaseCombinations('true'),
-    ...allCaseCombinations('false'),
+    ...all_case_combinations('yes'),
+    ...all_case_combinations('no'),
+    ...all_case_combinations('y'),
+    ...all_case_combinations('n'),
+    ...all_case_combinations('t'),
+    ...all_case_combinations('f'),
+    ...all_case_combinations('true'),
+    ...all_case_combinations('false'),
     0,
     1,
 ]);
@@ -92,7 +94,7 @@ dataset('valid bool loose', [
 $validDatetimeStrict = [
     '2025-03-06T08:57:06+00:00',
     '2050-12-06T00:00:03+00:00',
-    '2050-12-06T00:00:61+00:00',  // converts to 1 min and 1 sec
+    '2050-12-06T00:00:61+00:00', // converts to 1 min and 1 sec
     '2020-01-03T00:00:60Z',
     new DateTime,
     new DateTime('2013-6-23'),

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
@@ -12,8 +14,7 @@ describe('validate function basic functionality', function () {
     });
 
     it('accepts valid array and model parameters', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
         };
 
@@ -22,8 +23,7 @@ describe('validate function basic functionality', function () {
     });
 
     it('returns the model instance', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
         };
 
@@ -32,8 +32,7 @@ describe('validate function basic functionality', function () {
     });
 
     it('populates model properties from raw data', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
         };
 
@@ -42,8 +41,7 @@ describe('validate function basic functionality', function () {
     });
 
     it('handles multiple properties', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
 
             public int $age;
@@ -55,8 +53,7 @@ describe('validate function basic functionality', function () {
     });
 
     it('ignores private and protected properties', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name = '<default>';
 
             private int $private = 10;
@@ -81,8 +78,7 @@ describe('validate function basic functionality', function () {
     });
 
     it('ignores static properties', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public static string $public = '<default>';
 
             private static int $private = 10;

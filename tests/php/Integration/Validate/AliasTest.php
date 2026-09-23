@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
@@ -11,8 +13,7 @@ use function Attributes\Validation\validate;
 
 describe('validate function alias attribute handling', function () {
     it('uses Alias attribute for property name mapping', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             #[Alias('user_name')]
             public string $name;
         };
@@ -22,8 +23,7 @@ describe('validate function alias attribute handling', function () {
     });
 
     it('throws error when using property name instead of alias', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             #[Alias('user_name')]
             public string $name;
         };
@@ -32,8 +32,7 @@ describe('validate function alias attribute handling', function () {
     })->throws(ValidationException::class);
 
     it('handles multiple aliased properties', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             #[Alias('user_name')]
             public string $name;
 
@@ -47,8 +46,7 @@ describe('validate function alias attribute handling', function () {
     });
 
     it('mixes aliased and non-aliased properties', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             #[Alias('user_name')]
             public string $name;
 
@@ -61,13 +59,14 @@ describe('validate function alias attribute handling', function () {
     });
 
     it('Alias attribute takes precedence over aliasGenerator', function () {
-        $model = new #[ModelConfigs(aliasGenerator: 'snake')] class extends BaseModel
-        {
-            #[Alias('custom_alias')]
-            public string $firstName;
+        $model = new
+            #[ModelConfigs(aliasGenerator: 'snake')]
+            class extends BaseModel {
+                #[Alias('custom_alias')]
+                public string $firstName;
 
-            public string $lastName;
-        };
+                public string $lastName;
+            };
 
         $result = validate(['custom_alias' => 'John', 'last_name' => 'Doe'], $model);
         expect($result->firstName)->toBe('John');

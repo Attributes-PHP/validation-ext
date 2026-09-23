@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
@@ -9,8 +11,7 @@ use function Attributes\Validation\validate;
 
 describe('validate function required field validation', function () {
     it('throws ValidationException when required field is missing', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
         };
 
@@ -18,8 +19,7 @@ describe('validate function required field validation', function () {
     })->throws(ValidationException::class);
 
     it('includes field name in error when required field is missing', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
         };
 
@@ -28,13 +28,12 @@ describe('validate function required field validation', function () {
             expect(false)->toBeTrue(); // Should not reach here
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
-            expect(array_key_exists('name', $errors))->toBeTrue();
+            expect($errors)->toHaveKey('name');
         }
     });
 
     it('accepts all required fields when present', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
 
             public string $email;
@@ -46,8 +45,7 @@ describe('validate function required field validation', function () {
     });
 
     it('handles partial data with missing required fields', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
 
             public string $email;
@@ -58,8 +56,7 @@ describe('validate function required field validation', function () {
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
             $errors = $e->getErrors();
-            expect(array_key_exists('email', $errors))->toBeTrue();
-            expect(array_key_exists('name', $errors))->toBeFalse();
+            expect($errors)->toHaveKey('email')->not->toHaveKey('name');
         }
     });
 });

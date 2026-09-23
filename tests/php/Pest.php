@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 define('TESTS_RUNNING', true);
 
 if (! extension_loaded('attributes_validation')) {

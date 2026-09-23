@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
@@ -43,8 +45,7 @@ class TeamAuthModel extends BaseModel
 
 describe('validate function error handling', function () {
     it('throws ValidationException for missing required fields', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
         };
 
@@ -52,8 +53,7 @@ describe('validate function error handling', function () {
     })->throws(ValidationException::class);
 
     it('throws ValidationException with error details', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
 
             public string $email;
@@ -70,8 +70,7 @@ describe('validate function error handling', function () {
     });
 
     it('includes error message for required field', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
         };
 
@@ -85,8 +84,7 @@ describe('validate function error handling', function () {
     });
 
     it('generates proper message for enum validation', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public TestRole $role;
         };
 
@@ -100,8 +98,7 @@ describe('validate function error handling', function () {
     });
 
     it('generates proper message for nested model errors', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public TestAuthModel $auth;
         };
 
@@ -109,20 +106,17 @@ describe('validate function error handling', function () {
             validate(['auth' => []], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            var_dump($e);
-            expect($e->getErrors())
-                ->toHaveKey('auth.token')
+            expect($e->getErrors())->toHaveKey('auth.token')
                 ->toHaveCount(1);
 
-            expect($e->getErrors()['auth.token'])
-                ->toHaveCount(1)
-                ->and($e->getErrors()['auth.token'][0])->toBe('Field is required');
+            expect($e->getErrors()['auth.token'])->toHaveCount(1)
+                ->and($e->getErrors()['auth.token'][0])
+                ->toBe('Field is required');
         }
     });
 
     it('uses proper articles in error messages', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public int|float $value;
         };
 
@@ -135,8 +129,7 @@ describe('validate function error handling', function () {
     });
 
     it('generates proper message for required fields', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
         };
 
@@ -149,8 +142,7 @@ describe('validate function error handling', function () {
     });
 
     it('matches expected error format from documentation', function () {
-        $team = new class extends BaseModel
-        {
+        $team = new class extends BaseModel {
             public int|float $team_id;
 
             public TeamRole $role;
@@ -178,8 +170,7 @@ describe('validate function error handling', function () {
     });
 
     it('handles many validation errors efficiently', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public int $field1;
 
             public int $field2;

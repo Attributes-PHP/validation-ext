@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
@@ -8,8 +10,7 @@ use function Attributes\Validation\validate;
 
 describe('validate function edge cases', function () {
     it('handles empty raw data array', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name = 'default';
         };
 
@@ -25,8 +26,7 @@ describe('validate function edge cases', function () {
     });
 
     it('handles raw data with extra fields not in model', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
         };
 

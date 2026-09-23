@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
@@ -8,8 +10,7 @@ use function Attributes\Validation\validate;
 
 describe('validate function default value handling', function () {
     it('skips validation for properties with default values when field is missing', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name = 'default';
         };
 
@@ -18,8 +19,7 @@ describe('validate function default value handling', function () {
     });
 
     it('uses provided value over default value', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name = 'default';
         };
 
@@ -28,8 +28,7 @@ describe('validate function default value handling', function () {
     });
 
     it('handles multiple properties with default values', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name = 'default_name';
 
             public int $age = 25;
@@ -41,8 +40,7 @@ describe('validate function default value handling', function () {
     });
 
     it('mixes required and default value properties correctly', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name;
 
             public string $city = 'Unknown';
@@ -54,8 +52,7 @@ describe('validate function default value handling', function () {
     });
 
     it('ignores default values when field is present', function () {
-        $model = new class extends BaseModel
-        {
+        $model = new class extends BaseModel {
             public string $name = 'default';
 
             public string $email = 'default@example.com';

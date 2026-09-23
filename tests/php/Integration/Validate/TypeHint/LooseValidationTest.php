@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Attributes\Validation\Tests\Integration\Validate\TypeHint;
 
 use Attributes\Validation\BaseModel;
@@ -12,8 +14,7 @@ use function Attributes\Validation\validate;
 describe('type-hint validation (loose mode)', function () {
     describe('scalar types', function () {
         it('accepts valid string values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public string $value;
             };
 
@@ -22,17 +23,16 @@ describe('type-hint validation (loose mode)', function () {
         })->with('valid string loose');
 
         it('rejects invalid string values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public string $value;
             };
 
             validate(['value' => $value], $model);
-        })->with('invalid string loose')->throws(ValidationException::class);
+        })->with('invalid string loose')
+            ->throws(ValidationException::class);
 
         it('accepts valid integer values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public int $value;
             };
 
@@ -41,17 +41,16 @@ describe('type-hint validation (loose mode)', function () {
         })->with('valid integer loose');
 
         it('rejects invalid integer values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public int $value;
             };
 
             validate(['value' => $value], $model);
-        })->with('invalid integer loose')->throws(ValidationException::class);
+        })->with('invalid integer loose')
+            ->throws(ValidationException::class);
 
         it('accepts valid float values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public float $value;
             };
 
@@ -60,17 +59,16 @@ describe('type-hint validation (loose mode)', function () {
         })->with('valid float loose');
 
         it('rejects invalid float values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public float $value;
             };
 
             validate(['value' => $value], $model);
-        })->with('invalid float loose')->throws(ValidationException::class);
+        })->with('invalid float loose')
+            ->throws(ValidationException::class);
 
         it('accepts valid bool values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public bool $value;
             };
 
@@ -79,19 +77,18 @@ describe('type-hint validation (loose mode)', function () {
         })->with('valid bool loose');
 
         it('rejects invalid bool values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public bool $value;
             };
 
             validate(['value' => $value], $model);
-        })->with('invalid bool loose')->throws(ValidationException::class);
+        })->with('invalid bool loose')
+            ->throws(ValidationException::class);
     });
 
     describe('DateTime types', function () {
         it('accepts valid DateTime values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public DateTime $value;
             };
 
@@ -100,17 +97,16 @@ describe('type-hint validation (loose mode)', function () {
         })->with('valid datetime loose');
 
         it('rejects invalid DateTime values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public DateTime $value;
             };
 
             validate(['value' => $value], $model);
-        })->with('invalid datetime loose')->throws(ValidationException::class);
+        })->with('invalid datetime loose')
+            ->throws(ValidationException::class);
 
         it('accepts valid DateTimeInterface values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public DateTimeInterface $value;
             };
 
@@ -119,19 +115,18 @@ describe('type-hint validation (loose mode)', function () {
         })->with('valid datetime loose');
 
         it('rejects invalid DateTimeInterface values', function ($value) {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public DateTimeInterface $value;
             };
 
             validate(['value' => $value], $model);
-        })->with('invalid datetime loose')->throws(ValidationException::class);
+        })->with('invalid datetime loose')
+            ->throws(ValidationException::class);
     });
 
     describe('DateTime string conversion', function () {
         it('converts valid date strings to DateTime objects', function () {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public DateTime $value;
             };
 
@@ -141,8 +136,7 @@ describe('type-hint validation (loose mode)', function () {
         });
 
         it('converts valid date strings to DateTimeInterface', function () {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public DateTimeInterface $value;
             };
 
@@ -153,8 +147,7 @@ describe('type-hint validation (loose mode)', function () {
 
         it('preserves DateTime objects as-is', function () {
             $date = new DateTime('2025-03-06T08:57:06+00:00');
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public DateTime $value;
             };
 
@@ -165,8 +158,7 @@ describe('type-hint validation (loose mode)', function () {
 
     describe('mixed properties', function () {
         it('validates multiple properties with different type hints', function () {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public string $name;
 
                 public int $age;
@@ -189,13 +181,12 @@ describe('type-hint validation (loose mode)', function () {
             expect($result->name)->toBe('John Doe');
             expect($result->age)->toBe(30);
             expect($result->score)->toBe(95.5);
-            expect($result->active)->toBe(true);
+            expect($result->active)->toBeTrue();
             expect($result->createdAt)->toBeInstanceOf(DateTime::class);
         });
 
         it('fails when any property has invalid type', function () {
-            $model = new class extends BaseModel
-            {
+            $model = new class extends BaseModel {
                 public string $name;
 
                 public int $age;
