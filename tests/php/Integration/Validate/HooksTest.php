@@ -7,6 +7,7 @@ namespace Attributes\Validation\Tests\Integration\Validate;
 use Attributes\Validation\BaseModel;
 use Attributes\Validation\Exceptions\ValidationException;
 use Attributes\Validation\ModelConfigs;
+use ReflectionProperty;
 
 use function Attributes\Validation\validate;
 
