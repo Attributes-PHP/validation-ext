@@ -6,6 +6,14 @@ namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
 use Attributes\Validation\Exceptions\ValidationException;
+use Attributes\Validation\Tests\Models\Enums\EnumBasicOneValue;
+use Attributes\Validation\Tests\Models\Enums\EnumBasicThreeValues;
+use Attributes\Validation\Tests\Models\Enums\EnumBasicTwentyValues;
+use Attributes\Validation\Tests\Models\Enums\EnumBasicTwoValues;
+use Attributes\Validation\Tests\Models\Enums\EnumIntOneValue;
+use Attributes\Validation\Tests\Models\Enums\EnumIntThreeValues;
+use Attributes\Validation\Tests\Models\Enums\EnumIntTwentyValues;
+use Attributes\Validation\Tests\Models\Enums\EnumIntTwoValues;
 use Attributes\Validation\Tests\Models\Enums\EnumStrOneValue;
 use Attributes\Validation\Tests\Models\Enums\EnumStrThreeValues;
 use Attributes\Validation\Tests\Models\Enums\EnumStrTwentyValues;
@@ -105,7 +113,44 @@ describe('validate function error handling', function () {
         }
     });
 
-    it('generates proper message for string enums', function (BaseModel $model, string $expectedErrorMessage) {
+    it('generates proper message for basic enums', function (BaseModel $model, string $expectedErrorMessage) {
+        try {
+            validate(['field' => 'invalid'], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getMessage())->toBe('Invalid data');
+            expect($e->getErrors())->toBe([
+                'field' => [$expectedErrorMessage],
+            ]);
+        }
+    })->with([
+        '20 options' => [
+            new class extends BaseModel {
+                public EnumBasicTwentyValues $field;
+            },
+            "Should be 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen' or 'Twenty'",
+        ],
+        'three options' => [
+            new class extends BaseModel {
+                public EnumBasicThreeValues $field;
+            },
+            "Should be 'One', 'Two' or 'Three'",
+        ],
+        'two options' => [
+            new class extends BaseModel {
+                public EnumBasicTwoValues $field;
+            },
+            "Should be 'One' or 'Two'",
+        ],
+        'single option' => [
+            new class extends BaseModel {
+                public EnumBasicOneValue $field;
+            },
+            "Should be 'One'",
+        ],
+    ]);
+
+    it('generates proper message for string-backed enums', function (BaseModel $model, string $expectedErrorMessage) {
         try {
             validate(['field' => 'invalid'], $model);
             expect(false)->toBeTrue();
@@ -139,6 +184,43 @@ describe('validate function error handling', function () {
                 public EnumStrOneValue $field;
             },
             "Should be 'one'",
+        ],
+    ]);
+
+    it('generates proper message for int-backed enums', function (BaseModel $model, string $expectedErrorMessage) {
+        try {
+            validate(['field' => 'invalid'], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getMessage())->toBe('Invalid data');
+            expect($e->getErrors())->toBe([
+                'field' => [$expectedErrorMessage],
+            ]);
+        }
+    })->with([
+        '20 options' => [
+            new class extends BaseModel {
+                public EnumIntTwentyValues $field;
+            },
+            'Should be 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 or 20',
+        ],
+        'three options' => [
+            new class extends BaseModel {
+                public EnumIntThreeValues $field;
+            },
+            'Should be 1, 2 or 3',
+        ],
+        'two options' => [
+            new class extends BaseModel {
+                public EnumIntTwoValues $field;
+            },
+            'Should be 1 or 2',
+        ],
+        'single option' => [
+            new class extends BaseModel {
+                public EnumIntOneValue $field;
+            },
+            'Should be 1',
         ],
     ]);
 

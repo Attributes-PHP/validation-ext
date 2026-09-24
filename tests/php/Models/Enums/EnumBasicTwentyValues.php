@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Attributes\Validation\Tests\Models\Enums;
 
-enum EnumTwentyValues
+enum EnumBasicTwentyValues
 {
     case One;
     case Two;
