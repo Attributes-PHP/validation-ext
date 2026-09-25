@@ -308,7 +308,7 @@ describe('validate function error handling', function () {
                 'field.field' => ['Field is required'],
                 'field.secondField' => ['Field is required'],
                 'field' => [
-                    'Must be an Attributes\Validation\Tests\Integration\Validate\BasicModel or an Attributes\Validation\Tests\Integration\Validate\SecondBasicModel',
+                    'Must be Attributes\Validation\Tests\Integration\Validate\BasicModel or Attributes\Validation\Tests\Integration\Validate\SecondBasicModel',
                 ],
             ],
         ],
@@ -321,8 +321,36 @@ describe('validate function error handling', function () {
                 'field.secondField' => ['Field is required'],
                 'field.thirdField' => ['Field is required'],
                 'field' => [
-                    'Must be an Attributes\Validation\Tests\Integration\Validate\BasicModel or an Attributes\Validation\Tests\Integration\Validate\SecondBasicModel or an Attributes\Validation\Tests\Integration\Validate\ThirdBasicModel',
+                    'Must be Attributes\Validation\Tests\Integration\Validate\BasicModel or Attributes\Validation\Tests\Integration\Validate\SecondBasicModel or Attributes\Validation\Tests\Integration\Validate\ThirdBasicModel',
                 ],
+            ],
+        ],
+    ]);
+
+    it('generates proper message for enum-only unions', function (BaseModel $model, array $expectedErrors) {
+        try {
+            validate(['field' => ['invalid' => 'bro']], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getMessage())->toBe('Invalid data');
+            $errors = $e->getErrors();
+            expect($errors)->toBe($expectedErrors);
+        }
+    })->with([
+        'different-values' => [
+            'model' => new class extends BaseModel {
+                public EnumStrOneValue|EnumBasicOneValue|EnumIntOneValue $field;
+            },
+            'expectedErrors' => [
+                'field' => ["Must be 'one', 'One' or 1"],
+            ],
+        ],
+        'repeated-values' => [
+            'model' => new class extends BaseModel {
+                public EnumStrOneValue|EnumStrTwoValues $field;
+            },
+            'expectedErrors' => [
+                'field' => ["Must be 'one', 'one' or 'two'"],
             ],
         ],
     ]);
@@ -354,7 +382,42 @@ describe('validate function error handling', function () {
             'expectedErrors' => [
                 'field.field' => ['Field is required'],
                 'field.secondField' => ['Field is required'],
-                'field' => ['Must be boolean, integer, float, Attributes\Validation\Tests\Integration\Validate\BasicModel or Attributes\Validation\Tests\Integration\Validate\SecondBasicModel'],
+                'field' => [
+                    'Must be boolean, integer, float, Attributes\Validation\Tests\Integration\Validate\BasicModel or Attributes\Validation\Tests\Integration\Validate\SecondBasicModel',
+                ],
+            ],
+        ],
+    ]);
+
+    it('generates proper message for basic, class and enum unions', function (BaseModel $model, array $expectedErrors) {
+        try {
+            validate(['field' => ['invalid' => 'bro']], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getMessage())->toBe('Invalid data');
+            $errors = $e->getErrors();
+            var_dump($errors['field'][0]);
+            expect($errors)->toBe($expectedErrors);
+        }
+    })->with([
+        'two-type-hints' => [
+            'model' => new class extends BaseModel {
+                public bool|EnumStrOneValue $field;
+            },
+            'expectedErrors' => [
+                'field' => ["Must be boolean or 'one'"],
+            ],
+        ],
+        'six-type-hints' => [
+            'model' => new class extends BaseModel {
+                public int|float|BasicModel|SecondBasicModel|EnumStrOneValue|EnumBasicTwoValues $field;
+            },
+            'expectedErrors' => [
+                'field.field' => ['Field is required'],
+                'field.secondField' => ['Field is required'],
+                'field' => [
+                    "Must be integer, float, Attributes\Validation\Tests\Integration\Validate\BasicModel, Attributes\Validation\Tests\Integration\Validate\SecondBasicModel, 'one', 'One' or 'Two'",
+                ],
             ],
         ],
     ]);
