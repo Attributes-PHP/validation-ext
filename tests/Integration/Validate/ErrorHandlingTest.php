@@ -327,7 +327,7 @@ describe('validate function error handling', function () {
         ],
     ]);
 
-    it('generates proper message for class|basic unions', function (BaseModel $model, array $expectedErrors) {
+    it('generates proper message for basic and class unions', function (BaseModel $model, array $expectedErrors) {
         try {
             validate(['field' => ['invalid' => 'bro']], $model);
             expect(false)->toBeTrue();
