@@ -13,10 +13,10 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Attributes\\Validation\\Tests\\": "tests/php/"
+            "Attributes\\Validation\\Tests\\": "tests/Integration/"
         },
         "classmap": [
-            "tests/php/Models/"
+            "tests/Integration/Models/"
         ]
     },
     "require-dev": {

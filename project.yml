@@ -97,14 +97,14 @@
 # see documentation for the many options for specifying this.
 :paths:
   :test:
-    - +:tests/c/**
-    - -:tests/c/support
+    - +:tests/Unit/**
+    - -:tests/Unit/support
   :source:
     - src/**
   :include:
     - src/** # In simple projects, this entry often duplicates :source
   :support:
-    - tests/c/support
+    - tests/Unit/support
   :libraries: []
 
 # You can even specify specific files to add or remove from your test

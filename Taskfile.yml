@@ -50,7 +50,7 @@ tasks:
     deps:
       - _ensure-vendor
     cmds:
-      - ./vendor/bin/mago format tests/php
+      - ./vendor/bin/mago format tests/Integration
 
   format:c:
     desc: Format C sources in place with clang-format
@@ -62,7 +62,7 @@ tasks:
     deps:
       - _ensure-vendor
     cmds:
-      - ./vendor/bin/mago format tests/php --check
+      - ./vendor/bin/mago format tests/Integration --check
 
   test:format:c:
     desc: Check C formatting with clang-format (fails on violations)
@@ -80,7 +80,7 @@ tasks:
     deps:
       - _ensure-vendor
     cmds:
-      - ./vendor/bin/mago lint tests/php
+      - ./vendor/bin/mago lint tests/Integration
 
   test:lint:c:
     desc: Run clang-tidy static analysis on C sources
@@ -97,7 +97,7 @@ tasks:
     deps:
       - _ensure-vendor
     cmds:
-      - ./vendor/bin/pest --coverage tests/php
+      - ./vendor/bin/pest --coverage tests/Integration
 
   test:unit:
     desc: Run C unit tests via Ceedling
@@ -109,13 +109,13 @@ tasks:
     deps:
       - _ensure-vendor
     cmds:
-      - ./vendor/bin/pest --colors=always tests/php
+      - ./vendor/bin/pest --colors=always tests/Integration
 
   test:
     desc: Run all tests (lint, unit, integration)
     deps:
       - test:lint
-      - test:c:format
+      - test:format:c
       - test:unit
       - test:integration
 
