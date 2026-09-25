@@ -249,4 +249,34 @@ describe('validate function error handling', function () {
             'expectedErrors' => ['three.two.one.field' => ['Field is required']],
         ],
     ]);
+
+    it('generates proper message for basic unions', function (BaseModel $model, string $expectedErrorMessage) {
+        try {
+            validate(['field' => (object) []], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getMessage())->toBe('Invalid data');
+            $errors = $e->getErrors();
+            expect($errors)->toBe(['field' => [$expectedErrorMessage]]);
+        }
+    })->with([
+        'two-type-hints' => [
+            'model' => new class extends BaseModel {
+                public bool|int $field;
+            },
+            'expectedErrorMessage' => 'Must be boolean or integer',
+        ],
+        'three-type-hints' => [
+            'model' => new class extends BaseModel {
+                public bool|int|float $field;
+            },
+            'expectedErrorMessage' => 'Must be boolean, integer or float',
+        ],
+        'five-type-hints' => [
+            'model' => new class extends BaseModel {
+                public bool|int|float|string|array $field;
+            },
+            'expectedErrorMessage' => 'Must be boolean, integer, float, string or array',
+        ],
+    ]);
 });
