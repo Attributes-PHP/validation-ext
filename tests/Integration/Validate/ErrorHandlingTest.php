@@ -28,6 +28,16 @@ class BasicModel extends BaseModel
     public string $field;
 }
 
+class SecondBasicModel extends BaseModel
+{
+    public string $secondField;
+}
+
+class ThirdBasicModel extends BaseModel
+{
+    public string $thirdField;
+}
+
 // Multi-level nested model
 
 class OneLevelNestedModel extends BaseModel
@@ -277,6 +287,75 @@ describe('validate function error handling', function () {
                 public bool|int|float|string|array $field;
             },
             'expectedErrorMessage' => 'Must be boolean, integer, float, string or array',
+        ],
+    ]);
+
+    it('generates proper message for class-only unions', function (BaseModel $model, array $expectedErrors) {
+        try {
+            validate(['field' => ['invalid' => 'bro']], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getMessage())->toBe('Invalid data');
+            $errors = $e->getErrors();
+            expect($errors)->toBe($expectedErrors);
+        }
+    })->with([
+        'two-type-hints' => [
+            'model' => new class extends BaseModel {
+                public BasicModel|SecondBasicModel $field;
+            },
+            'expectedErrors' => [
+                'field.field' => ['Field is required'],
+                'field.secondField' => ['Field is required'],
+                'field' => [
+                    'Must be an Attributes\Validation\Tests\Integration\Validate\BasicModel or an Attributes\Validation\Tests\Integration\Validate\SecondBasicModel',
+                ],
+            ],
+        ],
+        'three-type-hints' => [
+            'model' => new class extends BaseModel {
+                public BasicModel|SecondBasicModel|ThirdBasicModel $field;
+            },
+            'expectedErrors' => [
+                'field.field' => ['Field is required'],
+                'field.secondField' => ['Field is required'],
+                'field.thirdField' => ['Field is required'],
+                'field' => [
+                    'Must be an Attributes\Validation\Tests\Integration\Validate\BasicModel or an Attributes\Validation\Tests\Integration\Validate\SecondBasicModel or an Attributes\Validation\Tests\Integration\Validate\ThirdBasicModel',
+                ],
+            ],
+        ],
+    ]);
+
+    it('generates proper message for class|basic unions', function (BaseModel $model, array $expectedErrors) {
+        try {
+            validate(['field' => ['invalid' => 'bro']], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getMessage())->toBe('Invalid data');
+            $errors = $e->getErrors();
+            var_dump($errors['field'][0]);
+            expect($errors)->toBe($expectedErrors);
+        }
+    })->with([
+        'two-type-hints' => [
+            'model' => new class extends BaseModel {
+                public BasicModel|bool $field;
+            },
+            'expectedErrors' => [
+                'field.field' => ['Field is required'],
+                'field' => ['Must be boolean or Attributes\Validation\Tests\Integration\Validate\BasicModel'],
+            ],
+        ],
+        'five-type-hints' => [
+            'model' => new class extends BaseModel {
+                public bool|int|float|BasicModel|SecondBasicModel $field;
+            },
+            'expectedErrors' => [
+                'field.field' => ['Field is required'],
+                'field.secondField' => ['Field is required'],
+                'field' => ['Must be boolean, integer, float, Attributes\Validation\Tests\Integration\Validate\BasicModel or Attributes\Validation\Tests\Integration\Validate\SecondBasicModel'],
+            ],
         ],
     ]);
 });
