@@ -138,25 +138,25 @@ describe('validate function error handling', function () {
             new class extends BaseModel {
                 public EnumBasicTwentyValues $field;
             },
-            "Should be 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen' or 'Twenty'",
+            "Must be 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen' or 'Twenty'",
         ],
         'three options' => [
             new class extends BaseModel {
                 public EnumBasicThreeValues $field;
             },
-            "Should be 'One', 'Two' or 'Three'",
+            "Must be 'One', 'Two' or 'Three'",
         ],
         'two options' => [
             new class extends BaseModel {
                 public EnumBasicTwoValues $field;
             },
-            "Should be 'One' or 'Two'",
+            "Must be 'One' or 'Two'",
         ],
         'single option' => [
             new class extends BaseModel {
                 public EnumBasicOneValue $field;
             },
-            "Should be 'One'",
+            "Must be 'One'",
         ],
     ]);
 
@@ -175,25 +175,25 @@ describe('validate function error handling', function () {
             new class extends BaseModel {
                 public EnumStrTwentyValues $field;
             },
-            "Should be 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen' or 'twenty'",
+            "Must be 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen' or 'twenty'",
         ],
         'three options' => [
             new class extends BaseModel {
                 public EnumStrThreeValues $field;
             },
-            "Should be 'one', 'two' or 'three'",
+            "Must be 'one', 'two' or 'three'",
         ],
         'two options' => [
             new class extends BaseModel {
                 public EnumStrTwoValues $field;
             },
-            "Should be 'one' or 'two'",
+            "Must be 'one' or 'two'",
         ],
         'single option' => [
             new class extends BaseModel {
                 public EnumStrOneValue $field;
             },
-            "Should be 'one'",
+            "Must be 'one'",
         ],
     ]);
 
@@ -212,25 +212,25 @@ describe('validate function error handling', function () {
             new class extends BaseModel {
                 public EnumIntTwentyValues $field;
             },
-            'Should be 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 or 20',
+            'Must be 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 or 20',
         ],
         'three options' => [
             new class extends BaseModel {
                 public EnumIntThreeValues $field;
             },
-            'Should be 1, 2 or 3',
+            'Must be 1, 2 or 3',
         ],
         'two options' => [
             new class extends BaseModel {
                 public EnumIntTwoValues $field;
             },
-            'Should be 1 or 2',
+            'Must be 1 or 2',
         ],
         'single option' => [
             new class extends BaseModel {
                 public EnumIntOneValue $field;
             },
-            'Should be 1',
+            'Must be 1',
         ],
     ]);
 
