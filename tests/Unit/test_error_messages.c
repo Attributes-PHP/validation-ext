@@ -220,7 +220,7 @@ void test_expected_placeholder_replaced_with_type_string(void)
 
     const char *template = "The {field} must be {expected}.";
     zend_string *result = av_replace_placeholders(template, strlen(template), &field, &prop_info);
-    TEST_ASSERT_EQUAL_STRING("The age must be an integer.", result->val);
+    TEST_ASSERT_EQUAL_STRING("The age must be integer.", result->val);
     av_string_release(result);
     av_string_release(field.name);
 }
@@ -237,7 +237,7 @@ void test_expected_placeholder_repeated(void)
 
     const char *template = "{field} must be {expected} or {expected}";
     zend_string *result = av_replace_placeholders(template, strlen(template), &field, &prop_info);
-    TEST_ASSERT_EQUAL_STRING("name must be a string or a string", result->val);
+    TEST_ASSERT_EQUAL_STRING("name must be string or string", result->val);
     av_string_release(result);
     av_string_release(field.name);
 }
@@ -258,7 +258,7 @@ void test_all_three_placeholders_replaced(void)
 
     const char *template = "The {field} must be {expected}, got {value}.";
     zend_string *result = av_replace_placeholders(template, strlen(template), &field, &prop_info);
-    TEST_ASSERT_EQUAL_STRING("The count must be an integer, got 7.", result->val);
+    TEST_ASSERT_EQUAL_STRING("The count must be integer, got 7.", result->val);
     av_string_release(result);
     av_string_release(field.name);
 }
@@ -276,7 +276,7 @@ void test_non_placeholder_braced_text_is_preserved(void)
     // "{fieldx}" is not a placeholder and must be left untouched.
     const char *template = "{field} {fieldx} must be {expected}; got {value}";
     zend_string *result = av_replace_placeholders(template, strlen(template), &field, &prop_info);
-    TEST_ASSERT_EQUAL_STRING("price {fieldx} must be a float; got 1", result->val);
+    TEST_ASSERT_EQUAL_STRING("price {fieldx} must be float; got 1", result->val);
     av_string_release(result);
     av_string_release(field.name);
 }
