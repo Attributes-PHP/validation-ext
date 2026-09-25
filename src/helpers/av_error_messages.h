@@ -17,10 +17,8 @@ zend_string *av_replace_placeholders(const char *template, size_t length, av_fie
 // Error message generation
 static zend_string *generate_type_name(const zend_type *type);
 static bool is_type_enum(const zend_type *type);
-static zend_string *build_single_type_with_article(const zend_type *type);
 zend_string *build_union_type_string(zend_type property_type);
 static zend_string *generate_error_message(av_field *field, zend_type property_type);
-static bool av_vowel_sound(char c);
 
 // Value conversion
 zend_string *av_value_to_string(zval *value);

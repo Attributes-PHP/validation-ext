@@ -39,29 +39,17 @@ static zend_always_inline void add_field_error(zval *errors, zend_string *field_
     }
 }
 
-/**
- * Checks if a character starts with a vowel sound (for "an" vs "a" article selection).
- *
- * @param c The character to check
- * @return true if the character starts a word that should use "an"
- */
-static bool av_vowel_sound(char c)
+static zend_string *generate_type_name(const zend_type type)
 {
-    c = (c >= 'A' && c <= 'Z') ? c - 'A' + 'a' : c;
-    return (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u');
-}
-
-static zend_string *generate_type_name(const zend_type *type)
-{
-    if (ZEND_TYPE_IS_INTERSECTION(*type)) {
+    if (ZEND_TYPE_IS_INTERSECTION(type)) {
         return av_string_init("mixed", 5, 0);
     }
 
-    if (ZEND_TYPE_HAS_NAME(*type)) {
-        return av_string_copy(ZEND_TYPE_NAME(*type));
+    if (ZEND_TYPE_HAS_NAME(type)) {
+        return av_string_copy(ZEND_TYPE_NAME(type));
     }
 
-    uint32_t type_mask = ZEND_TYPE_PURE_MASK(*type);
+    uint32_t type_mask = ZEND_TYPE_PURE_MASK(type);
 
     if (type_mask == MAY_BE_BOOL)
         return av_string_init("boolean", 7, 0);
@@ -87,14 +75,6 @@ static zend_string *generate_type_name(const zend_type *type)
     return av_string_init("mixed", 5, 0);
 }
 
-static zend_always_inline zend_string *build_single_type_with_article(const zend_type *type)
-{
-    zend_string *type_name = generate_type_name(type);
-    const char *article = av_vowel_sound(ZSTR_VAL(type_name)[0]) ? "an" : "a";
-    zend_string *result = av_string_concat3(article, strlen(article), " ", 1, ZSTR_VAL(type_name), ZSTR_LEN(type_name));
-    av_string_release(type_name);
-    return result;
-}
 
 static zend_always_inline zend_string *build_union_only_basic_types(uint32_t pure_mask)
 {
@@ -207,13 +187,13 @@ zend_string *build_union_type_string(zend_type property_type)
     return result;
 }
 
-static bool is_type_enum(const zend_type *type)
+static bool is_type_enum(const zend_type type)
 {
     if (!ZEND_TYPE_HAS_NAME(*type)) {
         return false;
     }
 
-    zend_class_entry *ce = av_lookup_class_ex(ZEND_TYPE_NAME(*type), NULL, 0);
+    zend_class_entry *ce = av_lookup_class_ex(ZEND_TYPE_NAME(type), NULL, 0);
     if (!ce) {
         return false;
     }
@@ -221,11 +201,11 @@ static bool is_type_enum(const zend_type *type)
     return (ce->ce_flags & ZEND_ACC_ENUM);
 }
 
-static zend_class_entry *resolve_enum_ce(const zend_type *type)
+static zend_class_entry *resolve_enum_ce(const zend_type type)
 {
-    ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*type));
+    ZEND_ASSERT(ZEND_TYPE_HAS_NAME(type));
 
-    return av_lookup_class_ex(ZEND_TYPE_NAME(*type), NULL, 0);
+    return av_lookup_class_ex(ZEND_TYPE_NAME(type), NULL, 0);
 }
 
 static zend_string *enum_case_label(zend_class_entry *ce, zend_object *case_obj)
