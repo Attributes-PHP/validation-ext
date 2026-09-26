@@ -1,6 +1,8 @@
 # Attributes Validation Extension
 
-<img src="https://raw.githubusercontent.com/Attributes-PHP/validation-ext/main/docs/assets/images/validation-ext-wallpaper.png" alt="validation-ext logo">
+<p align="center">
+    <img src="https://raw.githubusercontent.com/Attributes-PHP/validation-ext/main/docs/assets/images/validation-ext-wallpaper.png" alt="validation-ext logo" width="600">
+</p>
 <p align="center">
     <a href="https://github.com/Attributes-PHP/validation-ext/actions"><img alt="GitHub Actions Workflow Status (main)" src="https://img.shields.io/github/actions/workflow/status/Attributes-PHP/validation-ext/tests.yml"></a>
     <a href="https://codecov.io/gh/Attributes-PHP/validation-ext" ><img alt="Code Coverage" src="https://codecov.io/gh/Attributes-PHP/validation-ext/graph/badge.svg?token=8N7N9NMGLG"/></a>
