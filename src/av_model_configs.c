@@ -75,6 +75,7 @@ void av_register_ModelConfigs_class(void)
     zend_class_entry ce;
     INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation", "ModelConfigs", class_AV_ModelConfigs_methods);
     AV_ModelConfigs_ce = zend_register_internal_class_ex(&ce, NULL);
+    ZEND_ASSERT(AV_ModelConfigs_ce != NULL);
     AV_ModelConfigs_ce->ce_flags |= ZEND_ACC_FINAL;
 
     /* Declare properties */

@@ -21,6 +21,7 @@ void av_register_BaseModel_class(void)
     zend_class_entry ce;
     INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation", "BaseModel", class_AV_BaseModel_methods);
     AV_BaseModel_ce = zend_register_internal_class_ex(&ce, NULL);
+    ZEND_ASSERT(AV_BaseModel_ce != NULL);
     AV_BaseModel_ce->ce_flags |= ZEND_ACC_ABSTRACT;
 }
 

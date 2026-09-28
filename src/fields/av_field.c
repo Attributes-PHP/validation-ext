@@ -8,4 +8,5 @@ void av_register_Field_interface(void)
 
     INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation\\Fields", "Field", class_AV_Fields_Field_methods);
     AV_Fields_Field_ce = zend_register_internal_interface(&ce);
+    ZEND_ASSERT(AV_Fields_Field_ce != NULL);
 }

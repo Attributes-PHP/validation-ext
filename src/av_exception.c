@@ -11,6 +11,7 @@ void av_register_all_exception_classes(void)
 {
     register_BaseException_class();
     register_ValidationException_class();
+    ZEND_ASSERT(class_AV_Exceptions_BaseException != NULL && class_AV_Exceptions_ValidationException != NULL);
 }
 
 void av_throw_validation_exception(zval *errors)

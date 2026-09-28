@@ -89,6 +89,8 @@ static bool is_datetime_class(zend_class_entry *ce)
 
 static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_configs_properties *properties)
 {
+    ZEND_ASSERT(Z_TYPE_P(value) == IS_STRING);
+
     const zend_string *str = Z_STR_P(value);
     if (ZSTR_LEN(str) <= 12) {
         return false;
@@ -308,6 +310,8 @@ static bool is_basemodel_class_type_hint(av_property_info *prop_info, const zend
  */
 bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors)
 {
+    ZEND_ASSERT(field->value != NULL);
+
     zend_type property_type = prop_info->property->type;
 
     if (!ZEND_TYPE_IS_SET(property_type))

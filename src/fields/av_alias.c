@@ -22,6 +22,9 @@ void av_register_Alias_class(void)
 
     INIT_NS_CLASS_ENTRY(ce, "Attributes\\Validation\\Fields", "Alias", class_AV_Fields_Alias_methods);
     AV_Fields_Alias_ce = zend_register_internal_class_ex(&ce, NULL);
+    ZEND_ASSERT(AV_Fields_Alias_ce != NULL);
+
+    ZEND_ASSERT(AV_Fields_Field_ce != NULL);
     zend_class_implements(AV_Fields_Alias_ce, 1, AV_Fields_Field_ce);
 
     /* Register $name property */

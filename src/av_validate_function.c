@@ -83,6 +83,9 @@ static zend_always_inline zval *get_property_value(zend_class_entry *model_ce, z
 
 static zend_always_inline bool has_property_default_value(av_property_info *property_info)
 {
+    // OBJ_PROP_TO_NUM() is only meaningful for declared (non-static) properties
+    ZEND_ASSERT(!(property_info->property->flags & ZEND_ACC_STATIC));
+
     if (!property_info->model_ce->default_properties_table)
         return false;
 
@@ -132,6 +135,9 @@ static inline bool validate_field_value(av_field *field, av_property_info *prop_
 
 bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors, zend_string *parent_path)
 {
+    ZEND_ASSERT(Z_TYPE_P(raw_data) == IS_ARRAY);
+    ZEND_ASSERT(Z_TYPE_P(errors) == IS_ARRAY);
+
     while (prop_info->model_ce != NULL && prop_info->model_ce != AV_BaseModel_ce) {
         zend_string *property_name = NULL;
         av_field field = {
