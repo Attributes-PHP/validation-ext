@@ -114,3 +114,18 @@ $validArrayLoose = [
 dataset('valid array strict', $validArrayLoose);
 
 dataset('valid array loose', $validArrayLoose);
+
+$validObjectLoose = [
+    (object) [123],
+    (object) ['a' => 1, 'b' => 2],
+    (object) [['a' => 1, 'b' => 2], [1, 2, 3]],
+    new class {
+        public string $name;
+
+        public string $age;
+    },
+];
+
+dataset('valid object strict', $validObjectLoose);
+
+dataset('valid object loose', $validObjectLoose);

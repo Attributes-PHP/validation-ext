@@ -102,6 +102,24 @@ describe('type-hint validation (loose mode)', function () {
             validate(['value' => $value], $model);
         })->with('invalid array loose')
             ->throws(ValidationException::class);
+
+        it('accepts valid object values', function ($value) {
+            $model = new class extends BaseModel {
+                public object $value;
+            };
+
+            $result = validate(['value' => $value], $model);
+            expect($result->value)->toBeObject();
+        })->with('valid object loose');
+
+        it('rejects invalid object values', function ($value) {
+            $model = new class extends BaseModel {
+                public object $value;
+            };
+
+            validate(['value' => $value], $model);
+        })->with('invalid object loose')
+            ->throws(ValidationException::class);
     });
 
     describe('DateTime types', function () {

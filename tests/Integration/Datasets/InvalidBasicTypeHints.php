@@ -152,3 +152,20 @@ $invalidArrayLoose = [
 dataset('invalid array strict', $invalidArrayLoose);
 
 dataset('invalid array loose', $invalidArrayLoose);
+
+$invalidObjectLoose = [
+    'This is a string',
+    12345,
+    -123,
+    92.21,
+    true,
+    false,
+    null,
+    [[123]],
+    [['a' => 1, 'b' => 2]],
+    [[['a' => 1, 'b' => 2], [1, 2, 3]]],
+];
+
+dataset('invalid object strict', $invalidObjectLoose);
+
+dataset('invalid object loose', $invalidObjectLoose);

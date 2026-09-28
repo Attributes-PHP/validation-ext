@@ -101,6 +101,50 @@ describe('type-hint validation (strict mode)', function () {
             validate(['value' => $value], $model);
         })->with('invalid bool strict')
             ->throws(ValidationException::class);
+
+        it('accepts valid array values in strict mode', function ($value) {
+            $model = new
+                #[ModelConfigs(strict: true)]
+                class extends BaseModel {
+                    public array $value;
+                };
+
+            $result = validate(['value' => $value], $model);
+            expect($result->value)->toBeArray();
+        })->with('valid array strict');
+
+        it('rejects invalid array values in strict mode', function ($value) {
+            $model = new
+                #[ModelConfigs(strict: true)]
+                class extends BaseModel {
+                    public array $value;
+                };
+
+            validate(['value' => $value], $model);
+        })->with('invalid array strict')
+            ->throws(ValidationException::class);
+
+        it('accepts valid object values in strict mode', function ($value) {
+            $model = new
+                #[ModelConfigs(strict: true)]
+                class extends BaseModel {
+                    public object $value;
+                };
+
+            $result = validate(['value' => $value], $model);
+            expect($result->value)->toBeObject();
+        })->with('valid object strict');
+
+        it('rejects invalid object values in strict mode', function ($value) {
+            $model = new
+                #[ModelConfigs(strict: true)]
+                class extends BaseModel {
+                    public object $value;
+                };
+
+            validate(['value' => $value], $model);
+        })->with('invalid object strict')
+            ->throws(ValidationException::class);
     });
 
     describe('DateTime types', function () {
