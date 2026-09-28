@@ -375,7 +375,6 @@ describe('validate function error handling', function () {
         } catch (ValidationException $e) {
             expect($e->getMessage())->toBe('Invalid data');
             $errors = $e->getErrors();
-            var_dump($errors['field'][0]);
             expect($errors)->toBe($expectedErrors);
         }
     })->with([
@@ -409,7 +408,6 @@ describe('validate function error handling', function () {
         } catch (ValidationException $e) {
             expect($e->getMessage())->toBe('Invalid data');
             $errors = $e->getErrors();
-            var_dump($errors['field'][0]);
             expect($errors)->toBe($expectedErrors);
         }
     })->with([
@@ -434,7 +432,9 @@ describe('validate function error handling', function () {
             ],
         ],
     ]);
+});
 
+describe('custom ErrorMessage attribute messages', function () {
     it('uses custom messages from the ErrorMessage attribute with named arguments', function (
         BaseModel $model,
         array $input,

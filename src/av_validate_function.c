@@ -179,7 +179,11 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_
                 continue;
             }
 
-            field.parent = av_string_dot_concat(parent_path, field.name);
+            // The parent path excludes the property's own name: error paths
+            // append it (get_property_full_path) and the nested model
+            // recursion prepends it (handle_class_by_ce), so including it
+            // here would double it in reported paths
+            field.parent = parent_path != NULL ? zend_string_copy(parent_path) : NULL;
 
             const bool is_valid = validate_field_value(&field, prop_info, properties, errors);
 
@@ -189,6 +193,13 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_
             }
             if (is_to_release_field_name)
                 zend_string_release(field.name);
+
+            // A hard error thrown during validation (e.g. an unresolvable
+            // docstring class) must surface instead of continuing or being
+            // masked by the validation exception
+            if (UNEXPECTED(EG(exception))) {
+                return false;
+            }
 
             if (!is_valid) {
                 if (properties->stop_first_error)
@@ -239,6 +250,12 @@ ZEND_FUNCTION(validate)
         .model_ce = model_ce,
     };
     if (!av_validate_model_internal(raw_data, &property_info, &properties, &errors, NULL)) {
+        // A hard error thrown during validation (e.g. an unresolvable
+        // docstring class) takes precedence over the validation exception
+        if (EG(exception)) {
+            AV_ZVAL_DTOR_RETURN_THROWS(&configs_obj, &errors);
+        }
+
         ZEND_ASSERT(zend_hash_num_elements(Z_ARRVAL_P(&errors)) > 0);
 
         av_throw_validation_exception(&errors);

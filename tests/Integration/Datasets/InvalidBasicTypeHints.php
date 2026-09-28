@@ -155,7 +155,7 @@ dataset('invalid array loose', $invalidArrayLoose);
 
 $invalidObjectLoose = [
     'This is a string',
-    12345,
+    12_345,
     -123,
     92.21,
     true,
