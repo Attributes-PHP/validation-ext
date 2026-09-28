@@ -136,3 +136,19 @@ $invalidDatetimeLoose = [
 dataset('invalid datetime strict', $invalidDatetimeLoose);
 
 dataset('invalid datetime loose', $invalidDatetimeLoose);
+
+$invalidArrayLoose = [
+    (object) [[1, 2, 3]],
+    new class {},
+    123,
+    'hello world',
+    92.12,
+    -19,
+    true,
+    false,
+    null,
+];
+
+dataset('invalid array strict', $invalidArrayLoose);
+
+dataset('invalid array loose', $invalidArrayLoose);

@@ -104,3 +104,13 @@ $validDatetimeStrict = [
 dataset('valid datetime strict', $validDatetimeStrict);
 
 dataset('valid datetime loose', $validDatetimeStrict);
+
+$validArrayLoose = [
+    [[123]],
+    [['a' => 1, 'b' => 2]],
+    [[['a' => 1, 'b' => 2], [1, 2, 3]]],
+];
+
+dataset('valid array strict', $validArrayLoose);
+
+dataset('valid array loose', $validArrayLoose);
