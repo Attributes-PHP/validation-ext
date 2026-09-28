@@ -6,6 +6,7 @@ namespace Attributes\Validation\Tests\Integration\Validate;
 
 use Attributes\Validation\BaseModel;
 use Attributes\Validation\Exceptions\ValidationException;
+use Attributes\Validation\Fields\ErrorMessage;
 use Attributes\Validation\Tests\Models\Enums\EnumBasicOneValue;
 use Attributes\Validation\Tests\Models\Enums\EnumBasicThreeValues;
 use Attributes\Validation\Tests\Models\Enums\EnumBasicTwentyValues;
@@ -18,6 +19,7 @@ use Attributes\Validation\Tests\Models\Enums\EnumStrOneValue;
 use Attributes\Validation\Tests\Models\Enums\EnumStrThreeValues;
 use Attributes\Validation\Tests\Models\Enums\EnumStrTwentyValues;
 use Attributes\Validation\Tests\Models\Enums\EnumStrTwoValues;
+use ValueError;
 
 use function Attributes\Validation\validate;
 
@@ -36,6 +38,17 @@ class SecondBasicModel extends BaseModel
 class ThirdBasicModel extends BaseModel
 {
     public string $thirdField;
+}
+
+class InnerModelWithCustomMessages extends BaseModel
+{
+    #[ErrorMessage(required: '{field} is missing', type: 'Ups wrong type {expected}')]
+    public string $field;
+}
+
+class OneLevelNestedModelWithCustomMessages extends BaseModel
+{
+    public InnerModelWithCustomMessages $one;
 }
 
 // Multi-level nested model
@@ -421,4 +434,175 @@ describe('validate function error handling', function () {
             ],
         ],
     ]);
+
+    it('uses custom messages from the ErrorMessage attribute with named arguments', function (
+        BaseModel $model,
+        array $input,
+        array $expectedErrors,
+    ) {
+        try {
+            validate($input, $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getMessage())->toBe('Invalid data');
+            expect($e->getErrors())->toBe($expectedErrors);
+        }
+    })->with([
+        'custom required message' => [
+            'model' => new class extends BaseModel {
+                #[ErrorMessage(required: '{field} is missing', type: 'Ups wrong type {expected}')]
+                public string $name;
+            },
+            'input' => [],
+            'expectedErrors' => [
+                'name' => ['name is missing'],
+            ],
+        ],
+        'custom type message' => [
+            'model' => new class extends BaseModel {
+                #[ErrorMessage(required: '{field} is missing', type: 'Ups wrong type {expected}')]
+                public string $name;
+            },
+            'input' => ['name' => ['not' => 'a string']],
+            'expectedErrors' => [
+                'name' => ['Ups wrong type string'],
+            ],
+        ],
+        'custom messages do not leak to sibling fields' => [
+            'model' => new class extends BaseModel {
+                #[ErrorMessage(required: '{field} is missing', type: 'Ups wrong type {expected}')]
+                public string $name;
+
+                public int $age;
+            },
+            'input' => ['name' => 'Jane'],
+            'expectedErrors' => [
+                'age' => ['Field is required'],
+            ],
+        ],
+        'custom messages keep the nested property path' => [
+            'model' => new OneLevelNestedModelWithCustomMessages,
+            'input' => ['one' => []],
+            'expectedErrors' => [
+                'one.field' => ['field is missing'],
+            ],
+        ],
+        'custom type message expands enum cases in {expected}' => [
+            'model' => new class extends BaseModel {
+                #[ErrorMessage(required: '{field} is missing', type: 'pick one of {expected}')]
+                public EnumBasicTwoValues|EnumStrTwoValues $field;
+            },
+            'input' => ['field' => 'invalid'],
+            'expectedErrors' => [
+                'field' => ["pick one of 'One', 'Two', 'one' or 'two'"],
+            ],
+        ],
+        'custom type message renders the received value in {value}' => [
+            'model' => new class extends BaseModel {
+                #[ErrorMessage(type: 'expected {expected}, got {value}', required: '{field} is missing')]
+                public ?string $nick;
+            },
+            'input' => ['nick' => ['an' => 'array']],
+            'expectedErrors' => [
+                'nick' => ['expected string or null, got array'],
+            ],
+        ],
+    ]);
+
+    it('uses custom messages from the ErrorMessage attribute with positional arguments', function (
+        BaseModel $model,
+        array $input,
+        array $expectedErrors,
+    ) {
+        try {
+            validate($input, $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getMessage())->toBe('Invalid data');
+            expect($e->getErrors())->toBe($expectedErrors);
+        }
+    })->with([
+        'custom required message' => [
+            'model' => new class extends BaseModel {
+                #[ErrorMessage('give me {field}', 'expected {expected}')]
+                public string $name;
+            },
+            'input' => [],
+            'expectedErrors' => [
+                'name' => ['give me name'],
+            ],
+        ],
+        'custom type message' => [
+            'model' => new class extends BaseModel {
+                #[ErrorMessage('give me {field}', 'expected {expected}')]
+                public string $name;
+            },
+            'input' => ['name' => ['an' => 'array']],
+            'expectedErrors' => [
+                'name' => ['expected string'],
+            ],
+        ],
+    ]);
+
+    it('uses ErrorMessage but uses default messages', function (BaseModel $model, array $input, array $expectedErrors) {
+        try {
+            validate($input, $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getMessage())->toBe('Invalid data');
+            expect($e->getErrors())->toBe($expectedErrors);
+        }
+    })->with([
+        'uses default required' => [
+            'model' => new class extends BaseModel {
+                #[ErrorMessage(type: 'Ups wrong type {expected}')]
+                public string $name;
+            },
+            'input' => [],
+            'expectedErrors' => [
+                'name' => ['Field is required'],
+            ],
+        ],
+        'uses default type' => [
+            'model' => new class extends BaseModel {
+                #[ErrorMessage(required: '{field} is missing')]
+                public bool|string|int $name;
+            },
+            'input' => ['name' => ['not' => 'a string']],
+            'expectedErrors' => [
+                'name' => ['Must be boolean, integer or string'],
+            ],
+        ],
+        'uses default type - positional argument' => [
+            'model' => new class extends BaseModel {
+                #[ErrorMessage('{field} is missing')]
+                public bool|string|int $name;
+            },
+            'input' => ['name' => ['not' => 'a string']],
+            'expectedErrors' => [
+                'name' => ['Must be boolean, integer or string'],
+            ],
+        ],
+    ]);
+
+    it('invalid ErrorMessage arguments', function (BaseModel $model, array $input) {
+        validate($input, $model);
+    })
+        ->throws(ValueError::class)
+        ->with([
+            'invalid required' => [
+                'model' => new class extends BaseModel {
+                    #[ErrorMessage(required: 123)]
+                    public string $name;
+                },
+                'input' => [],
+            ],
+            'invalid type' => [
+                'model' => new class extends BaseModel {
+                    #[ErrorMessage(type: true)]
+                    public string $name;
+                },
+                'input' => ['name' => []],
+            ],
+        ]);
 });
