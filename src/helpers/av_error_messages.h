@@ -26,7 +26,6 @@ zend_string *av_replace_placeholders(const char *template, size_t length, av_fie
 
 // Error message generation
 static zend_string *generate_type_name(const zend_type type);
-static bool is_type_enum(const zend_type type);
 zend_string *build_union_type_string(zend_type property_type);
 static zend_string *get_custom_error_template(av_error_type type, av_property_info *property);
 static zend_string *get_property_full_path(av_field *field);

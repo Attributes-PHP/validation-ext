@@ -61,43 +61,29 @@ static zend_string *generate_type_name(const zend_type type)
 
     uint32_t type_mask = ZEND_TYPE_PURE_MASK(type);
 
-    if (type_mask == MAY_BE_BOOL)
-        return av_string_init("boolean", 7, 0);
-    if (type_mask == MAY_BE_LONG)
-        return av_string_init("integer", 7, 0);
-    if (type_mask == MAY_BE_DOUBLE)
-        return av_string_init("float", 5, 0);
-    if (type_mask == MAY_BE_STRING)
-        return av_string_init("string", 6, 0);
-    if (type_mask == MAY_BE_ARRAY)
-        return av_string_init("array", 5, 0);
-    if (type_mask == MAY_BE_OBJECT)
-        return av_string_init("object", 6, 0);
-    if (type_mask == MAY_BE_NULL)
-        return av_string_init("null", 4, 0);
+    for (size_t i = 0; i < BASIC_TYPE_MAPPINGS_SIZE; i++) {
+        if (type_mask == basic_type_mappings[i].mask) {
+            return av_string_init(basic_type_mappings[i].name, basic_type_mappings[i].length, 0);
+        }
+    }
 
     return av_string_init("mixed", 5, 0);
 }
 
-static bool is_type_enum(const zend_type type)
-{
-    if (!ZEND_TYPE_HAS_NAME(type)) {
-        return false;
-    }
-
-    zend_class_entry *ce = av_lookup_class_ex(ZEND_TYPE_NAME(type), NULL, ZEND_FETCH_CLASS_DEFAULT);
-    if (!ce) {
-        return false;
-    }
-
-    return (ce->ce_flags & ZEND_ACC_ENUM);
-}
-
+/*
+ * Resolves the class entry of a named type when it declares an enum; returns
+ * NULL for anything else (plain classes, interfaces, unknown names).
+ */
 static zend_class_entry *resolve_enum_ce(const zend_type type)
 {
     ZEND_ASSERT(ZEND_TYPE_HAS_NAME(type));
 
-    return av_lookup_class_ex(ZEND_TYPE_NAME(type), NULL, ZEND_FETCH_CLASS_DEFAULT);
+    zend_class_entry *ce = av_lookup_class_ex(ZEND_TYPE_NAME(type), NULL, ZEND_FETCH_CLASS_DEFAULT);
+    if (ce == NULL || !(ce->ce_flags & ZEND_ACC_ENUM)) {
+        return NULL;
+    }
+
+    return ce;
 }
 
 static zend_string *enum_case_label(zend_class_entry *ce, zend_object *case_obj)
@@ -191,15 +177,10 @@ static zend_always_inline void append_union_type_part(zend_string **result, uint
     *result = temp;
 }
 
-// Number of parts a named enum type contributes to a union list: one per case.
-static uint32_t count_enum_type_parts(const zend_type type)
+// Number of parts an enum type contributes to a union list: one per case.
+static uint32_t count_enum_type_parts(zend_class_entry *ce)
 {
-    ZEND_ASSERT(ZEND_TYPE_HAS_NAME(type));
-
-    zend_class_entry *ce = resolve_enum_ce(type);
-    if (!ce) {
-        return 1;
-    }
+    ZEND_ASSERT(ce != NULL);
 
     if (ce->type == ZEND_USER_CLASS && !(ce->ce_flags & ZEND_ACC_CONSTANTS_UPDATED)) {
         av_update_class_constants(ce);
@@ -221,18 +202,13 @@ static uint32_t count_enum_type_parts(const zend_type type)
 }
 
 /*
- * Appends the cases of a named enum type to a union list, one part per case,
+ * Appends the cases of an enum type to a union list, one part per case,
  * using the comma/"or" grammar based on index/total.
- * Returns the number of parts appended (0 when the enum cannot be resolved).
+ * Returns the number of parts appended (0 when no case could be evaluated).
  */
-static uint32_t append_enum_type_parts(zend_string **result, uint32_t index, uint32_t total, const zend_type type)
+static uint32_t append_enum_type_parts(zend_string **result, uint32_t index, uint32_t total, zend_class_entry *ce)
 {
-    ZEND_ASSERT(ZEND_TYPE_HAS_NAME(type));
-
-    zend_class_entry *ce = resolve_enum_ce(type);
-    if (!ce) {
-        return 0;
-    }
+    ZEND_ASSERT(ce != NULL);
 
     if (ce->type == ZEND_USER_CLASS && !(ce->ce_flags & ZEND_ACC_CONSTANTS_UPDATED)) {
         av_update_class_constants(ce);
@@ -269,18 +245,25 @@ zend_string *build_union_type_string(zend_type property_type)
     uint32_t pure_mask = ZEND_TYPE_PURE_MASK(property_type);
     uint32_t basic_total = count_basic_types(pure_mask);
 
+    // Single classification pass over the named types: detects enums and
+    // classes and counts the parts each named type contributes to a union
+    // list (classes one part, enums one per case).
     bool has_class = false;
     bool has_enum = false;
+    uint32_t named_total = 0;
     const zend_type *type;
     ZEND_TYPE_FOREACH(property_type, type)
     {
         if (!ZEND_TYPE_HAS_NAME(*type) || ZEND_TYPE_IS_INTERSECTION(*type))
             continue;
 
-        if (is_type_enum(*type)) {
+        zend_class_entry *ce = resolve_enum_ce(*type);
+        if (ce != NULL) {
             has_enum = true;
+            named_total += count_enum_type_parts(ce);
         } else {
             has_class = true;
+            named_total += 1;
         }
     }
     ZEND_TYPE_FOREACH_END();
@@ -324,16 +307,6 @@ zend_string *build_union_type_string(zend_type property_type)
     // first, then named types in declaration order, joined like a union list
     // (commas, final " or "). Basic types and classes contribute one part
     // each, enums one part per case.
-    uint32_t named_total = 0;
-    ZEND_TYPE_FOREACH(property_type, type)
-    {
-        if (!ZEND_TYPE_HAS_NAME(*type) || ZEND_TYPE_IS_INTERSECTION(*type))
-            continue;
-
-        named_total += is_type_enum(*type) ? count_enum_type_parts(*type) : 1;
-    }
-    ZEND_TYPE_FOREACH_END();
-
     uint32_t total = basic_total + named_total;
     zend_string *result = NULL;
     uint32_t index = 0;
@@ -351,8 +324,9 @@ zend_string *build_union_type_string(zend_type property_type)
         if (!ZEND_TYPE_HAS_NAME(*type) || ZEND_TYPE_IS_INTERSECTION(*type))
             continue;
 
-        if (is_type_enum(*type)) {
-            uint32_t appended = append_enum_type_parts(&result, index, total, *type);
+        zend_class_entry *ce = resolve_enum_ce(*type);
+        if (ce != NULL) {
+            uint32_t appended = append_enum_type_parts(&result, index, total, ce);
             if (appended == 0) {
                 zend_string *class_name = ZEND_TYPE_NAME(*type);
                 append_union_type_part(&result, index, total, ZSTR_VAL(class_name), ZSTR_LEN(class_name));
