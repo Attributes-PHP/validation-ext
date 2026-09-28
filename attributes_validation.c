@@ -12,6 +12,7 @@
 #include "src/av_model_configs.h"
 #include "src/fields/av_field.h"
 #include "src/fields/av_alias.h"
+#include "src/fields/av_error_message.h"
 #include "src/validators/av_typehint_validator.h"
 
 /* Module startup */
@@ -25,6 +26,7 @@ PHP_MINIT_FUNCTION(attributes_validation)
     // Register fields
     av_register_Field_interface();
     av_register_Alias_class();
+    av_register_ErrorMessage_class();
     return SUCCESS;
 }
 
