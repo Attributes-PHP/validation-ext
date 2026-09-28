@@ -6,6 +6,7 @@
 #include <Zend/zend_type_info.h>
 #include <Zend/zend_types.h>
 #include <Zend/zend_string.h>
+#include <stdlib.h>
 #include <string.h>
 
 // ---------------------------------------------------------------------------
@@ -56,6 +57,9 @@ void setUp(void)
     av_long_to_str_Stub(long_to_str_stub);
     av_double_to_str_Stub(double_to_str_stub);
     av_memnstr_Stub(memnstr_stub);
+    // Union rendering looks up named types to detect enums; the unit tests
+    // have no class table, so treat every lookup as "class not found".
+    av_lookup_class_ex_IgnoreAndReturn(NULL);
 }
 
 void tearDown(void)
@@ -294,4 +298,131 @@ void test_standalone_token_followed_by_suffix_is_replaced(void)
     TEST_ASSERT_EQUAL_STRING("preidxpost", result->val);
     av_string_release(result);
     av_string_release(field.name);
+}
+
+// ---------------------------------------------------------------------------
+// build_union_type_string()
+// ---------------------------------------------------------------------------
+
+// MAY_BE_BOOL spans two bits (MAY_BE_FALSE|MAY_BE_TRUE), so a plain bool type
+// must not be treated as a multi-type union and must not leak a stray comma
+// separator or a trailing NUL byte into the message.
+void test_union_string_single_bool_type_is_bare(void)
+{
+    zend_type type = ZEND_TYPE_INIT_MASK(MAY_BE_BOOL);
+
+    zend_string *result = build_union_type_string(type);
+    TEST_ASSERT_EQUAL_STRING("boolean", result->val);
+    TEST_ASSERT_EQUAL(7, result->len);
+    av_string_release(result);
+}
+
+void test_union_string_single_basic_type_is_bare(void)
+{
+    zend_type type = ZEND_TYPE_INIT_MASK(MAY_BE_LONG);
+
+    zend_string *result = build_union_type_string(type);
+    TEST_ASSERT_EQUAL_STRING("integer", result->val);
+    av_string_release(result);
+}
+
+void test_union_string_two_basic_types_are_or_joined(void)
+{
+    zend_type type = ZEND_TYPE_INIT_MASK(MAY_BE_BOOL | MAY_BE_LONG);
+
+    zend_string *result = build_union_type_string(type);
+    TEST_ASSERT_EQUAL_STRING("boolean or integer", result->val);
+    TEST_ASSERT_EQUAL(18, result->len);
+    av_string_release(result);
+}
+
+void test_union_string_three_basic_types_use_commas(void)
+{
+    zend_type type = ZEND_TYPE_INIT_MASK(MAY_BE_BOOL | MAY_BE_LONG | MAY_BE_STRING);
+
+    zend_string *result = build_union_type_string(type);
+    TEST_ASSERT_EQUAL_STRING("boolean, integer or string", result->val);
+    av_string_release(result);
+}
+
+void test_union_string_nullable_basic_type_includes_null(void)
+{
+    zend_type type = ZEND_TYPE_INIT_MASK(MAY_BE_LONG | MAY_BE_NULL);
+
+    zend_string *result = build_union_type_string(type);
+    TEST_ASSERT_EQUAL_STRING("integer or null", result->val);
+    av_string_release(result);
+}
+
+void test_union_string_single_class_type_is_bare(void)
+{
+    const char *name = "Attributes\\Validation\\BasicModel";
+    zend_string *class_name = string_init_stub(name, strlen(name), 0, 0);
+    zend_type type = ZEND_TYPE_INIT_CLASS(class_name, 0, 0);
+
+    zend_string *result = build_union_type_string(type);
+    TEST_ASSERT_EQUAL_STRING("Attributes\\Validation\\BasicModel", result->val);
+    av_string_release(result);
+    av_string_release(class_name);
+}
+
+void test_union_string_two_class_types_are_or_joined(void)
+{
+    const char *first_name = "App\\FirstModel";
+    const char *second_name = "App\\SecondModel";
+    zend_string *first = string_init_stub(first_name, strlen(first_name), 0, 0);
+    zend_string *second = string_init_stub(second_name, strlen(second_name), 0, 0);
+
+    zend_type types[2] = {ZEND_TYPE_INIT_CLASS(first, 0, 0), ZEND_TYPE_INIT_CLASS(second, 0, 0)};
+    zend_type_list *list = malloc(ZEND_TYPE_LIST_SIZE(2));
+    list->num_types = 2;
+    memcpy(list->types, types, sizeof(types));
+    zend_type type = ZEND_TYPE_INIT_UNION(list, 0);
+
+    zend_string *result = build_union_type_string(type);
+    TEST_ASSERT_EQUAL_STRING("App\\FirstModel or App\\SecondModel", result->val);
+    av_string_release(result);
+    av_string_release(first);
+    av_string_release(second);
+    free(list);
+}
+
+// A single class type combined with basic type hints is stored by PHP as an
+// inline class name plus the accumulated code mask (no type list), so the
+// class name must be rendered alongside the basic types.
+void test_union_string_class_and_basic_types_are_or_joined(void)
+{
+    const char *name = "Attributes\\Validation\\BasicModel";
+    zend_string *class_name = string_init_stub(name, strlen(name), 0, 0);
+    zend_type type = ZEND_TYPE_INIT_PTR_MASK(class_name, _ZEND_TYPE_NAME_BIT | MAY_BE_BOOL);
+
+    zend_string *result = build_union_type_string(type);
+    TEST_ASSERT_EQUAL_STRING("boolean or Attributes\\Validation\\BasicModel", result->val);
+    av_string_release(result);
+    av_string_release(class_name);
+}
+
+// Multiple class types are stored as a type list while the code mask of the
+// basic type hints accumulates in the outer type mask. All parts are joined
+// like any union list: comma separated, with the final two joined by " or ".
+void test_union_string_classes_and_multiple_basic_types_use_commas(void)
+{
+    const char *first_name = "Attributes\\Validation\\BasicModel";
+    const char *second_name = "Attributes\\Validation\\SecondBasicModel";
+    zend_string *first = string_init_stub(first_name, strlen(first_name), 0, 0);
+    zend_string *second = string_init_stub(second_name, strlen(second_name), 0, 0);
+
+    zend_type types[2] = {ZEND_TYPE_INIT_CLASS(first, 0, 0), ZEND_TYPE_INIT_CLASS(second, 0, 0)};
+    zend_type_list *list = malloc(ZEND_TYPE_LIST_SIZE(2));
+    list->num_types = 2;
+    memcpy(list->types, types, sizeof(types));
+    zend_type type = ZEND_TYPE_INIT_UNION(list, 0);
+    type.type_mask |= MAY_BE_BOOL | MAY_BE_LONG | MAY_BE_DOUBLE;
+
+    zend_string *result = build_union_type_string(type);
+    TEST_ASSERT_EQUAL_STRING("boolean, integer, float, Attributes\\Validation\\BasicModel or Attributes\\Validation\\SecondBasicModel", result->val);
+    av_string_release(result);
+    av_string_release(first);
+    av_string_release(second);
+    free(list);
 }

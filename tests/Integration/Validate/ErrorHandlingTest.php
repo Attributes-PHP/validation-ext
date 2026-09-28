@@ -587,8 +587,7 @@ describe('validate function error handling', function () {
 
     it('invalid ErrorMessage arguments', function (BaseModel $model, array $input) {
         validate($input, $model);
-    })
-        ->throws(ValueError::class)
+    })->throws(ValueError::class)
         ->with([
             'invalid required' => [
                 'model' => new class extends BaseModel {

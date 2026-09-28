@@ -1,6 +1,7 @@
 #include "av_error_messages.h"
 #include "av_wrappers.h"
 #include "Zend/zend_API.h"
+#include "Zend/zend_attributes.h"
 #include "Zend/zend_compile.h"
 #include "Zend/zend_enum.h"
 #include "Zend/zend_exceptions.h"
@@ -12,11 +13,17 @@
 #include <stddef.h>
 #include <string.h>
 
-// Supported placeholders: {value}, {field} and {expected}
-static const char *av_error_type_messages[] = {
+const char *av_default_error_type_messages[] = {
     [AV_ERROR_REQUIRED] = "Field is required",
     [AV_ERROR_TYPE] = "Must be {expected}",
 };
+
+static const av_basic_type_mapping basic_type_mappings[] = {
+    {MAY_BE_BOOL, "boolean", sizeof("boolean") - 1}, {MAY_BE_LONG, "integer", sizeof("integer") - 1}, {MAY_BE_DOUBLE, "float", sizeof("float") - 1}, {MAY_BE_STRING, "string", sizeof("string") - 1},
+    {MAY_BE_ARRAY, "array", sizeof("array") - 1},    {MAY_BE_OBJECT, "object", sizeof("object") - 1}, {MAY_BE_NULL, "null", sizeof("null") - 1},
+};
+
+#define BASIC_TYPE_MAPPINGS_SIZE (sizeof(basic_type_mappings) / sizeof(basic_type_mappings[0]))
 
 static zend_always_inline void add_field_error_to_array(zval *errors_array, const char *error_message, size_t length)
 {
@@ -27,7 +34,10 @@ static zend_always_inline void add_field_error_to_array(zval *errors_array, cons
 
 static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, const char *error_message, size_t length)
 {
+    ZEND_ASSERT(Z_TYPE_P(errors) == IS_ARRAY);
+
     zval *existing = av_hash_find(Z_ARRVAL_P(errors), field_name);
+    ZEND_ASSERT(existing == NULL || Z_TYPE_P(existing) == IS_ARRAY);
 
     if (existing && Z_TYPE_P(existing) == IS_ARRAY) {
         add_field_error_to_array(existing, error_message, length);
@@ -63,137 +73,19 @@ static zend_string *generate_type_name(const zend_type type)
         return av_string_init("array", 5, 0);
     if (type_mask == MAY_BE_OBJECT)
         return av_string_init("object", 6, 0);
-    if (type_mask == MAY_BE_RESOURCE)
-        return av_string_init("resource", 8, 0);
     if (type_mask == MAY_BE_NULL)
         return av_string_init("null", 4, 0);
-    if (type_mask == MAY_BE_CALLABLE)
-        return av_string_init("callable", 8, 0);
-    if (type_mask == MAY_BE_VOID)
-        return av_string_init("void", 4, 0);
 
     return av_string_init("mixed", 5, 0);
 }
 
-
-static zend_always_inline zend_string *build_union_only_basic_types(uint32_t pure_mask)
-{
-    struct {
-        uint32_t mask;
-        const char *name;
-        size_t length;
-    } type_mappings[] = {
-        {MAY_BE_BOOL, "boolean", sizeof("boolean") - 1},       {MAY_BE_LONG, "integer", sizeof("integer") - 1}, {MAY_BE_DOUBLE, "float", sizeof("float") - 1},         {MAY_BE_STRING, "string", sizeof("string") - 1},
-        {MAY_BE_ARRAY, "array", sizeof("array") - 1},          {MAY_BE_OBJECT, "object", sizeof("object") - 1}, {MAY_BE_RESOURCE, "resource", sizeof("resource") - 1}, {MAY_BE_NULL, "null", sizeof("null") - 1},
-        {MAY_BE_CALLABLE, "callable", sizeof("callable") - 1}, {MAY_BE_VOID, "void", sizeof("void") - 1},
-    };
-    size_t type_mappings_size = sizeof(type_mappings) / sizeof(type_mappings[0]);
-
-    struct {
-        size_t max_string_size;
-        size_t total;
-    } count = {0, 0};
-    for (int i = 0; i < type_mappings_size; i++) {
-        if (!(pure_mask & type_mappings[i].mask))
-            continue;
-
-        count.max_string_size += type_mappings[i].length;
-        count.total += 1;
-    }
-
-    ZEND_ASSERT(count.max_string_size > 0);
-    ZEND_ASSERT(count.total >= 2);
-    ZEND_ASSERT(count.total <= type_mappings_size);
-
-    size_t num_commas = av_fmax(count.total - 2, 0) * (sizeof(", ") - 1); // Comma + space after comma
-    size_t num_ors = sizeof(" or ") - 1;
-    count.max_string_size += num_commas + num_ors;
-
-    zend_string *result = av_string_alloc(count.max_string_size, 0);
-    char *output = ZSTR_VAL(result);
-    size_t output_pos = 0;
-    int i = 0;
-
-    // Commas
-    for (; i < type_mappings_size && count.total - 2 > 0; i++) {
-        if (!(pure_mask & type_mappings[i].mask))
-            continue;
-
-        count.total -= 1;
-        // Append type-hint
-        memcpy(output + output_pos, type_mappings[i].name, type_mappings[i].length);
-        output_pos += type_mappings[i].length;
-
-        // Append comma
-        memcpy(output + output_pos, ", ", sizeof(", ") - 1);
-        output_pos += sizeof(", ") - 1;
-    }
-
-    // or
-    for (; i < type_mappings_size && count.total > 0; i++) {
-        if (!(pure_mask & type_mappings[i].mask))
-            continue;
-
-        count.total -= 1;
-
-        // Append type-hint
-        memcpy(output + output_pos, type_mappings[i].name, type_mappings[i].length);
-        output_pos += type_mappings[i].length;
-
-        if (count.total > 0) {
-            // Append or
-            memcpy(output + output_pos, " or ", sizeof(" or ") - 1);
-            output_pos += sizeof(" or ") - 1;
-        }
-    }
-
-    output[output_pos] = '\0';
-
-    ZEND_ASSERT(output_pos == count.max_string_size);
-    return av_string_truncate(result, output_pos, 0);
-}
-
-zend_string *build_union_type_string(zend_type property_type)
-{
-    uint32_t pure_mask = ZEND_TYPE_PURE_MASK(property_type);
-    bool is_simple_union = !ZEND_TYPE_HAS_LIST(property_type) && ZEND_TYPE_IS_SET(property_type) && (pure_mask & (pure_mask - 1)) != 0;
-
-    if (is_simple_union)
-        return build_union_only_basic_types(pure_mask);
-
-    zend_string *result = NULL;
-    const zend_type *type;
-
-    ZEND_TYPE_FOREACH(property_type, type)
-    {
-        if (ZEND_TYPE_IS_INTERSECTION(*type))
-            continue;
-
-        zend_string *type_part = build_single_type_with_article(type);
-
-        if (!result) {
-            result = type_part;
-        } else {
-            zend_string *prefix = av_string_init(" or ", 4, 0);
-            zend_string *temp = av_string_concat3(ZSTR_VAL(result), ZSTR_LEN(result), ZSTR_VAL(prefix), ZSTR_LEN(prefix), ZSTR_VAL(type_part), ZSTR_LEN(type_part));
-            av_string_release(result);
-            av_string_release(prefix);
-            av_string_release(type_part);
-            result = temp;
-        }
-    }
-    ZEND_TYPE_FOREACH_END();
-
-    return result;
-}
-
 static bool is_type_enum(const zend_type type)
 {
-    if (!ZEND_TYPE_HAS_NAME(*type)) {
+    if (!ZEND_TYPE_HAS_NAME(type)) {
         return false;
     }
 
-    zend_class_entry *ce = av_lookup_class_ex(ZEND_TYPE_NAME(type), NULL, 0);
+    zend_class_entry *ce = av_lookup_class_ex(ZEND_TYPE_NAME(type), NULL, ZEND_FETCH_CLASS_DEFAULT);
     if (!ce) {
         return false;
     }
@@ -205,7 +97,7 @@ static zend_class_entry *resolve_enum_ce(const zend_type type)
 {
     ZEND_ASSERT(ZEND_TYPE_HAS_NAME(type));
 
-    return av_lookup_class_ex(ZEND_TYPE_NAME(type), NULL, 0);
+    return av_lookup_class_ex(ZEND_TYPE_NAME(type), NULL, ZEND_FETCH_CLASS_DEFAULT);
 }
 
 static zend_string *enum_case_label(zend_class_entry *ce, zend_object *case_obj)
@@ -217,8 +109,98 @@ static zend_string *enum_case_label(zend_class_entry *ce, zend_object *case_obj)
     return av_value_to_string(zend_enum_fetch_case_name(case_obj));
 }
 
-static zend_string *build_enum_values_string(zend_class_entry *ce)
+static uint32_t count_basic_types(uint32_t pure_mask)
 {
+    uint32_t total = 0;
+    for (size_t i = 0; i < BASIC_TYPE_MAPPINGS_SIZE; i++) {
+        if (pure_mask & basic_type_mappings[i].mask)
+            total += 1;
+    }
+
+    return total;
+}
+
+static zend_always_inline zend_string *build_union_only_basic_types(uint32_t pure_mask)
+{
+    size_t total = count_basic_types(pure_mask);
+    ZEND_ASSERT(total >= 1);
+
+    size_t max_string_size = 0;
+    for (size_t i = 0; i < BASIC_TYPE_MAPPINGS_SIZE; i++) {
+        if (pure_mask & basic_type_mappings[i].mask)
+            max_string_size += basic_type_mappings[i].length;
+    }
+
+    // All types but the last two are followed by ", ", the last two by " or ".
+    if (total >= 2)
+        max_string_size += (total - 2) * (sizeof(", ") - 1) + (sizeof(" or ") - 1);
+
+    zend_string *result = av_string_alloc(max_string_size, 0);
+    char *output = ZSTR_VAL(result);
+    size_t output_pos = 0;
+    size_t remaining = total;
+
+    for (size_t i = 0; i < BASIC_TYPE_MAPPINGS_SIZE; i++) {
+        if (!(pure_mask & basic_type_mappings[i].mask))
+            continue;
+
+        if (output_pos > 0) {
+            const char *separator = (remaining == 1) ? " or " : ", ";
+            size_t separator_len = (remaining == 1) ? (sizeof(" or ") - 1) : (sizeof(", ") - 1);
+            memcpy(output + output_pos, separator, separator_len);
+            output_pos += separator_len;
+        }
+
+        memcpy(output + output_pos, basic_type_mappings[i].name, basic_type_mappings[i].length);
+        output_pos += basic_type_mappings[i].length;
+        remaining -= 1;
+    }
+
+    output[output_pos] = '\0';
+
+    ZEND_ASSERT(output_pos == max_string_size);
+    return av_string_truncate(result, output_pos, 0);
+}
+
+static zend_always_inline zend_string *build_single_type_string(zend_type property_type)
+{
+    const zend_type *type;
+    ZEND_TYPE_FOREACH(property_type, type)
+    {
+        return generate_type_name(*type);
+    }
+    ZEND_TYPE_FOREACH_END();
+
+    return NULL;
+}
+
+static zend_always_inline void append_union_type_part(zend_string **result, uint32_t index, uint32_t total, const char *name, size_t name_len)
+{
+    // index is the number of parts appended so far: the last part sits at index total - 1
+    ZEND_ASSERT(index < total);
+
+    if (*result == NULL) {
+        *result = av_string_init(name, name_len, 0);
+        return;
+    }
+
+    const char *separator = (index + 1 == total) ? " or " : ", ";
+    size_t separator_len = (index + 1 == total) ? (sizeof(" or ") - 1) : (sizeof(", ") - 1);
+    zend_string *temp = av_string_concat3(ZSTR_VAL(*result), ZSTR_LEN(*result), separator, separator_len, name, name_len);
+    av_string_release(*result);
+    *result = temp;
+}
+
+// Number of parts a named enum type contributes to a union list: one per case.
+static uint32_t count_enum_type_parts(const zend_type type)
+{
+    ZEND_ASSERT(ZEND_TYPE_HAS_NAME(type));
+
+    zend_class_entry *ce = resolve_enum_ce(type);
+    if (!ce) {
+        return 1;
+    }
+
     if (ce->type == ZEND_USER_CLASS && !(ce->ce_flags & ZEND_ACC_CONSTANTS_UPDATED)) {
         av_update_class_constants(ce);
     }
@@ -235,12 +217,29 @@ static zend_string *build_enum_values_string(zend_class_entry *ce)
     }
     ZEND_HASH_FOREACH_END();
 
-    if (total == 0) {
-        return av_string_init("", 0, 0);
+    return total > 0 ? total : 1;
+}
+
+/*
+ * Appends the cases of a named enum type to a union list, one part per case,
+ * using the comma/"or" grammar based on index/total.
+ * Returns the number of parts appended (0 when the enum cannot be resolved).
+ */
+static uint32_t append_enum_type_parts(zend_string **result, uint32_t index, uint32_t total, const zend_type type)
+{
+    ZEND_ASSERT(ZEND_TYPE_HAS_NAME(type));
+
+    zend_class_entry *ce = resolve_enum_ce(type);
+    if (!ce) {
+        return 0;
     }
 
-    zend_string *result = NULL;
-    uint32_t index = 0;
+    if (ce->type == ZEND_USER_CLASS && !(ce->ce_flags & ZEND_ACC_CONSTANTS_UPDATED)) {
+        av_update_class_constants(ce);
+    }
+
+    uint32_t appended = 0;
+    zend_class_constant *c;
 
     ZEND_HASH_MAP_FOREACH_PTR(&ce->constants_table, c)
     {
@@ -251,107 +250,252 @@ static zend_string *build_enum_values_string(zend_class_entry *ce)
         zval *case_zv = &c->value;
         if (Z_TYPE_P(case_zv) == IS_CONSTANT_AST) {
             if (av_zval_update_constant_ex(case_zv, c->ce) == FAILURE) {
-                if (result) {
-                    av_string_release(result);
-                }
-                return NULL;
+                break;
             }
         }
 
         zend_string *label = enum_case_label(ce, Z_OBJ_P(case_zv));
-
-        if (!result) {
-            result = label;
-        } else {
-            const char *sep_str;
-            size_t sep_len;
-            if (index == total - 1) {
-                sep_str = " or ";
-                sep_len = sizeof(" or ") - 1;
-            } else {
-                sep_str = ", ";
-                sep_len = sizeof(", ") - 1;
-            }
-
-            zend_string *separator = av_string_init(sep_str, sep_len, 0);
-            zend_string *temp = av_string_concat3(ZSTR_VAL(result), ZSTR_LEN(result), ZSTR_VAL(separator), ZSTR_LEN(separator), ZSTR_VAL(label), ZSTR_LEN(label));
-            av_string_release(result);
-            av_string_release(separator);
-            av_string_release(label);
-            result = temp;
-        }
-
-        index += 1;
+        append_union_type_part(result, index + appended, total, ZSTR_VAL(label), ZSTR_LEN(label));
+        av_string_release(label);
+        appended += 1;
     }
     ZEND_HASH_FOREACH_END();
+
+    return appended;
+}
+
+zend_string *build_union_type_string(zend_type property_type)
+{
+    uint32_t pure_mask = ZEND_TYPE_PURE_MASK(property_type);
+    uint32_t basic_total = count_basic_types(pure_mask);
+
+    bool has_class = false;
+    bool has_enum = false;
+    const zend_type *type;
+    ZEND_TYPE_FOREACH(property_type, type)
+    {
+        if (!ZEND_TYPE_HAS_NAME(*type) || ZEND_TYPE_IS_INTERSECTION(*type))
+            continue;
+
+        if (is_type_enum(*type)) {
+            has_enum = true;
+        } else {
+            has_class = true;
+        }
+    }
+    ZEND_TYPE_FOREACH_END();
+
+    // Basic types only
+    if (!has_class && !has_enum) {
+        if (basic_total <= 1)
+            return build_single_type_string(property_type);
+
+        return build_union_only_basic_types(pure_mask);
+    }
+
+    // Class types only: class names or-joined
+    if (basic_total == 0 && !has_enum) {
+        zend_string *result = NULL;
+
+        ZEND_TYPE_FOREACH(property_type, type)
+        {
+            if (!ZEND_TYPE_HAS_NAME(*type) || ZEND_TYPE_IS_INTERSECTION(*type))
+                continue;
+
+            zend_string *type_part = generate_type_name(*type);
+
+            if (!result) {
+                result = type_part;
+            } else {
+                zend_string *prefix = av_string_init(" or ", sizeof(" or ") - 1, 0);
+                zend_string *temp = av_string_concat3(ZSTR_VAL(result), ZSTR_LEN(result), ZSTR_VAL(prefix), ZSTR_LEN(prefix), ZSTR_VAL(type_part), ZSTR_LEN(type_part));
+                av_string_release(result);
+                av_string_release(prefix);
+                av_string_release(type_part);
+                result = temp;
+            }
+        }
+        ZEND_TYPE_FOREACH_END();
+
+        return result;
+    }
+
+    // Mixed basic, class and enum types (also enum-only unions): basic names
+    // first, then named types in declaration order, joined like a union list
+    // (commas, final " or "). Basic types and classes contribute one part
+    // each, enums one part per case.
+    uint32_t named_total = 0;
+    ZEND_TYPE_FOREACH(property_type, type)
+    {
+        if (!ZEND_TYPE_HAS_NAME(*type) || ZEND_TYPE_IS_INTERSECTION(*type))
+            continue;
+
+        named_total += is_type_enum(*type) ? count_enum_type_parts(*type) : 1;
+    }
+    ZEND_TYPE_FOREACH_END();
+
+    uint32_t total = basic_total + named_total;
+    zend_string *result = NULL;
+    uint32_t index = 0;
+
+    for (size_t i = 0; i < BASIC_TYPE_MAPPINGS_SIZE; i++) {
+        if (!(pure_mask & basic_type_mappings[i].mask))
+            continue;
+
+        append_union_type_part(&result, index, total, basic_type_mappings[i].name, basic_type_mappings[i].length);
+        index += 1;
+    }
+
+    ZEND_TYPE_FOREACH(property_type, type)
+    {
+        if (!ZEND_TYPE_HAS_NAME(*type) || ZEND_TYPE_IS_INTERSECTION(*type))
+            continue;
+
+        if (is_type_enum(*type)) {
+            uint32_t appended = append_enum_type_parts(&result, index, total, *type);
+            if (appended == 0) {
+                zend_string *class_name = ZEND_TYPE_NAME(*type);
+                append_union_type_part(&result, index, total, ZSTR_VAL(class_name), ZSTR_LEN(class_name));
+                appended = 1;
+            }
+            index += appended;
+            continue;
+        }
+
+        zend_string *class_name = ZEND_TYPE_NAME(*type);
+        append_union_type_part(&result, index, total, ZSTR_VAL(class_name), ZSTR_LEN(class_name));
+        index += 1;
+    }
+    ZEND_TYPE_FOREACH_END();
 
     return result;
 }
 
-static zend_string *generate_error_message(av_field *field, zend_type property_type)
+/*
+ * Retrieves the ErrorMessage attribute associated with the given property.
+ *
+ * Attribute usage example: #[ErrorMessage(required: "{field} is missing", type: "Ups wrong type {expected}")]
+ */
+static zend_attribute *get_error_message_attribute(av_property_info *property)
 {
-    const zend_type *type;
-    ZEND_TYPE_FOREACH(property_type, type)
-    {
-        if (ZEND_TYPE_HAS_NAME(*type) && is_type_enum(type)) {
-            zend_class_entry *ce = resolve_enum_ce(type);
-            zend_string *values = build_enum_values_string(ce);
-            if (!values) {
-                values = av_string_init("", 0, 0);
-            }
-            zend_string *msg = av_string_concat3("Should be ", sizeof("Should be ") - 1, ZSTR_VAL(values), ZSTR_LEN(values), "", 0);
-            av_string_release(values);
-            return msg;
-        }
-    }
-    ZEND_TYPE_FOREACH_END();
-
-    zend_string *type_string = build_union_type_string(property_type);
-    if (!type_string) {
-        type_string = av_string_init("mixed", sizeof("mixed") - 1, 0);
+    if (property == NULL || property->property == NULL || property->property->attributes == NULL) {
+        return NULL;
     }
 
-    size_t message_len = sizeof("Must be ") - 1 + ZSTR_LEN(type_string);
-    zend_string *message = av_string_alloc(message_len, 0);
-
-    av_snprintf(ZSTR_VAL(message), message_len + 1, "Must be %s", ZSTR_VAL(type_string));
-
-    av_string_release(type_string);
-
-    return message;
+    return av_get_attribute_str(property->property->attributes, "attributes\\validation\\fields\\errormessage", sizeof("attributes\\validation\\fields\\errormessage") - 1);
 }
 
-static bool property_is_enum_type(av_property_info *property)
+static zend_always_inline bool attribute_argument_name_equals(const zend_string *name, const char *expected, size_t length)
 {
-    const zend_type *type;
-    ZEND_TYPE_FOREACH(property->property->type, type)
-    {
-        if (is_type_enum(type)) {
-            return true;
-        }
-    }
-    ZEND_TYPE_FOREACH_END();
+    return av_binary_strcasecmp(ZSTR_VAL(name), ZSTR_LEN(name), expected, length) == 0;
+}
 
-    return false;
+/*
+ * Returns the error message template for the given error type: the custom
+ * template declared with the #[ErrorMessage] attribute when the property
+ * carries one, the default template otherwise.
+ *
+ * Named attribute arguments are matched by name (case-insensitively),
+ * positional ones by constructor order (required first, then type).
+ *
+ * The result is a freshly allocated zend_string the caller must release.
+ * Returns NULL when the error type is unsupported or the attribute value
+ * cannot be evaluated; an exception is thrown in both cases.
+ */
+static zend_string *get_custom_error_template(av_error_type type, av_property_info *property)
+{
+    ZEND_ASSERT(AV_ERROR_TYPE == type || AV_ERROR_REQUIRED == type);
+
+    zend_attribute *attribute = get_error_message_attribute(property);
+    if (attribute == NULL) {
+        const char *default_template = av_default_error_type_messages[type];
+        return av_string_init(default_template, strlen(default_template), 0);
+    }
+
+    const char *argument_name;
+    size_t argument_length;
+    uint32_t argument_position;
+
+    switch (type) {
+        case AV_ERROR_REQUIRED:
+            argument_name = "required";
+            argument_position = 0;
+            argument_length = sizeof("required") - 1;
+            break;
+        case AV_ERROR_TYPE:
+            argument_name = "type";
+            argument_position = 1;
+            argument_length = sizeof("type") - 1;
+            break;
+        default:
+            av_throw_value_error("Unsupported error type");
+            return NULL;
+    }
+
+    uint32_t position = 0;
+
+    for (uint32_t i = 0; i < attribute->argc; i++) {
+        zend_attribute_arg *argument = &attribute->args[i];
+
+        if (argument->name == NULL) {
+            if (position != argument_position) {
+                position += 1;
+                continue;
+            }
+        } else if (!attribute_argument_name_equals(argument->name, argument_name, argument_length)) {
+            continue;
+        }
+
+        zval value;
+        if (av_get_attribute_value(&value, attribute, i, property->model_ce) != SUCCESS) {
+            return NULL;
+        }
+
+        if (Z_TYPE_P(&value) == IS_STRING) {
+            zend_string *template = av_string_copy(Z_STR_P(&value));
+            av_zval_ptr_dtor(&value);
+            return template;
+        }
+
+        if (Z_TYPE_P(&value) != IS_UNDEF) {
+            av_throw_value_error("Only string arguments are valid for Attributes\\Validation\\Fields\\ErrorMessage::construct(...)");
+            return NULL;
+        }
+
+        av_zval_ptr_dtor(&value);
+        break;
+    }
+
+    const char *default_template = av_default_error_type_messages[type];
+    return av_string_init(default_template, strlen(default_template), 0);
+}
+
+/**
+ * Returns a dot concatenation string like: firstParentProperty.secondProperty.lastProperty
+ */
+static zend_string *get_property_full_path(av_field *field)
+{
+    if (!field->parent || ZSTR_LEN(field->parent) == 0) {
+        return av_string_copy(field->name);
+    }
+
+    return av_string_concat3(ZSTR_VAL(field->parent), ZSTR_LEN(field->parent), ".", 1, ZSTR_VAL(field->name), ZSTR_LEN(field->name));
 }
 
 void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_property_info *property, zval *errors)
 {
-    zend_string *replaced_message;
-    if (type == AV_ERROR_TYPE && property != NULL && property_is_enum_type(property)) {
-        replaced_message = generate_error_message(field, property->property->type);
-    } else {
-        const char *template = av_error_type_messages[type];
-        replaced_message = av_replace_placeholders(template, strlen(template), field, property);
-    }
-
-    if (!field->parent || ZSTR_LEN(field->parent) == 0) {
-        add_field_error(errors, field->name, ZSTR_VAL(replaced_message), ZSTR_LEN(replaced_message));
-        av_string_release(replaced_message);
+    zend_string *template = get_custom_error_template(type, property);
+    if (template == NULL) {
         return;
     }
 
-    zend_string *full_path = av_string_concat3(ZSTR_VAL(field->parent), ZSTR_LEN(field->parent), ".", 1, ZSTR_VAL(field->name), ZSTR_LEN(field->name));
+    zend_string *replaced_message = av_replace_placeholders(ZSTR_VAL(template), ZSTR_LEN(template), field, property);
+    av_string_release(template);
+    if (replaced_message == NULL) {
+        return;
+    }
+
+    zend_string *full_path = get_property_full_path(field);
     add_field_error(errors, full_path, ZSTR_VAL(replaced_message), ZSTR_LEN(replaced_message));
     av_string_release(full_path);
     av_string_release(replaced_message);
@@ -459,9 +603,11 @@ zend_string *av_replace_placeholders(const char *template, size_t length, av_fie
             if (i == 1) { // {value}
                 table[i].replace = av_value_to_string(field->value);
             } else if (i == 2) { // {expected}
+                ZEND_ASSERT(prop_info != NULL && prop_info->property != NULL);
                 table[i].replace = build_union_type_string(prop_info->property->type);
             }
         }
+        ZEND_ASSERT(table[i].replace != NULL);
         max_template_size += table[i].counts * (ZSTR_LEN(table[i].replace) - table[i].len);
     }
 

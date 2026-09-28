@@ -8,19 +8,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Test-controlled state for the instanceof / resource / __toString paths.
+// Test-controlled state for the is_stringable / resource / __toString paths.
 static bool g_instanceof_result;
 static const char *g_resource_type_name;
 static zend_result g_tostring_result;
 static const char *g_tostring_value;
-
-static bool instanceof_stub(const zend_class_entry *instance_ce, const zend_class_entry *ce, int num_calls)
-{
-    (void)instance_ce;
-    (void)ce;
-    (void)num_calls;
-    return g_instanceof_result;
-}
 
 static bool is_stringable_stub(const zend_class_entry *instance_ce, int num_calls)
 {
@@ -98,7 +90,6 @@ void setUp(void)
     av_string_copy_Stub(string_copy_stub);
     av_long_to_str_Stub(long_to_str_stub);
     av_double_to_str_Stub(double_to_str_stub);
-    av_instanceof_function_Stub(instanceof_stub);
     av_is_stringable_Stub(is_stringable_stub);
     av_rsrc_list_get_rsrc_type_Stub(rsrc_type_stub);
     av_call_tostring_Stub(tostring_stub);

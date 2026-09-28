@@ -1,14 +1,13 @@
 #include "av_wrappers.h"
 #include "php.h"
 #include "Zend/zend_API.h"
-#include "Zend/zend_compile.h"
+#include "Zend/zend_attributes.h"
+#include "Zend/zend_exceptions.h"
 #include "Zend/zend_hash.h"
 #include "Zend/zend_interfaces.h"
 #include "Zend/zend_list.h"
 #include "Zend/zend_operators.h"
 #include "Zend/zend_variables.h"
-#include <math.h>
-#include <stdarg.h>
 
 /*
  * Wrapper implementations for Zend internals.
@@ -73,11 +72,6 @@ zend_string *av_double_to_str(double num)
     return zend_double_to_str(num);
 }
 
-bool av_instanceof_function(const zend_class_entry *instance_ce, const zend_class_entry *ce)
-{
-    return instanceof_function(instance_ce, ce);
-}
-
 bool av_is_stringable(const zend_class_entry *instance_ce)
 {
     return instanceof_function(instance_ce, zend_ce_stringable);
@@ -133,9 +127,24 @@ zend_result av_zval_update_constant_ex(zval *zv, zend_class_entry *scope)
     return zval_update_constant_ex(zv, scope);
 }
 
-double av_fmax(double a, double b)
+void *av_get_attribute_str(HashTable *attributes, const char *str, size_t len)
 {
-    return fmax(a, b);
+    return zend_get_attribute_str(attributes, str, len);
+}
+
+zend_result av_get_attribute_value(zval *ret, void *attribute, uint32_t arg_num, zend_class_entry *scope)
+{
+    return zend_get_attribute_value(ret, (const zend_attribute *)attribute, arg_num, scope);
+}
+
+void av_throw_value_error(const char *message)
+{
+    zend_throw_exception_ex(zend_ce_value_error, 0, "%s", message);
+}
+
+int av_binary_strcasecmp(const char *s1, size_t len1, const char *s2, size_t len2)
+{
+    return zend_binary_strcasecmp(s1, len1, s2, len2);
 }
 
 #endif /* TESTING */
@@ -165,13 +174,4 @@ zend_result av_call_tostring(zend_object *object, zval *retval)
 void av_zval_stringl(zval *z, const char *str, size_t len)
 {
     ZVAL_NEW_STR(z, av_string_init(str, len, 0));
-}
-
-int av_snprintf(char *buffer, size_t size, const char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    int result = vsnprintf(buffer, size, format, args);
-    va_end(args);
-    return result;
 }
