@@ -432,6 +432,62 @@ describe('validate function error handling', function () {
             ],
         ],
     ]);
+
+    it('generates proper message for type-hint array', function () {
+        $model = new class extends BaseModel {
+            /** @var array<bool|int|string> */
+            public array $values;
+        };
+
+        try {
+            validate(['values' => ['a', [], (object) []]], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getErrors())->toBe([
+                'values.1' => ['Must be boolean, integer or string'],
+                'values.2' => ['Must be boolean, integer or string'],
+            ]);
+        }
+    });
+
+    it('generates proper message for type-hint array union', function (
+        BaseModel $model,
+        array $input,
+        array $expectedErrors,
+    ) {
+        try {
+            validate($input, $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getErrors())->toBe($expectedErrors);
+        }
+    })->with([
+        [
+            'model' => new class extends BaseModel {
+                /** @var array<bool|int|string> */
+                public array $values;
+            },
+            'input' => ['values' => ['a', [], (object) []]],
+            'expectedErrors' => [
+                'values.1' => ['Must be boolean, integer or string'],
+                'values.2' => ['Must be boolean, integer or string'],
+            ],
+        ],
+        [
+            'model' => new class extends BaseModel {
+                /** @var array<string|bool|float> */
+                public array $values;
+            },
+            'input' => ['values' => [(object) []]],
+            'expectedErrors' => [
+                'values.0' => ['Must be string, boolean or float'],
+            ],
+        ],
+        [
+            'input' => [],
+            'expectedErrors' => ['values' => ['Field is required']],
+        ],
+    ]);
 });
 
 describe('custom ErrorMessage attribute messages', function () {
