@@ -84,7 +84,7 @@ void av_register_ModelConfigs_class(void)
     declare_typed_property_bool("strToUpper", sizeof("strToUpper") - 1, false);
     declare_typed_property_bool("stripWhitespace", sizeof("stripWhitespace") - 1, false);
     declare_typed_property_string("extra", sizeof("extra") - 1, "ignore", sizeof("ignore") - 1, false);
-    declare_typed_property_bool("strict", sizeof("strict") - 1, false);
+    declare_typed_property_bool("strict", sizeof("strict") - 1, true);
     declare_typed_property_bool("stopAtFirstError", sizeof("stopAtFirstError") - 1, false);
 
     /* Declare defaultErrorMessages as a static mixed property */
@@ -196,7 +196,7 @@ static zend_always_inline void set_default_properties(av_model_configs_propertie
     properties->str_to_upper = false;
     properties->strip_whitespace = false;
     properties->extra = AV_IGNORE;
-    properties->strict = false;
+    properties->strict = true;
     properties->stop_first_error = false;
 }
 

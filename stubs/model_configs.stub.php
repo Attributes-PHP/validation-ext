@@ -10,7 +10,7 @@ namespace Attributes\Validation {
       private bool $strToUpper = false;
       private bool $stripWhitespace = false;
       private string $extra = "ignore";
-      private bool $strict = false;
+      private bool $strict = true;
       private bool $stopAtFirstError = false;
       private static ?callable $defaultErrorMessages = null;
 

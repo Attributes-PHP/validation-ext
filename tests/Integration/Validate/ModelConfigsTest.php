@@ -21,6 +21,25 @@ describe('validate function model configs handling', function () {
         expect($result->name)->toBe('John');
     });
 
+    it('is strict by default', function () {
+        $model = new class extends BaseModel {
+            public int $age;
+        };
+
+        validate(['age' => '30'], $model);
+    })->throws(ValidationException::class);
+
+    it('allows opting out of strict mode', function () {
+        $model = new
+            #[ModelConfigs(strict: false)]
+            class extends BaseModel {
+                public int $age;
+            };
+
+        $result = validate(['age' => '30'], $model);
+        expect($result->age)->toBe(30);
+    });
+
     it('stopAtFirstError=true', function () {
         $model = new
             #[ModelConfigs(stopAtFirstError: true)]
