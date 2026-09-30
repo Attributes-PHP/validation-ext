@@ -456,6 +456,8 @@ static zend_string *get_property_full_path(av_field *field)
     return av_string_concat3(ZSTR_VAL(field->parent), ZSTR_LEN(field->parent), ".", 1, ZSTR_VAL(field->name), ZSTR_LEN(field->name));
 }
 
+static zend_string *replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info, const zend_string *expected_override);
+
 void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_property_info *property, zval *errors)
 {
     zend_string *template = get_custom_error_template(type, property);
@@ -464,6 +466,35 @@ void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_prop
     }
 
     zend_string *replaced_message = av_replace_placeholders(ZSTR_VAL(template), ZSTR_LEN(template), field, property);
+    av_string_release(template);
+    if (replaced_message == NULL) {
+        return;
+    }
+
+    zend_string *full_path = get_property_full_path(field);
+    add_field_error(errors, full_path, ZSTR_VAL(replaced_message), ZSTR_LEN(replaced_message));
+    av_string_release(full_path);
+    av_string_release(replaced_message);
+}
+
+/*
+ * Like av_add_field_error_with_prefix(), but substitutes {expected} with
+ * the given string instead of the property's native type hint. Used for
+ * array element errors described by the array type-hint attributes, where
+ * the native type hint would only say "array".
+ *
+ * The expected string is neither modified nor released.
+ */
+void av_add_field_error_with_expected(av_error_type type, av_field *field, av_property_info *property, zval *errors, const zend_string *expected)
+{
+    ZEND_ASSERT(expected != NULL);
+
+    zend_string *template = get_custom_error_template(type, property);
+    if (template == NULL) {
+        return;
+    }
+
+    zend_string *replaced_message = replace_placeholders(ZSTR_VAL(template), ZSTR_LEN(template), field, property, expected);
     av_string_release(template);
     if (replaced_message == NULL) {
         return;
@@ -548,8 +579,12 @@ zend_string *av_value_to_string(zval *value)
  *
  * All Zend internals are reached through the mockable av_wrappers so the
  * function can be unit tested in isolation.
+ *
+ * {expected} substitutes the given expected_override when not NULL (used
+ * for array element errors described by the array type-hint attributes),
+ * and the property's native type hint otherwise.
  */
-zend_string *av_replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info)
+static zend_string *replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info, const zend_string *expected_override)
 {
     struct {
         const char *search;
@@ -577,8 +612,12 @@ zend_string *av_replace_placeholders(const char *template, size_t length, av_fie
             if (i == 1) { // {value}
                 table[i].replace = av_value_to_string(field->value);
             } else if (i == 2) { // {expected}
-                ZEND_ASSERT(prop_info != NULL && prop_info->property != NULL);
-                table[i].replace = build_union_type_string(prop_info->property->type);
+                if (expected_override != NULL) {
+                    table[i].replace = av_string_copy((zend_string *)expected_override);
+                } else {
+                    ZEND_ASSERT(prop_info != NULL && prop_info->property != NULL);
+                    table[i].replace = build_union_type_string(prop_info->property->type);
+                }
             }
         }
         ZEND_ASSERT(table[i].replace != NULL);
@@ -640,4 +679,14 @@ zend_string *av_replace_placeholders(const char *template, size_t length, av_fie
     }
 
     return result;
+}
+
+/*
+ * Substitutes the {field}, {value} and {expected} placeholders of an error
+ * message template, deriving {expected} from the property's native type
+ * hint. See replace_placeholders() for the detailed semantics.
+ */
+zend_string *av_replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info)
+{
+    return replace_placeholders(template, length, field, prop_info, NULL);
 }

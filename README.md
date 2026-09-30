@@ -26,7 +26,7 @@ We aim to support versions that haven't reached their end-of-life.
 ```php
 <?php
 
-use Attributes\Validation\validate;
+use function Attributes\Validation\validate;
 use Attributes\Validation\BaseModel;
 
 class User extends BaseModel
@@ -36,7 +36,7 @@ class User extends BaseModel
 }
 
 $rawData = [
-    'age' => '30',
+    'age' => 30,
     'birthday' => '1994-01-01T09:00:00+00:00',
 ];
 $user = validate($rawData, new User());
@@ -50,7 +50,7 @@ var_dump($user->birthday); // object(DateTime) { ["date"] => string(26) "1994-01
 ```php
 <?php
 
-use Attributes\Validation\call;
+use function Attributes\Validation\call;
 
 function myFunction(User $user) {
     var_dump($user->age);      // int(30)

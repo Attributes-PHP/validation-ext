@@ -206,6 +206,59 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_
     return zend_hash_num_elements(Z_ARRVAL_P(errors)) == 0;
 }
 
+zend_result av_hydrate_model(zval *raw_data, zval *model)
+{
+    zval configs_obj;
+    av_model_configs_properties properties;
+    av_create_model_configs(&configs_obj, model, &properties);
+    if (UNEXPECTED(EG(exception))) {
+        zval_ptr_dtor(&configs_obj);
+        return FAILURE;
+    }
+
+    av_call_before_validation_hook(model, raw_data, &configs_obj);
+    if (EG(exception)) {
+        zval_ptr_dtor(&configs_obj);
+        return FAILURE;
+    }
+
+    zval errors;
+    array_init(&errors);
+
+    av_property_info property_info = {
+        .model = model,
+        .model_ce = Z_OBJCE_P(model),
+    };
+    if (!av_validate_model_internal(raw_data, &property_info, &properties, &errors, NULL)) {
+        // A failure with a pending exception comes from a thrown error
+        // (unbuildable attribute spec, class not found, hook exception):
+        // let it propagate instead of masking it with an empty
+        // ValidationException
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            zval_ptr_dtor(&configs_obj);
+            zval_ptr_dtor(&errors);
+            return FAILURE;
+        }
+
+        ZEND_ASSERT(zend_hash_num_elements(Z_ARRVAL_P(&errors)) > 0);
+
+        av_throw_validation_exception(&errors);
+        zval_ptr_dtor(&configs_obj);
+        zval_ptr_dtor(&errors);
+        return FAILURE;
+    }
+
+    av_call_after_validation_hook(model, raw_data, &configs_obj);
+    zval_ptr_dtor(&configs_obj);
+    zval_ptr_dtor(&errors);
+
+    if (UNEXPECTED(EG(exception) != NULL)) {
+        return FAILURE;
+    }
+
+    return SUCCESS;
+}
+
 /* Function implementation for validate */
 ZEND_FUNCTION(validate)
 {
@@ -217,39 +270,7 @@ ZEND_FUNCTION(validate)
     Z_PARAM_OBJECT_OF_CLASS(model, AV_BaseModel_ce)
     ZEND_PARSE_PARAMETERS_END();
 
-    zval configs_obj;
-    av_model_configs_properties properties;
-    av_create_model_configs(&configs_obj, model, &properties);
-    if (UNEXPECTED(EG(exception))) {
-        AV_ZVAL_DTOR_RETURN_THROWS(&configs_obj);
-    }
-
-    av_call_before_validation_hook(model, raw_data, &configs_obj);
-    if (EG(exception)) {
-        AV_ZVAL_DTOR_RETURN_THROWS(&configs_obj);
-    }
-
-    zval errors;
-    array_init(&errors);
-
-    zend_class_entry *model_ce = Z_OBJCE_P(model);
-
-    av_property_info property_info = {
-        .model = model,
-        .model_ce = model_ce,
-    };
-    if (!av_validate_model_internal(raw_data, &property_info, &properties, &errors, NULL)) {
-        ZEND_ASSERT(zend_hash_num_elements(Z_ARRVAL_P(&errors)) > 0);
-
-        av_throw_validation_exception(&errors);
-        AV_ZVAL_DTOR_RETURN_THROWS(&configs_obj, &errors);
-    }
-
-    av_call_after_validation_hook(model, raw_data, &configs_obj);
-    zval_ptr_dtor(&configs_obj);
-    zval_ptr_dtor(&errors);
-
-    if (EG(exception)) {
+    if (av_hydrate_model(raw_data, model) == FAILURE) {
         RETURN_THROWS();
     }
 

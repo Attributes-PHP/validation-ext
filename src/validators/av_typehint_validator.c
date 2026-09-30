@@ -149,6 +149,19 @@ static bool handle_class(av_field *field, av_property_info *prop_info, const zen
         return false;
     }
 
+    return av_handle_class_by_ce(field, prop_info, ce, properties, errors);
+}
+
+/*
+ * Validates a value against a single class entry: accepts existing
+ * instances, coerces strings for DateTime-like classes and hydrates raw
+ * arrays into nested BaseModel instances. Shared with the array type-hint
+ * validator, whose arms reuse the exact class semantics.
+ */
+bool av_handle_class_by_ce(av_field *field, av_property_info *prop_info, zend_class_entry *ce, av_model_configs_properties *properties, zval *errors)
+{
+    ZEND_ASSERT(ce != NULL);
+
     if (Z_TYPE_P(field->value) == IS_STRING && is_datetime_class(ce)) {
         return coerce_datetime(field->value, ce, properties);
     }
@@ -188,7 +201,7 @@ static bool handle_class(av_field *field, av_property_info *prop_info, const zen
     return false;
 }
 
-static bool coerce_bool(av_field *field)
+bool av_coerce_bool(av_field *field)
 {
     zend_uchar type_code = Z_TYPE_P(field->value);
 
@@ -317,8 +330,16 @@ bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_mode
     if (!ZEND_TYPE_IS_SET(property_type))
         return true;
 
-    if (ZEND_TYPE_CONTAINS_CODE(property_type, Z_TYPE_P(field->value)))
+    if (ZEND_TYPE_CONTAINS_CODE(property_type, Z_TYPE_P(field->value))) {
+        if (Z_TYPE_P(field->value) == IS_ARRAY) {
+            // The native hint accepted the array: enforce the array
+            // type-hint attributes (Sequence, Union, Intersection, Dict), when
+            // the property declares any
+            return av_validate_array_typehint(field, prop_info, properties, errors);
+        }
+
         return true;
+    }
 
     const zend_type *type;
     ZEND_TYPE_FOREACH(property_type, type)
@@ -337,7 +358,7 @@ bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_mode
 
         uint32_t type_mask = ZEND_TYPE_PURE_MASK(*type);
         if (!properties->strict && type_mask & MAY_BE_BOOL) {
-            if (coerce_bool(field))
+            if (av_coerce_bool(field))
                 return true;
             continue;
         }

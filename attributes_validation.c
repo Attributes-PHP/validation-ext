@@ -10,9 +10,14 @@
 #include "src/av_base_model.h"
 #include "src/av_exception.h"
 #include "src/av_model_configs.h"
+#include "src/av_type.h"
 #include "src/fields/av_field.h"
 #include "src/fields/av_alias.h"
+#include "src/fields/av_dict.h"
 #include "src/fields/av_error_message.h"
+#include "src/fields/av_intersection.h"
+#include "src/fields/av_sequence.h"
+#include "src/fields/av_union.h"
 #include "src/validators/av_typehint_validator.h"
 
 /* Module startup */
@@ -23,10 +28,18 @@ PHP_MINIT_FUNCTION(attributes_validation)
     av_register_ModelConfigs_class();
     av_register_all_exception_classes();
 
+    // Register the Type enum and its namespace constants
+    av_register_Type_enum();
+    av_register_type_constants(module_number);
+
     // Register fields
     av_register_Field_interface();
     av_register_Alias_class();
     av_register_ErrorMessage_class();
+    av_register_Sequence_class();
+    av_register_Union_class();
+    av_register_Intersection_class();
+    av_register_Dict_class();
     return SUCCESS;
 }
 
