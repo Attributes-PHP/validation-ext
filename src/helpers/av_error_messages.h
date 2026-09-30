@@ -38,8 +38,4 @@ static zend_always_inline void add_field_error_to_array(zval *errors_array, cons
 static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, const char *error_message, size_t length);
 void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_property_info *property, zval *errors);
 
-// Error message generation with an explicit {expected} substitution, for
-// errors whose expected type cannot be derived from the native type hint
-void av_add_field_error_with_expected(av_error_type type, av_field *field, av_property_info *property, zval *errors, const zend_string *expected);
-
 #endif /* AV_ERROR_MESSAGES_H */

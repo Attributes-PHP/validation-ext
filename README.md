@@ -31,20 +31,16 @@ use Attributes\Validation\BaseModel;
 
 class User extends BaseModel
 {
-    /** @var string[] **/
-    public array $names;
     public float|int $age;
     public ?DateTime $birthday;
 }
 
 $rawData = [
-    'names' => ['André', 10]
     'age' => '30',
     'birthday' => '1994-01-01T09:00:00+00:00',
 ];
 $user = validate($rawData, new User());
 
-var_dump($user->names);    // array(2) {[0]=> string(6) "André" [1]=> string(2) "10"}
 var_dump($user->age);      // int(30)
 var_dump($user->birthday); // object(DateTime) { ["date"] => string(26) "1994-01-01 09:00:00.000000", (...) }
 ```

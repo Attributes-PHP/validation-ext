@@ -476,37 +476,6 @@ void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_prop
 }
 
 /*
- * Like av_add_field_error_with_prefix(), but substitutes {expected} with
- * the given string instead of the property's native type hint. Used for
- * array element errors described by docstring shapes, where the native
- * type hint would only say "array".
- *
- * The expected string is neither modified nor released.
- */
-static zend_string *replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info, const zend_string *expected_override);
-
-void av_add_field_error_with_expected(av_error_type type, av_field *field, av_property_info *property, zval *errors, const zend_string *expected)
-{
-    ZEND_ASSERT(expected != NULL);
-
-    zend_string *template = get_custom_error_template(type, property);
-    if (template == NULL) {
-        return;
-    }
-
-    zend_string *replaced_message = replace_placeholders(ZSTR_VAL(template), ZSTR_LEN(template), field, property, expected);
-    av_string_release(template);
-    if (replaced_message == NULL) {
-        return;
-    }
-
-    zend_string *full_path = get_property_full_path(field);
-    add_field_error(errors, full_path, ZSTR_VAL(replaced_message), ZSTR_LEN(replaced_message));
-    av_string_release(full_path);
-    av_string_release(replaced_message);
-}
-
-/*
  * Converts any PHP zval into a zend_string suitable for inclusion in an
  * error message template (the {value} placeholder).
  *
@@ -572,9 +541,7 @@ zend_string *av_value_to_string(zval *value)
  *
  *   {field}    -> field->name
  *   {value}    -> av_value_to_string(field->value)
- *   {expected} -> build_union_type_string(prop_info->property->type),
- *                or the given expected_override when not NULL (used for
- *                array element errors described by docstring shapes)
+ *   {expected} -> build_union_type_string(prop_info->property->type)
  *
  * Each placeholder may occur multiple times. The result is a freshly
  * allocated zend_string that the caller must release with av_string_release.
@@ -582,7 +549,7 @@ zend_string *av_value_to_string(zval *value)
  * All Zend internals are reached through the mockable av_wrappers so the
  * function can be unit tested in isolation.
  */
-static zend_string *replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info, const zend_string *expected_override)
+zend_string *av_replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info)
 {
     struct {
         const char *search;
@@ -610,12 +577,8 @@ static zend_string *replace_placeholders(const char *template, size_t length, av
             if (i == 1) { // {value}
                 table[i].replace = av_value_to_string(field->value);
             } else if (i == 2) { // {expected}
-                if (expected_override != NULL) {
-                    table[i].replace = av_string_copy((zend_string *)expected_override);
-                } else {
-                    ZEND_ASSERT(prop_info != NULL && prop_info->property != NULL);
-                    table[i].replace = build_union_type_string(prop_info->property->type);
-                }
+                ZEND_ASSERT(prop_info != NULL && prop_info->property != NULL);
+                table[i].replace = build_union_type_string(prop_info->property->type);
             }
         }
         ZEND_ASSERT(table[i].replace != NULL);
@@ -677,14 +640,4 @@ static zend_string *replace_placeholders(const char *template, size_t length, av
     }
 
     return result;
-}
-
-/*
- * Substitutes the {field}, {value} and {expected} placeholders of an error
- * message template, deriving {expected} from the property's native type
- * hint. See replace_placeholders() for the detailed semantics.
- */
-zend_string *av_replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info)
-{
-    return replace_placeholders(template, length, field, prop_info, NULL);
 }
