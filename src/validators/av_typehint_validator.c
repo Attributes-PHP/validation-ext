@@ -64,6 +64,12 @@ static bool handle_intersection(av_field *field, av_property_info *prop_info, co
     const zend_type *intersection_type;
     ZEND_ASSERT(ZEND_TYPE_IS_INTERSECTION(*value_type));
 
+    // Only objects can satisfy an intersection of classes; checking a
+    // non-object value against a class entry would dereference garbage
+    if (Z_TYPE_P(field->value) != IS_OBJECT) {
+        return false;
+    }
+
     ZEND_TYPE_LIST_FOREACH(ZEND_TYPE_LIST(*value_type), intersection_type)
     {
         ZEND_ASSERT(!ZEND_TYPE_HAS_LIST(*intersection_type));
@@ -74,7 +80,7 @@ static bool handle_intersection(av_field *field, av_property_info *prop_info, co
         }
     }
     ZEND_TYPE_LIST_FOREACH_END();
-    return false;
+    return true;
 }
 
 /**
@@ -300,6 +306,32 @@ static bool is_basemodel_class_type_hint(av_property_info *prop_info, const zend
     return model_ce && instanceof_function(model_ce, AV_BaseModel_ce);
 }
 
+/*
+ * A pure intersection hint (A&B) requires every class arm to match;
+ * the containment fast path and the any-arm union walk do not apply.
+ */
+static bool validate_intersection_group(av_field *field, av_compiled_field *cf, av_property_info *prop_info, zval *errors)
+{
+    bool valid = Z_TYPE_P(field->value) == IS_OBJECT;
+
+    for (uint32_t i = 0; valid && i < cf->arms_count; i++) {
+        av_compiled_arm *arm = &cf->arms[i];
+        ZEND_ASSERT(arm->kind == AV_ARM_CLASS);
+
+        zend_class_entry *ce = arm->ce != NULL ? arm->ce : av_get_ce_from_type(prop_info->property, arm->origin);
+        if (ce != NULL) {
+            arm->ce = ce;
+        }
+        valid = ce != NULL && instanceof_function(Z_OBJCE_P(field->value), ce);
+    }
+
+    if (!valid) {
+        av_add_field_error_with_prefix(AV_ERROR_TYPE, field, prop_info, errors);
+    }
+
+    return valid;
+}
+
 /**
  * Validates that a value matches the property's compiled type arms.
  *
@@ -321,6 +353,10 @@ bool av_validate_compiled_type_hint(av_field *field, av_compiled_field *cf, av_p
 
     if (cf->untyped)
         return true;
+
+    if (cf->is_intersection_group) {
+        return validate_intersection_group(field, cf, prop_info, errors);
+    }
 
     if (cf->contains_code & (1u << Z_TYPE_P(field->value))) {
         if (Z_TYPE_P(field->value) == IS_ARRAY) {

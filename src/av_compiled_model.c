@@ -334,6 +334,7 @@ static bool compile_field(av_compiled_field *cf, av_compiled_model *plan)
         // The arms reference the property's own type storage (the
         // zend_type for single types, its heap-allocated list for
         // unions/intersections): both live as long as the property_info
+        cf->is_intersection_group = ZEND_TYPE_IS_INTERSECTION(type);
         const zend_type *arms_src;
         uint32_t arms_count;
         if (ZEND_TYPE_HAS_LIST(type)) {

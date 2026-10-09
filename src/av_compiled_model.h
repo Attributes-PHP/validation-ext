@@ -48,6 +48,7 @@ typedef struct {
     av_compiled_arm *arms;  // flattened zend_type arms, NULL when untyped
     uint32_t arms_count;
     bool untyped;
+    bool is_intersection_group; // pure intersection hint: every class arm must match
     bool has_default;
 
     av_array_state array_state;
