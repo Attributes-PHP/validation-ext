@@ -16,12 +16,18 @@ require __DIR__.'/../../vendor/autoload.php';
 use Attributes\Validation\Tests\Benchmark\Models\BenchBrokenDict;
 use Attributes\Validation\Tests\Benchmark\Models\BenchDateTimeEvent;
 use Attributes\Validation\Tests\Benchmark\Models\BenchErrorForm;
+use Attributes\Validation\Tests\Benchmark\Models\BenchIntersectionPayload;
 use Attributes\Validation\Tests\Benchmark\Models\BenchLooseUser;
 use Attributes\Validation\Tests\Benchmark\Models\BenchNestedShape;
+use Attributes\Validation\Tests\Benchmark\Models\BenchNestedUnionIntersection;
 use Attributes\Validation\Tests\Benchmark\Models\BenchOrder;
+use Attributes\Validation\Tests\Benchmark\Models\BenchRegistryService;
 use Attributes\Validation\Tests\Benchmark\Models\BenchShallowModel;
 use Attributes\Validation\Tests\Benchmark\Models\BenchSignup;
 use Attributes\Validation\Tests\Benchmark\Models\BenchTagList;
+use Attributes\Validation\Tests\Benchmark\Models\BenchUnionModelArm;
+use Attributes\Validation\Tests\Benchmark\Models\BenchUnionPayload;
+use Attributes\Validation\Tests\Benchmark\Models\BenchUnionTree;
 use Attributes\Validation\Tests\Benchmark\Models\BenchWideModel;
 
 use function Attributes\Validation\validate;
@@ -109,6 +115,29 @@ $errorData = [
 ];
 
 $signupData = ['user_name' => 'andre', 'email' => 'andre@example.com', 'age' => '30'];
+
+// Union/Intersection reuse-safe datasets: instances and exact-match
+// scalars never rewrite buckets, so the arrays survive every iteration
+$unionScalarsData = ['mixed' => [], 'coerced' => []];
+for ($i = 0; $i < 100; $i++) {
+    $unionScalarsData['mixed'][] = match ($i % 3) {
+        0 => $i,
+        1 => 'item-'.$i,
+        2 => ($i % 2) === 0,
+    };
+}
+
+$services = [];
+for ($i = 0; $i < 50; $i++) {
+    $services[] = new BenchRegistryService('svc-'.$i);
+}
+
+$intersectionData = ['services' => $services];
+
+$unionIntersectionData = ['payloads' => []];
+for ($i = 0; $i < 40; $i++) {
+    $unionIntersectionData['payloads'][] = ($i % 2) === 0 ? $i : array_slice($services, 0, 5);
+}
 
 $cases = [
     'wide model, 32 typed fields' => [
@@ -223,6 +252,78 @@ $cases = [
                 'active' => 'true',
                 'balance' => '1.5',
             ], new BenchLooseUser);
+        },
+    ],
+
+    'union scalars, exact 100 per call' => [
+        1_000_000,
+        function () use ($unionScalarsData) {
+            validate($unionScalarsData, new BenchUnionPayload);
+        },
+    ],
+
+    'union coercion, 50 per call' => [
+        500_000,
+        function () {
+            // Rebuilt each iteration: loose-mode coercion rewrites the
+            // element buckets in place
+            $coerced = [];
+            for ($i = 0; $i < 50; $i++) {
+                $coerced[] = ($i % 2) === 0 ? '30' : '250';
+            }
+            validate(['mixed' => [], 'coerced' => $coerced], new BenchUnionPayload);
+        },
+    ],
+
+    'union class-arm hydration, 20 per call' => [
+        500_000,
+        function () {
+            // Rebuilt each iteration: hydration replaces the item buckets
+            // with model objects, and a reused array would skip hydration
+            $items = [];
+            for ($i = 0; $i < 20; $i++) {
+                $items[] = ($i % 3) === 2 ? $i : ['street' => 'Street '.$i, 'city' => 'City '.$i];
+            }
+            validate(['items' => $items], new BenchUnionModelArm);
+        },
+    ],
+
+    'intersection instances, 50 per call' => [
+        1_000_000,
+        function () use ($intersectionData) {
+            validate($intersectionData, new BenchIntersectionPayload);
+        },
+    ],
+
+    'composed union/intersection, 40 payloads' => [
+        1_000_000,
+        function () use ($unionIntersectionData) {
+            validate($unionIntersectionData, new BenchNestedUnionIntersection);
+        },
+    ],
+
+    'union tree hydration, 31 nodes per call' => [
+        200_000,
+        function () {
+            // Rebuilt each iteration: each raw subtree bucket becomes a
+            // hydrated BenchUnionTree, recursively, and a reused array
+            // would skip hydration after the first call
+            $node = null;
+            $node = static function (int $depth) use (&$node): array {
+                $children = [1, 'leaf'];
+                if ($depth > 0) {
+                    for ($i = 0; $i < 2; $i++) {
+                        $children[] = $node($depth - 1);
+                    }
+                }
+
+                return ['name' => 'node-'.$depth, 'children' => $children];
+            };
+            $children = [];
+            for ($i = 0; $i < 5; $i++) {
+                $children[] = ($i % 2) === 0 ? $i : $node(3);
+            }
+            validate(['name' => 'root', 'children' => $children], new BenchUnionTree);
         },
     ],
 
