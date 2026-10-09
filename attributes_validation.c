@@ -21,6 +21,7 @@
 #include "src/fields/av_sequence.h"
 #include "src/fields/av_union.h"
 #include "src/validators/av_typehint_validator.h"
+#include "src/helpers/av_error_messages.h"
 
 ZEND_DECLARE_MODULE_GLOBALS(attributes_validation)
 
@@ -30,6 +31,7 @@ static PHP_GINIT_FUNCTION(attributes_validation)
     attributes_validation_globals->av_field_name_cache = NULL;
     attributes_validation_globals->av_plans_cache = NULL;
     attributes_validation_globals->av_spec_cache = NULL;
+    attributes_validation_globals->av_error_templates_cache = NULL;
 }
 
 /* Module startup */
@@ -79,6 +81,7 @@ PHP_RSHUTDOWN_FUNCTION(attributes_validation)
     av_clear_model_configs_cache();
     av_clear_array_spec_cache();
     av_clear_field_name_cache();
+    av_clear_error_templates_cache();
     av_shutdown_typehint_validator();
 
     return SUCCESS;

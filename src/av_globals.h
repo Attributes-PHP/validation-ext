@@ -15,6 +15,7 @@ HashTable *av_model_configs_cache;
 HashTable *av_field_name_cache;
 HashTable *av_plans_cache;
 HashTable *av_spec_cache;
+HashTable *av_error_templates_cache;
 ZEND_END_MODULE_GLOBALS(attributes_validation)
 
 #define AV_G(v) ZEND_MODULE_GLOBALS_ACCESSOR(attributes_validation, v)

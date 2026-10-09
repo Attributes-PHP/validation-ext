@@ -1,5 +1,6 @@
 #include "av_error_messages.h"
 #include "av_wrappers.h"
+#include "../av_globals.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_attributes.h"
 #include "Zend/zend_compile.h"
@@ -346,6 +347,67 @@ zend_string *build_union_type_string(zend_type property_type)
 }
 
 /*
+ * Per-property error rendering cache, keyed by the property info and
+ * stored in the module globals (see av_globals.h): the ErrorMessage
+ * attribute and the native type hint never change within a request, so
+ * the templates and the {expected} string are resolved once per
+ * property instead of on every reported error. Failed template
+ * resolutions stay uncached so their errors keep firing.
+ */
+typedef struct {
+    zend_string *templates[2]; // one per av_error_type, owned
+    zend_string *expected;     // {expected} from the native hint, owned
+} av_property_error_templates;
+
+static void error_templates_cache_dtor(zval *entry)
+{
+    av_property_error_templates *cached = Z_PTR_P(entry);
+
+    for (uint32_t i = 0; i < 2; i++) {
+        if (cached->templates[i] != NULL) {
+            zend_string_release(cached->templates[i]);
+        }
+    }
+    if (cached->expected != NULL) {
+        zend_string_release(cached->expected);
+    }
+    efree(cached);
+}
+
+void av_clear_error_templates_cache(void)
+{
+    if (AV_G(av_error_templates_cache) != NULL) {
+        zend_hash_destroy(AV_G(av_error_templates_cache));
+        efree(AV_G(av_error_templates_cache));
+        AV_G(av_error_templates_cache) = NULL;
+    }
+}
+
+static av_property_error_templates *get_property_error_templates(av_property_info *property)
+{
+    if (AV_G(av_error_templates_cache) != NULL) {
+        av_property_error_templates *cached = zend_hash_index_find_ptr(AV_G(av_error_templates_cache), (zend_ulong)(uintptr_t)property->property);
+        if (cached != NULL) {
+            return cached;
+        }
+    }
+
+    av_property_error_templates *cached = emalloc(sizeof(av_property_error_templates));
+    cached->templates[AV_ERROR_REQUIRED] = NULL;
+    cached->templates[AV_ERROR_TYPE] = NULL;
+    cached->expected = NULL;
+
+    if (AV_G(av_error_templates_cache) == NULL) {
+        AV_G(av_error_templates_cache) = emalloc(sizeof(HashTable));
+        zend_hash_init(AV_G(av_error_templates_cache), 8, NULL, error_templates_cache_dtor, 0);
+    }
+
+    zend_hash_index_add_ptr(AV_G(av_error_templates_cache), (zend_ulong)(uintptr_t)property->property, cached);
+
+    return cached;
+}
+
+/*
  * Retrieves the ErrorMessage attribute associated with the given property.
  *
  * Attribute usage example: #[ErrorMessage(required: "{field} is missing", type: "Ups wrong type {expected}")]
@@ -365,25 +427,16 @@ static zend_always_inline bool attribute_argument_name_equals(const zend_string 
 }
 
 /*
- * Returns the error message template for the given error type: the custom
- * template declared with the #[ErrorMessage] attribute when the property
- * carries one, the default template otherwise.
- *
- * Named attribute arguments are matched by name (case-insensitively),
- * positional ones by constructor order (required first, then type).
- *
- * The result is a freshly allocated zend_string the caller must release.
- * Returns NULL when the error type is unsupported or the attribute value
- * cannot be evaluated; an exception is thrown in both cases.
+ * Resolves the raw error message template for the given error type from
+ * the #[ErrorMessage] attribute, or NULL when the property declares no
+ * template for it (the caller falls back to the default). Throws when
+ * an argument value cannot be evaluated or is not a string.
  */
-static zend_string *get_custom_error_template(av_error_type type, av_property_info *property)
+static zend_string *resolve_error_template(av_error_type type, av_property_info *property)
 {
-    ZEND_ASSERT(AV_ERROR_TYPE == type || AV_ERROR_REQUIRED == type);
-
     zend_attribute *attribute = get_error_message_attribute(property);
     if (attribute == NULL) {
-        const char *default_template = av_default_error_type_messages[type];
-        return av_string_init(default_template, strlen(default_template), 0);
+        return NULL;
     }
 
     const char *argument_name;
@@ -440,8 +493,42 @@ static zend_string *get_custom_error_template(av_error_type type, av_property_in
         break;
     }
 
-    const char *default_template = av_default_error_type_messages[type];
-    return av_string_init(default_template, strlen(default_template), 0);
+    return NULL;
+}
+
+/*
+ * Returns the error message template for the given error type: the
+ * custom template declared with the #[ErrorMessage] attribute when the
+ * property carries one, the default template otherwise. Resolved once
+ * per property, then handed out as a copy.
+ *
+ * The result is a freshly allocated zend_string the caller must release.
+ * Returns NULL when the error type is unsupported or the attribute value
+ * cannot be evaluated; an exception is thrown in both cases.
+ */
+static zend_string *get_custom_error_template(av_error_type type, av_property_info *property)
+{
+    ZEND_ASSERT(AV_ERROR_TYPE == type || AV_ERROR_REQUIRED == type);
+
+    av_property_error_templates *cached = get_property_error_templates(property);
+
+    if (cached->templates[type] != NULL) {
+        return zend_string_copy(cached->templates[type]);
+    }
+
+    zend_string *template = resolve_error_template(type, property);
+    if (UNEXPECTED(EG(exception) != NULL)) {
+        return NULL;
+    }
+
+    if (template == NULL) {
+        const char *default_template = av_default_error_type_messages[type];
+        template = av_string_init(default_template, strlen(default_template), 0);
+    }
+
+    cached->templates[type] = template;
+
+    return zend_string_copy(template);
 }
 
 /**
@@ -616,7 +703,13 @@ static zend_string *replace_placeholders(const char *template, size_t length, av
                     table[i].replace = av_string_copy((zend_string *)expected_override);
                 } else {
                     ZEND_ASSERT(prop_info != NULL && prop_info->property != NULL);
-                    table[i].replace = build_union_type_string(prop_info->property->type);
+                    // The native hint never changes within a request:
+                    // resolve the expected string once per property
+                    av_property_error_templates *cached = get_property_error_templates(prop_info);
+                    if (cached->expected == NULL) {
+                        cached->expected = build_union_type_string(prop_info->property->type);
+                    }
+                    table[i].replace = av_string_copy(cached->expected);
                 }
             }
         }
