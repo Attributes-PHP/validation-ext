@@ -178,7 +178,9 @@ bool av_handle_class_by_ce(av_field *field, av_property_info *prop_info, zend_cl
 
         if (result) {
             zval_ptr_dtor(field->value);
-            ZVAL_COPY(field->value, &model_obj);
+            // Move the single reference owned by model_obj instead of
+            // copying: ZVAL_COPY would leak one reference per hydration
+            ZVAL_COPY_VALUE(field->value, &model_obj);
         } else {
             zval_ptr_dtor(&model_obj);
         }
