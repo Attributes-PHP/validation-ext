@@ -210,7 +210,7 @@ zend_result av_hydrate_model(zval *raw_data, zval *model)
 {
     zval configs_obj;
     av_model_configs_properties properties;
-    av_create_model_configs(&configs_obj, model, &properties);
+    av_get_model_configs(&configs_obj, model, &properties, true);
     if (UNEXPECTED(EG(exception))) {
         zval_ptr_dtor(&configs_obj);
         return FAILURE;

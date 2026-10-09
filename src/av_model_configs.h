@@ -72,7 +72,8 @@ typedef struct {
 
 /* Registration function */
 void av_register_ModelConfigs_class(void);
-void av_create_model_configs(zval *configs, zval *model, av_model_configs_properties *properties);
+void av_get_model_configs(zval *configs, zval *model, av_model_configs_properties *properties, bool build_object);
+void av_clear_model_configs_cache(void);
 static void update_model_properties(zend_object *this, av_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra);
 static zend_always_inline void set_default_properties(av_model_configs_properties *properties);
 static bool validate_alias_generator(char *pretty_alias_generator);

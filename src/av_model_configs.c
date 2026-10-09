@@ -8,6 +8,34 @@
 
 zend_class_entry *AV_ModelConfigs_ce;
 
+/*
+ * Cache of parsed ModelConfigs properties, keyed by the model class
+ * entry: attribute arguments never change within a request, so the
+ * attribute walk and the argument evaluation run once per class.
+ * Entries are freed at request shutdown.
+ */
+typedef struct {
+    av_model_configs_properties properties;
+    char alias_generator_name[8]; // pretty name, "" when unset
+    char extra_name[8];
+} av_model_configs_cache_entry;
+
+static HashTable *av_model_configs_cache = NULL;
+
+static void av_model_configs_cache_entry_dtor(zval *entry)
+{
+    efree(Z_PTR_P(entry));
+}
+
+void av_clear_model_configs_cache(void)
+{
+    if (av_model_configs_cache != NULL) {
+        zend_hash_destroy(av_model_configs_cache);
+        efree(av_model_configs_cache);
+        av_model_configs_cache = NULL;
+    }
+}
+
 /**
  * Reads a property from the current object and returns it.
  * Used by all getter methods in this class.
@@ -97,33 +125,30 @@ void av_register_ModelConfigs_class(void)
 }
 
 /**
- * Instantiates a ModelConfigs class with all required properties for validation.
- * If the model class (or any parent class) has a ModelConfigs attribute, its values
- * are used. Otherwise, default properties are applied.
+ * Parses the ModelConfigs attribute of a model class into plain values.
+ *
  * Inheritance is supported: if Child extends Parent and Parent has ModelConfigs,
  * those configs are used for Child unless Child overrides them with its own ModelConfigs.
+ *
+ * A parse that fails (invalid option value) returns with a pending exception
+ * and must never be cached, so the error keeps firing.
  */
-void av_create_model_configs(zval *configs, zval *model, av_model_configs_properties *properties)
+static void av_parse_model_configs(zend_class_entry *model_ce, av_model_configs_properties *properties, char *alias_generator_name, char *extra_name)
 {
-    object_init_ex(configs, AV_ModelConfigs_ce);
-
-    zend_class_entry *base_model_class_entry = Z_OBJCE_P(model);
-    zend_attribute *model_configs_attr = get_model_configs_attribute(base_model_class_entry);
+    zend_attribute *model_configs_attr = get_model_configs_attribute(model_ce);
 
     set_default_properties(properties);
+    alias_generator_name[0] = '\0';
+    strcpy(extra_name, "ignore");
 
     if (model_configs_attr == NULL) {
-        update_model_properties(Z_OBJ_P(configs), properties, NULL, "ignore");
         return;
     }
-
-    char *pretty_alias_generator = NULL;
-    char *pretty_extra = "ignore";
 
     /* Parse attribute arguments */
     for (uint32_t i = 0; i < model_configs_attr->argc; i++) {
         zval arg_val;
-        if (zend_get_attribute_value(&arg_val, model_configs_attr, i, base_model_class_entry) != SUCCESS)
+        if (zend_get_attribute_value(&arg_val, model_configs_attr, i, model_ce) != SUCCESS)
             continue;
 
         zend_attribute_arg argument = model_configs_attr->args[i];
@@ -132,11 +157,11 @@ void av_create_model_configs(zval *configs, zval *model, av_model_configs_proper
         switch (index) {
             case 0: /* aliasGenerator */
                 if (Z_TYPE(arg_val) == IS_STRING) {
-                    pretty_alias_generator = Z_STRVAL(arg_val);
-                    if (!validate_alias_generator(pretty_alias_generator))
+                    if (!validate_alias_generator(Z_STRVAL(arg_val)))
                         return;
 
-                    properties->alias_generator = pretty_alias_generator[0];
+                    properties->alias_generator = Z_STRVAL(arg_val)[0];
+                    strcpy(alias_generator_name, Z_STRVAL(arg_val));
                 }
                 break;
             case 1: /* strToLower */
@@ -150,11 +175,11 @@ void av_create_model_configs(zval *configs, zval *model, av_model_configs_proper
                 break;
             case 4: /* extra */
                 if (Z_TYPE(arg_val) == IS_STRING) {
-                    pretty_extra = Z_STRVAL(arg_val);
-                    if (!validate_extra(pretty_extra))
+                    if (!validate_extra(Z_STRVAL(arg_val)))
                         return;
 
-                    properties->extra = pretty_extra[0];
+                    properties->extra = Z_STRVAL(arg_val)[0];
+                    strcpy(extra_name, Z_STRVAL(arg_val));
                 }
                 break;
             case 5: /* strict */
@@ -169,8 +194,51 @@ void av_create_model_configs(zval *configs, zval *model, av_model_configs_proper
         }
         zval_ptr_dtor(&arg_val);
     }
+}
 
-    update_model_properties(Z_OBJ_P(configs), properties, pretty_alias_generator, pretty_extra);
+/**
+ * Resolves the validation configuration of a model class, parsed once and
+ * cached per class entry. When build_object is true the ModelConfigs
+ * instance is materialized as well (hooks receive it as an argument).
+ */
+void av_get_model_configs(zval *configs, zval *model, av_model_configs_properties *properties, bool build_object)
+{
+    zend_class_entry *model_ce = Z_OBJCE_P(model);
+    av_model_configs_cache_entry *entry = NULL;
+
+    if (av_model_configs_cache != NULL) {
+        entry = zend_hash_index_find_ptr(av_model_configs_cache, (zend_ulong)(uintptr_t)model_ce);
+    }
+
+    if (entry == NULL) {
+        av_model_configs_cache_entry new_entry;
+        av_parse_model_configs(model_ce, &new_entry.properties, new_entry.alias_generator_name, new_entry.extra_name);
+
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            *properties = new_entry.properties;
+            ZVAL_UNDEF(configs);
+            return;
+        }
+
+        if (av_model_configs_cache == NULL) {
+            av_model_configs_cache = emalloc(sizeof(HashTable));
+            zend_hash_init(av_model_configs_cache, 8, NULL, av_model_configs_cache_entry_dtor, 0);
+        }
+
+        entry = emalloc(sizeof(av_model_configs_cache_entry));
+        memcpy(entry, &new_entry, sizeof(av_model_configs_cache_entry));
+        entry = zend_hash_index_add_ptr(av_model_configs_cache, (zend_ulong)(uintptr_t)model_ce, entry);
+    }
+
+    *properties = entry->properties;
+
+    if (!build_object) {
+        ZVAL_UNDEF(configs);
+        return;
+    }
+
+    object_init_ex(configs, AV_ModelConfigs_ce);
+    update_model_properties(Z_OBJ_P(configs), properties, entry->alias_generator_name[0] != '\0' ? entry->alias_generator_name : NULL, entry->extra_name);
 }
 
 static void update_model_properties(zend_object *this, av_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra)

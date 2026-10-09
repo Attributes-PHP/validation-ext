@@ -60,6 +60,8 @@ PHP_RINIT_FUNCTION(attributes_validation)
 /* Request shutdown */
 PHP_RSHUTDOWN_FUNCTION(attributes_validation)
 {
+    av_clear_model_configs_cache();
+
     return SUCCESS;
 }
 
