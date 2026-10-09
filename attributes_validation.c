@@ -8,6 +8,7 @@
 
 /* Include the component headers */
 #include "src/av_base_model.h"
+#include "src/av_compiled_model.h"
 #include "src/av_exception.h"
 #include "src/av_model_configs.h"
 #include "src/av_type.h"
@@ -60,6 +61,10 @@ PHP_RINIT_FUNCTION(attributes_validation)
 /* Request shutdown */
 PHP_RSHUTDOWN_FUNCTION(attributes_validation)
 {
+    // Plans borrow specs from the array spec cache and names from the
+    // field name cache: clearing the plans first is the only ordering
+    // that matters, as dtors never dereference borrowed pointers
+    av_clear_compiled_model_cache();
     av_clear_model_configs_cache();
     av_clear_array_spec_cache();
     av_clear_field_name_cache();

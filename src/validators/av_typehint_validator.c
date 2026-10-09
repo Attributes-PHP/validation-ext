@@ -45,7 +45,7 @@ static zend_class_entry *resolve_single_class_type(zend_string *name, zend_class
     }
 }
 
-static zend_always_inline zend_class_entry *get_ce_from_type(zend_property_info *info, const zend_type *type)
+zend_class_entry *av_get_ce_from_type(zend_property_info *info, const zend_type *type)
 {
     ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*type));
     zend_string *name = ZEND_TYPE_NAME(*type);
@@ -68,7 +68,7 @@ static bool handle_intersection(av_field *field, av_property_info *prop_info, co
     {
         ZEND_ASSERT(!ZEND_TYPE_HAS_LIST(*intersection_type));
 
-        zend_class_entry *ce = get_ce_from_type(prop_info->property, intersection_type);
+        zend_class_entry *ce = av_get_ce_from_type(prop_info->property, intersection_type);
         if (!ce || !instanceof_function(Z_OBJCE_P(field->value), ce)) {
             return false;
         }
@@ -140,18 +140,6 @@ static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_c
     return false;
 }
 
-static bool handle_class(av_field *field, av_property_info *prop_info, const zend_type *value_type, av_model_configs_properties *properties, zval *errors)
-{
-    ZEND_ASSERT(ZEND_TYPE_HAS_NAME(*value_type));
-
-    zend_class_entry *ce = get_ce_from_type(prop_info->property, value_type);
-    if (!ce) {
-        return false;
-    }
-
-    return av_handle_class_by_ce(field, prop_info, ce, properties, errors);
-}
-
 /*
  * Validates a value against a single class entry: accepts existing
  * instances, coerces strings for DateTime-like classes and hydrates raw
@@ -184,11 +172,7 @@ bool av_handle_class_by_ce(av_field *field, av_property_info *prop_info, zend_cl
             nested_path = zend_string_copy(field->name);
         }
 
-        av_property_info property_info = {
-            .model = &model_obj,
-            .model_ce = ce,
-        };
-        bool result = av_validate_model_internal(field->value, &property_info, properties, errors, nested_path);
+        bool result = av_compiled_validate_model(field->value, &model_obj, properties, errors, nested_path);
 
         zend_string_release(nested_path);
 
@@ -310,69 +294,75 @@ static bool is_basemodel_class_type_hint(av_property_info *prop_info, const zend
     if (!is_single_class)
         return false;
 
-    zend_class_entry *model_ce = get_ce_from_type(prop_info->property, property_type);
+    zend_class_entry *model_ce = av_get_ce_from_type(prop_info->property, property_type);
     return model_ce && instanceof_function(model_ce, AV_BaseModel_ce);
 }
 
 /**
- * Validates that a value matches the property's type hint.
+ * Validates that a value matches the property's compiled type arms.
  *
- * For union types, tries each type in the union.
+ * The compiled plan flattens the zend_type once per property; this
+ * dispatcher replays the interpreter's semantics arm by arm: the
+ * native-hint containment fast path, then intersection, class and
+ * basic arms in declaration order.
  *
  * @param field         The field related structure
- * @param prop_info     Property type information
+ * @param cf            The compiled field slot
+ * @param prop_info     Property type information (error rendering)
  * @param properties    Model configuration properties (for recursive validation)
  * @param errors        Error collection array
  * @return              true if validation succeeds, false otherwise
  */
-bool av_validate_type_hint(av_field *field, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors)
+bool av_validate_compiled_type_hint(av_field *field, av_compiled_field *cf, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors)
 {
     ZEND_ASSERT(field->value != NULL);
 
-    zend_type property_type = prop_info->property->type;
-
-    if (!ZEND_TYPE_IS_SET(property_type))
+    if (cf->untyped)
         return true;
 
-    if (ZEND_TYPE_CONTAINS_CODE(property_type, Z_TYPE_P(field->value))) {
+    if (cf->contains_code & (1u << Z_TYPE_P(field->value))) {
         if (Z_TYPE_P(field->value) == IS_ARRAY) {
             // The native hint accepted the array: enforce the array
             // type-hint attributes (Sequence, Union, Intersection, Dict), when
             // the property declares any
-            return av_validate_array_typehint(field, prop_info, properties, errors);
+            return av_validate_array_typehint_cached(field, cf, prop_info, properties, errors);
         }
 
         return true;
     }
 
-    const zend_type *type;
-    ZEND_TYPE_FOREACH(property_type, type)
-    {
-        if (ZEND_TYPE_IS_INTERSECTION(*type)) {
-            if (handle_intersection(field, prop_info, type))
+    for (uint32_t i = 0; i < cf->arms_count; i++) {
+        av_compiled_arm *arm = &cf->arms[i];
+
+        if (arm->kind == AV_ARM_INTERSECTION) {
+            if (handle_intersection(field, prop_info, arm->origin))
                 return true;
             continue;
         }
 
-        if (ZEND_TYPE_HAS_NAME(*type)) {
-            if (handle_class(field, prop_info, type, properties, errors))
-                return true;
+        if (arm->kind == AV_ARM_CLASS) {
+            zend_class_entry *ce = arm->ce != NULL ? arm->ce : av_get_ce_from_type(prop_info->property, arm->origin);
+            if (ce != NULL) {
+                // Memoize the late resolution: identical to what the
+                // ce cache would return on every retry
+                arm->ce = ce;
+                if (av_handle_class_by_ce(field, prop_info, ce, properties, errors))
+                    return true;
+            }
             continue;
         }
 
-        uint32_t type_mask = ZEND_TYPE_PURE_MASK(*type);
-        if (!properties->strict && type_mask & MAY_BE_BOOL) {
+        if (!properties->strict && arm->mask & MAY_BE_BOOL) {
             if (av_coerce_bool(field))
                 return true;
             continue;
         }
 
-        if (zend_verify_scalar_type_hint(type_mask, field->value, properties->strict, 0))
+        if (zend_verify_scalar_type_hint(arm->mask, field->value, properties->strict, 0))
             return true;
     }
-    ZEND_TYPE_FOREACH_END();
 
-    if (!is_basemodel_class_type_hint(prop_info, &property_type)) {
+    if (!is_basemodel_class_type_hint(prop_info, &prop_info->property->type)) {
         av_add_field_error_with_prefix(AV_ERROR_TYPE, field, prop_info, errors);
     }
 

@@ -33,16 +33,20 @@
 #include "php.h"
 #include "../av_model_configs.h"
 #include "../av_validate_function.h"
+#include "../av_compiled_model.h"
 #include "../helpers/av_structs.h"
 
 /**
  * Validates that an array value matches the array type-hint attributes
  * (Sequence, Union, Intersection, Dict) declared on the property.
  *
- * Returns true when the property declares none of these attributes (a plain
- * `array` keeps behaving as before) or when every key and element validated.
+ * Attribute probes and spec cache lookups run once per compiled field
+ * slot; the spec is then borrowed for every later validation of the
+ * property. Returns true when the property declares none of these
+ * attributes (a plain `array` keeps behaving as before) or when every
+ * key and element validated.
  */
-bool av_validate_array_typehint(av_field *field, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors);
+bool av_validate_array_typehint_cached(av_field *field, av_compiled_field *cf, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors);
 void av_clear_array_spec_cache(void);
 
 #endif /* AV_ARRAY_TYPEHINT_VALIDATOR_H */

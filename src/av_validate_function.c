@@ -1,290 +1,35 @@
 #include "av_validate_function.h"
+#include "av_compiled_model.h"
 #include "av_exception.h"
-#include "validators/av_typehint_validator.h"
-#include "Zend/zend_API.h"
-#include "Zend/zend_exceptions.h"
-#include "Zend/zend_attributes.h"
 #include "av_base_model.h"
 #include "av_model_configs.h"
-#include "av_exception.h"
+#include "Zend/zend_API.h"
+#include "Zend/zend_exceptions.h"
 #include "Zend/zend_portability.h"
 #include "Zend/zend_types.h"
-#include "helpers/av_string.h"
-#include <stddef.h>
-#include "Zend/zend_hash.h"
-#include "helpers/av_error_messages.h"
-#include "helpers/av_structs.h"
 #include "php.h"
-
-/**
- * Transforms a property name based on the alias generator type
- */
-static zend_always_inline zend_string *transform_property_name(zend_string *property_name, char alias_generator)
-{
-    switch (alias_generator) {
-        case AV_PASCAL_CASE:
-            return av_to_pascal_case(property_name);
-        case AV_CAMEL_CASE:
-            return av_to_camel_case(property_name);
-        case AV_SNAKE_CASE:
-            return av_to_snake_case(property_name);
-        case AV_KEBAB_CASE:
-            return av_to_kebab_case(property_name);
-        default:
-            return zend_string_copy(property_name);
-    }
-}
-
-/**
- * Resolves the field name of a property:
- *  1) If the Alias attribute is set uses that value
- *  2) If aliasGenerator is configured, transforms the property name
- *  3) Otherwise uses the property name as-is
- */
-static zend_string *resolve_field_name(av_property_info *property_info, zend_string *property_name, char alias_generator)
-{
-    zend_string *field_name = NULL;
-
-    // Check for #[Alias] attribute on the property
-    if (property_info->property->attributes != NULL) {
-        zend_attribute *alias_attr = zend_get_attribute_str(property_info->property->attributes, "attributes\\validation\\fields\\alias", sizeof("attributes\\validation\\fields\\alias") - 1);
-        if (alias_attr != NULL && alias_attr->argc > 0) {
-            zval attr_value;
-            if (zend_get_attribute_value(&attr_value, alias_attr, 0, property_info->model_ce) == SUCCESS) {
-                if (UNEXPECTED(Z_TYPE(attr_value) != IS_STRING)) {
-                    zval_ptr_dtor(&attr_value);
-                    zend_argument_type_error(1, "must be of type string, %s given", zend_zval_type_name(&attr_value));
-                    return NULL;
-                }
-                field_name = zend_string_copy(Z_STR(attr_value));
-                zval_ptr_dtor(&attr_value);
-                return field_name;
-            }
-        }
-    }
-
-    // If no Alias attribute, check for aliasGenerator in ModelConfigs
-    if (alias_generator != false) {
-        return transform_property_name(property_name, alias_generator);
-    }
-
-    return property_name;
-}
-
-/*
- * Field name cache, keyed by the property info: the Alias attribute and
- * the alias generator never change within a request, so resolutions run
- * once per property. The cache owns one reference; hits hand out an
- * additional one. Erroring resolutions stay uncached so their errors
- * keep firing.
- */
-static HashTable *av_field_name_cache = NULL;
-
-static void av_field_name_cache_dtor(zval *entry)
-{
-    zend_string_release(Z_PTR_P(entry));
-}
-
-void av_clear_field_name_cache(void)
-{
-    if (av_field_name_cache != NULL) {
-        zend_hash_destroy(av_field_name_cache);
-        efree(av_field_name_cache);
-        av_field_name_cache = NULL;
-    }
-}
-
-static zend_string *get_property_name(av_property_info *property_info, zend_string *property_name, char alias_generator)
-{
-    // Properties without attributes and without a generator resolve to
-    // the property name directly: nothing to cache
-    if (property_info->property->attributes == NULL && alias_generator == false) {
-        return property_name;
-    }
-
-    if (av_field_name_cache != NULL) {
-        zend_string *cached = zend_hash_index_find_ptr(av_field_name_cache, (zend_ulong)(uintptr_t)property_info->property);
-        if (cached != NULL) {
-            return zend_string_copy(cached);
-        }
-    }
-
-    zend_string *field_name = resolve_field_name(property_info, property_name, alias_generator);
-
-    // The error path (pending exception) must keep firing
-    if (field_name == NULL || UNEXPECTED(EG(exception) != NULL)) {
-        return field_name;
-    }
-
-    // A property with attributes but no Alias and no generator resolves
-    // to the property name: cache the miss too, so its attribute lookup
-    // is not repeated on every validation
-    if (field_name == property_name) {
-        field_name = zend_string_copy(property_name);
-    }
-
-    if (av_field_name_cache == NULL) {
-        av_field_name_cache = emalloc(sizeof(HashTable));
-        zend_hash_init(av_field_name_cache, 8, NULL, av_field_name_cache_dtor, 0);
-    }
-
-    zend_hash_index_add_ptr(av_field_name_cache, (zend_ulong)(uintptr_t)property_info->property, field_name);
-
-    return zend_string_copy(field_name);
-}
-
-static zend_always_inline zval *get_property_value(zend_class_entry *model_ce, zval *raw_data, zend_string *field_name)
-{
-    zval *raw_value = zend_hash_find(Z_ARRVAL_P(raw_data), field_name);
-
-    if (raw_value != NULL && Z_TYPE_P(raw_value) != IS_UNDEF)
-        return raw_value;
-
-    return NULL;
-}
-
-static zend_always_inline bool has_property_default_value(av_property_info *property_info)
-{
-    // OBJ_PROP_TO_NUM() is only meaningful for declared (non-static) properties
-    ZEND_ASSERT(!(property_info->property->flags & ZEND_ACC_STATIC));
-
-    if (!property_info->model_ce->default_properties_table)
-        return false;
-
-    const uint32_t index = OBJ_PROP_TO_NUM(property_info->property->offset);
-    if (index >= property_info->model_ce->default_properties_count)
-        return false;
-
-    const zval *default_value = &property_info->model_ce->default_properties_table[index];
-    return Z_TYPE_P(default_value) != IS_UNDEF;
-}
-
-static inline bool validate_field_value(av_field *field, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors)
-{
-    if (!av_validate_type_hint(field, prop_info, properties, errors)) {
-        return false;
-    }
-    return true;
-}
-
-// TODO: For each property, collect and sort validation rules
-// - Collect all attributes that are validation rules
-// - Type hint has highest priority (applied first)
-// - Other rules applied from bottom to top (reverse order of declaration)
-// - Supported rule types:
-//   * Type hints (int, string, DateTime, etc.)
-//   * #[ArrayOf(type1, type2, ...)] for array validation
-//   * #[Length(min, max)] for string length
-//   * Custom rules implementing Rules\Custom interface
-
-// TODO: 8. For each property value, perform validation:
-// - Get raw value from rawData using resolved field name
-// - Apply SensitiveParameter: mask value in errors if attribute is present
-// - Apply type hint validation first:
-//   * If strict mode, value must already be of the correct type
-//   * Otherwise, attempt to cast/coerce the value
-//   * Handle union types (e.g., float|int)
-//   * Handle nullable types (e.g., ?string)
-// - For ArrayOf:
-//   * Validate each element of the array against the specified types
-//   * Nested arrays create dot-notation paths (e.g., "users.0.email")
-// - Apply other rules in order
-// - For nested objects:
-//   * Recursively validate nested Base model instances
-//   * Build nested error paths
-// - If stopAtFirstError is true, throw ValidationException immediately on first error
-//   * Otherwise, add error to errors collection and continue
-
-bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors, zend_string *parent_path)
-{
-    ZEND_ASSERT(Z_TYPE_P(raw_data) == IS_ARRAY);
-    ZEND_ASSERT(Z_TYPE_P(errors) == IS_ARRAY);
-
-    while (prop_info->model_ce != NULL && prop_info->model_ce != AV_BaseModel_ce) {
-        zend_string *property_name = NULL;
-        av_field field = {
-            .parent = parent_path,
-        };
-
-        ZEND_HASH_FOREACH_STR_KEY_PTR(&prop_info->model_ce->properties_info, property_name, prop_info->property)
-        {
-            if (prop_info->property->flags & ZEND_ACC_STATIC)
-                continue;
-            if (prop_info->property->flags & (ZEND_ACC_PROTECTED | ZEND_ACC_PRIVATE))
-                continue;
-
-            field.name = get_property_name(prop_info, property_name, properties->alias_generator);
-            bool is_to_release_field_name = (field.name != property_name && field.name != NULL);
-
-            if (UNEXPECTED(EG(exception))) {
-                if (is_to_release_field_name)
-                    zend_string_release(field.name);
-                return false;
-            }
-
-            field.value = get_property_value(prop_info->model_ce, raw_data, field.name);
-
-            if (field.value == NULL) {
-                const bool has_default_value = has_property_default_value(prop_info);
-                if (has_default_value) {
-                    if (is_to_release_field_name)
-                        zend_string_release(field.name);
-                    continue;
-                }
-
-                av_add_field_error_with_prefix(AV_ERROR_REQUIRED, &field, prop_info, errors);
-                if (is_to_release_field_name)
-                    zend_string_release(field.name);
-                if (properties->stop_first_error) {
-                    return false;
-                }
-                continue;
-            }
-
-            // field->parent keeps the parent-excludes-own-name invariant:
-            // error paths and the nested recursion compose the full dot
-            // path only where it is needed
-            const bool is_valid = validate_field_value(&field, prop_info, properties, errors);
-            if (is_to_release_field_name)
-                zend_string_release(field.name);
-
-            if (!is_valid) {
-                if (properties->stop_first_error)
-                    return false;
-                continue;
-            }
-
-            // Direct offset write: the value is already of the declared
-            // type, so the property name lookup and the type
-            // re-verification of zend_update_property() are redundant
-            zval *property_slot = OBJ_PROP(Z_OBJ_P(prop_info->model), prop_info->property->offset);
-            zval_ptr_dtor(property_slot);
-            ZVAL_COPY(property_slot, field.value);
-        }
-        ZEND_HASH_FOREACH_END();
-
-        prop_info->model_ce = prop_info->model_ce->parent;
-    }
-
-    return zend_hash_num_elements(Z_ARRVAL_P(errors)) == 0;
-}
 
 zend_result av_hydrate_model(zval *raw_data, zval *model)
 {
-    zval configs_obj;
-    av_model_configs_properties properties;
-
-    // The ModelConfigs object and the hook dispatches are only needed
-    // when a hook is actually overridden
-    bool hooks_overridden = av_model_overrides_hooks(Z_OBJCE_P(model));
-
-    av_get_model_configs(&configs_obj, model, &properties, hooks_overridden);
-    if (UNEXPECTED(EG(exception))) {
-        zval_ptr_dtor(&configs_obj);
+    // The compiled plan carries the parsed ModelConfigs and the hook
+    // override check; only a model overriding a hook pays for the
+    // ModelConfigs object
+    av_compiled_model *plan = av_get_root_compiled_model(model);
+    if (UNEXPECTED(plan == NULL)) {
         return FAILURE;
     }
 
-    if (hooks_overridden) {
+    zval configs_obj;
+    ZVAL_UNDEF(&configs_obj);
+
+    if (plan->hooks_overridden) {
+        av_model_configs_properties hook_properties;
+        av_get_model_configs(&configs_obj, model, &hook_properties, true);
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            zval_ptr_dtor(&configs_obj);
+            return FAILURE;
+        }
+
         av_call_before_validation_hook(model, raw_data, &configs_obj);
         if (EG(exception)) {
             zval_ptr_dtor(&configs_obj);
@@ -295,11 +40,7 @@ zend_result av_hydrate_model(zval *raw_data, zval *model)
     zval errors;
     array_init(&errors);
 
-    av_property_info property_info = {
-        .model = model,
-        .model_ce = Z_OBJCE_P(model),
-    };
-    if (!av_validate_model_internal(raw_data, &property_info, &properties, &errors, NULL)) {
+    if (!av_compiled_validate_model(raw_data, model, &plan->configs, &errors, NULL)) {
         // A failure with a pending exception comes from a thrown error
         // (unbuildable attribute spec, class not found, hook exception):
         // let it propagate instead of masking it with an empty
@@ -318,10 +59,10 @@ zend_result av_hydrate_model(zval *raw_data, zval *model)
         return FAILURE;
     }
 
-    if (hooks_overridden) {
+    if (plan->hooks_overridden) {
         av_call_after_validation_hook(model, raw_data, &configs_obj);
+        zval_ptr_dtor(&configs_obj);
     }
-    zval_ptr_dtor(&configs_obj);
     zval_ptr_dtor(&errors);
 
     if (UNEXPECTED(EG(exception) != NULL)) {

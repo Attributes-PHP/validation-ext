@@ -13,8 +13,6 @@ ZEND_END_ARG_INFO()
 
 ZEND_FUNCTION(validate);
 
-bool av_validate_model_internal(zval *raw_data, av_property_info *property_info, av_model_configs_properties *properties, zval *errors, zend_string *parent_path);
-
 /**
  * Runs the full validation flow for one model instance: ModelConfigs,
  * before/after validation hooks and property hydration from raw data.
@@ -25,11 +23,5 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *property_info,
  *                  throwing (ValidationException or a hook exception)
  */
 zend_result av_hydrate_model(zval *raw_data, zval *model);
-void av_clear_field_name_cache(void);
-
-static zend_always_inline zend_string *transform_property_name(zend_string *property_name, char alias_generator);
-static zend_always_inline zend_string *get_property_name(av_property_info *property_info, zend_string *property_name, char alias_generator);
-static zend_always_inline zval *get_property_value(zend_class_entry *model_ce, zval *raw_data, zend_string *field_name);
-static inline bool validate_field_value(av_field *field, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors);
 
 #endif /* AV_VALIDATE_FUNCTION_H */

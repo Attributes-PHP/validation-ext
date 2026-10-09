@@ -1182,14 +1182,26 @@ void av_clear_array_spec_cache(void)
     }
 }
 
-bool av_validate_array_typehint(av_field *field, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors)
+bool av_validate_array_typehint_cached(av_field *field, av_compiled_field *cf, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors)
 {
+    if (cf->array_state == AV_ARRAY_ABSENT) {
+        return true;
+    }
+
+    if (cf->array_state == AV_ARRAY_SPEC) {
+        return validate_array_elements(field, prop_info, cf->array_spec, properties, errors);
+    }
+
+    // First array-valued validation for this slot: probe the attributes
+    // and the spec cache once, then borrow the spec for later calls
     if (prop_info->property->attributes == NULL) {
+        cf->array_state = AV_ARRAY_ABSENT;
         return true;
     }
 
     const zend_attribute *attribute = find_array_attribute(prop_info->property->attributes);
     if (attribute == NULL) {
+        cf->array_state = AV_ARRAY_ABSENT;
         return true;
     }
 
@@ -1207,6 +1219,7 @@ bool av_validate_array_typehint(av_field *field, av_property_info *prop_info, av
 
         spec = build_spec_from_attribute(attribute, &ctx);
         if (spec == NULL) {
+            // Failed builds stay unprobed so their errors keep firing
             return false;
         }
 
@@ -1217,6 +1230,9 @@ bool av_validate_array_typehint(av_field *field, av_property_info *prop_info, av
 
         zend_hash_index_add_ptr(av_spec_cache, (zend_ulong)(uintptr_t)prop_info->property, spec);
     }
+
+    cf->array_spec = spec;
+    cf->array_state = AV_ARRAY_SPEC;
 
     return validate_array_elements(field, prop_info, spec, properties, errors);
 }
