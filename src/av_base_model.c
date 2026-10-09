@@ -53,3 +53,16 @@ void av_call_after_validation_hook(zval *model, zval *raw_data, zval *configs)
 {
     zend_call_method_with_2_params(Z_OBJ_P(model), Z_OBJCE_P(model), NULL, "afterValidation", NULL, raw_data, configs);
 }
+
+/*
+ * Whether the model class overrides a validation hook. Inherited (but not
+ * overridden) entries stay scoped to BaseModel, so comparing the declaring
+ * scope detects overrides without instantiation.
+ */
+bool av_model_overrides_hooks(zend_class_entry *model_ce)
+{
+    zend_function *before = zend_hash_str_find_ptr(&model_ce->function_table, "beforevalidation", sizeof("beforevalidation") - 1);
+    zend_function *after = zend_hash_str_find_ptr(&model_ce->function_table, "aftervalidation", sizeof("aftervalidation") - 1);
+
+    return (before != NULL && before->common.scope != AV_BaseModel_ce) || (after != NULL && after->common.scope != AV_BaseModel_ce);
+}

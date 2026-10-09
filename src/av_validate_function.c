@@ -210,16 +210,23 @@ zend_result av_hydrate_model(zval *raw_data, zval *model)
 {
     zval configs_obj;
     av_model_configs_properties properties;
-    av_get_model_configs(&configs_obj, model, &properties, true);
+
+    // The ModelConfigs object and the hook dispatches are only needed
+    // when a hook is actually overridden
+    bool hooks_overridden = av_model_overrides_hooks(Z_OBJCE_P(model));
+
+    av_get_model_configs(&configs_obj, model, &properties, hooks_overridden);
     if (UNEXPECTED(EG(exception))) {
         zval_ptr_dtor(&configs_obj);
         return FAILURE;
     }
 
-    av_call_before_validation_hook(model, raw_data, &configs_obj);
-    if (EG(exception)) {
-        zval_ptr_dtor(&configs_obj);
-        return FAILURE;
+    if (hooks_overridden) {
+        av_call_before_validation_hook(model, raw_data, &configs_obj);
+        if (EG(exception)) {
+            zval_ptr_dtor(&configs_obj);
+            return FAILURE;
+        }
     }
 
     zval errors;
@@ -248,7 +255,9 @@ zend_result av_hydrate_model(zval *raw_data, zval *model)
         return FAILURE;
     }
 
-    av_call_after_validation_hook(model, raw_data, &configs_obj);
+    if (hooks_overridden) {
+        av_call_after_validation_hook(model, raw_data, &configs_obj);
+    }
     zval_ptr_dtor(&configs_obj);
     zval_ptr_dtor(&errors);
 

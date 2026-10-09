@@ -27,5 +27,6 @@ static const zend_function_entry class_AV_BaseModel_methods[] = {ZEND_ME(AV_Base
 void av_register_BaseModel_class(void);
 void av_call_before_validation_hook(zval *model, zval *raw_data, zval *configs);
 void av_call_after_validation_hook(zval *model, zval *raw_data, zval *configs);
+bool av_model_overrides_hooks(zend_class_entry *model_ce);
 
 #endif /* AV_BASEMODEL_H */
