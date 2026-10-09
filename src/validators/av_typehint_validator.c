@@ -177,7 +177,12 @@ bool av_handle_class_by_ce(av_field *field, av_property_info *prop_info, zend_cl
         zval model_obj;
         object_init_ex(&model_obj, ce);
 
-        zend_string *nested_path = field->parent ? zend_string_copy(field->parent) : field->name;
+        // The field parent excludes the property's own name, so the
+        // nested validation path composes the full dot path here
+        zend_string *nested_path = av_string_dot_concat(field->parent, field->name);
+        if (nested_path == NULL) {
+            nested_path = zend_string_copy(field->name);
+        }
 
         av_property_info property_info = {
             .model = &model_obj,
@@ -185,8 +190,7 @@ bool av_handle_class_by_ce(av_field *field, av_property_info *prop_info, zend_cl
         };
         bool result = av_validate_model_internal(field->value, &property_info, properties, errors, nested_path);
 
-        if (field->parent)
-            zend_string_release(nested_path);
+        zend_string_release(nested_path);
 
         if (result) {
             zval_ptr_dtor(field->value);

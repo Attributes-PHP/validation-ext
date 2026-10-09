@@ -273,6 +273,21 @@ describe('validate function error handling', function () {
         ],
     ]);
 
+    it('generates the nested property path for a nested type error', function () {
+        $model = new class extends BaseModel {
+            public BasicModel $one;
+        };
+
+        try {
+            validate(['one' => ['field' => []]], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getErrors())->toBe([
+                'one.field' => ['Must be string'],
+            ]);
+        }
+    });
+
     it('generates proper message for basic unions', function (BaseModel $model, string $expectedErrorMessage) {
         try {
             validate(['field' => (object) []], $model);

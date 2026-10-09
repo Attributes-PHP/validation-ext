@@ -1020,15 +1020,12 @@ static av_element_result validate_value_against_arms(av_field *element_field, av
             // Element fields follow the parent-excludes-own-name
             // invariant, so the element key is appended here first.
             av_field hydration_field = {
-                .parent = av_string_dot_concat(element_field->parent, element_field->name),
+                .parent = element_field->parent,
                 .name = element_field->name,
                 .value = element_field->value,
             };
 
-            bool handled = hydration_field.parent != NULL && av_handle_class_by_ce(&hydration_field, prop_info, arm->ce, properties, errors);
-            if (hydration_field.parent != NULL) {
-                zend_string_release(hydration_field.parent);
-            }
+            bool handled = av_handle_class_by_ce(&hydration_field, prop_info, arm->ce, properties, errors);
 
             if (handled) {
                 return AV_ELEMENT_VALID;

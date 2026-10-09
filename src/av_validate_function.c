@@ -241,14 +241,10 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_
                 continue;
             }
 
-            field.parent = av_string_dot_concat(parent_path, field.name);
-
+            // field->parent keeps the parent-excludes-own-name invariant:
+            // error paths and the nested recursion compose the full dot
+            // path only where it is needed
             const bool is_valid = validate_field_value(&field, prop_info, properties, errors);
-
-            if (field.parent) {
-                zend_string_release(field.parent);
-                field.parent = parent_path;
-            }
             if (is_to_release_field_name)
                 zend_string_release(field.name);
 
