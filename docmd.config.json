@@ -1,0 +1,55 @@
+{
+  "title": "Attributes Validation",
+  "url": "https://validation.attributes-php.com",
+  "src": "docs",
+  "out": "site",
+  "engine": "js",
+  "layout": {
+    "spa": true,
+    "header": {
+      "enabled": true
+    },
+    "sidebar": {
+      "collapsible": true,
+      "defaultCollapsed": false
+    },
+    "optionsMenu": {
+      "position": "sidebar-top",
+      "components": {
+        "search": true,
+        "themeSwitch": true
+      }
+    },
+    "footer": {
+      "style": "minimal",
+      "content": "© 2026 Attributes Validation.",
+      "branding": true
+    }
+  },
+  "theme": {
+    "name": "default",
+    "appearance": "system",
+    "codeHighlight": true
+  },
+  "minify": true,
+  "autoTitleFromH1": true,
+  "copyCode": true,
+  "pageNavigation": true,
+  "navigation": [
+    { "title": "Overview", "path": "/", "icon": "zap" },
+    { "title": "validate()", "path": "/validate/", "icon": "book-open" }
+  ],
+  "plugins": {
+    "ai": {
+      "assistant": false,
+      "projectId": ""
+    },
+    "git": {
+      "commitHistory": true,
+      "maxCommits": 5
+    },
+    "seo": {
+      "defaultDescription": "Pydantic-inspired PHP extension that validates data via type hints at native speed."
+    }
+  }
+}
