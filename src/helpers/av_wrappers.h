@@ -51,6 +51,11 @@
 #define av_get_attribute_value(ret, attribute, arg_num, scope)            zend_get_attribute_value(ret, attribute, arg_num, scope)
 #define av_throw_value_error(message)                                     zend_throw_exception_ex(zend_ce_value_error, 0, "%s", message)
 #define av_binary_strcasecmp(s1, len1, s2, len2)                          zend_binary_strcasecmp(s1, len1, s2, len2)
+#define av_hash_init(ht, size, dtor, persistent)                          zend_hash_init(ht, size, NULL, dtor, persistent)
+#define av_hash_destroy(ht)                                               zend_hash_destroy(ht)
+#define av_hash_index_find_ptr(ht, h)                                     zend_hash_index_find_ptr(ht, h)
+#define av_hash_index_add_ptr(ht, h, data)                                zend_hash_index_add_ptr(ht, h, data)
+#define av_has_exception()                                                (EG(exception) != NULL)
 
 #else
 /* Testing mode: function declarations for CMock */
@@ -94,6 +99,15 @@ void *av_get_attribute_str(HashTable *attributes, const char *str, size_t len);
 zend_result av_get_attribute_value(zval *ret, void *attribute, uint32_t arg_num, zend_class_entry *scope);
 void av_throw_value_error(const char *message);
 int av_binary_strcasecmp(const char *s1, size_t len1, const char *s2, size_t len2);
+
+/* Additional wrappers used by the per-property error templates cache in
+ * av_error_messages.c, so its hash table operations stay mockable and the
+ * unit-test build remains free of unresolved Zend/library symbols. */
+void av_hash_init(HashTable *ht, uint32_t size, dtor_func_t dtor, bool persistent);
+void av_hash_destroy(HashTable *ht);
+void *av_hash_index_find_ptr(HashTable *ht, zend_ulong h);
+void *av_hash_index_add_ptr(HashTable *ht, zend_ulong h, void *data);
+bool av_has_exception(void);
 
 #endif /* TESTING */
 

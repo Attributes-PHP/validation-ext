@@ -1,5 +1,6 @@
 #include "unity.h"
 #include "helpers/mock_av_wrappers.h"
+#include "av_globals.h"
 #include <Zend/zend_types.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -7,6 +8,11 @@
 
 // Stub implementations for av_wrappers to be used in tests
 // These provide real implementations that the tests can use
+
+// av_error_messages.c stores its per-request caches in the module globals
+// (AV_G). The unit-test executables link that translation unit but have no
+// engine, so define the globals struct as a plain zero-initialized instance.
+ZEND_DECLARE_MODULE_GLOBALS(attributes_validation)
 
 zend_string *string_init_stub(const char *str, size_t len, bool persistent, int num_calls)
 {
@@ -151,4 +157,44 @@ int ap_php_snprintf(char *buf, size_t len, const char *format, ...)
 int ap_php_vsnprintf(char *buf, size_t len, const char *format, va_list ap)
 {
     return __builtin_vsnprintf(buf, len, format, ap);
+}
+
+// Stubs for the error-templates cache wrappers. There is no engine and no
+// real hash table in the unit tests: every lookup misses (each template is
+// resolved fresh, like the pre-cache behavior), inserts are no-ops.
+void hash_init_stub(HashTable *ht, uint32_t size, dtor_func_t dtor, bool persistent, int num_calls)
+{
+    (void)ht;
+    (void)size;
+    (void)dtor;
+    (void)persistent;
+    (void)num_calls;
+}
+
+void hash_destroy_stub(HashTable *ht, int num_calls)
+{
+    (void)ht;
+    (void)num_calls;
+}
+
+void *hash_index_find_ptr_stub(HashTable *ht, zend_ulong h, int num_calls)
+{
+    (void)ht;
+    (void)h;
+    (void)num_calls;
+    return NULL;
+}
+
+void *hash_index_add_ptr_stub(HashTable *ht, zend_ulong h, void *data, int num_calls)
+{
+    (void)ht;
+    (void)h;
+    (void)num_calls;
+    return data;
+}
+
+bool has_exception_stub(int num_calls)
+{
+    (void)num_calls;
+    return false;
 }

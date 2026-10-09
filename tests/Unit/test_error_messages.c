@@ -60,6 +60,14 @@ void setUp(void)
     // Union rendering looks up named types to detect enums; the unit tests
     // have no class table, so treat every lookup as "class not found".
     av_lookup_class_ex_IgnoreAndReturn(NULL);
+    // The {expected} resolution goes through the per-property templates
+    // cache; the tests have no hash table, so every lookup misses and each
+    // template is resolved fresh, matching the pre-cache behavior.
+    av_hash_init_Stub(hash_init_stub);
+    av_hash_destroy_Stub(hash_destroy_stub);
+    av_hash_index_find_ptr_Stub(hash_index_find_ptr_stub);
+    av_hash_index_add_ptr_Stub(hash_index_add_ptr_stub);
+    av_has_exception_Stub(has_exception_stub);
 }
 
 void tearDown(void)

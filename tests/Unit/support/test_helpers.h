@@ -16,6 +16,13 @@ extern zend_string *string_copy_stub(zend_string *s, int num_calls);
 extern zend_string *long_to_str_stub(zend_long num, int num_calls);
 extern zend_string *double_to_str_stub(double num, int num_calls);
 
+// Stubs for the error-templates cache wrappers (no real hash table in tests)
+extern void hash_init_stub(HashTable *ht, uint32_t size, dtor_func_t dtor, bool persistent, int num_calls);
+extern void hash_destroy_stub(HashTable *ht, int num_calls);
+extern void *hash_index_find_ptr_stub(HashTable *ht, zend_ulong h, int num_calls);
+extern void *hash_index_add_ptr_stub(HashTable *ht, zend_ulong h, void *data, int num_calls);
+extern bool has_exception_stub(int num_calls);
+
 // Stubs for the PHP snprintf API (php.h #defines snprintf/vsnprintf to
 // ap_php_snprintf/ap_php_vsnprintf). The Ceedling unit-test build has no
 // Zend library to link against, so these delegate to the compiler builtins so

@@ -365,20 +365,20 @@ static void error_templates_cache_dtor(zval *entry)
 
     for (uint32_t i = 0; i < 2; i++) {
         if (cached->templates[i] != NULL) {
-            zend_string_release(cached->templates[i]);
+            av_string_release(cached->templates[i]);
         }
     }
     if (cached->expected != NULL) {
-        zend_string_release(cached->expected);
+        av_string_release(cached->expected);
     }
-    efree(cached);
+    av_efree(cached);
 }
 
 void av_clear_error_templates_cache(void)
 {
     if (AV_G(av_error_templates_cache) != NULL) {
-        zend_hash_destroy(AV_G(av_error_templates_cache));
-        efree(AV_G(av_error_templates_cache));
+        av_hash_destroy(AV_G(av_error_templates_cache));
+        av_efree(AV_G(av_error_templates_cache));
         AV_G(av_error_templates_cache) = NULL;
     }
 }
@@ -386,23 +386,23 @@ void av_clear_error_templates_cache(void)
 static av_property_error_templates *get_property_error_templates(av_property_info *property)
 {
     if (AV_G(av_error_templates_cache) != NULL) {
-        av_property_error_templates *cached = zend_hash_index_find_ptr(AV_G(av_error_templates_cache), (zend_ulong)(uintptr_t)property->property);
+        av_property_error_templates *cached = av_hash_index_find_ptr(AV_G(av_error_templates_cache), (zend_ulong)(uintptr_t)property->property);
         if (cached != NULL) {
             return cached;
         }
     }
 
-    av_property_error_templates *cached = emalloc(sizeof(av_property_error_templates));
+    av_property_error_templates *cached = av_emalloc(sizeof(av_property_error_templates));
     cached->templates[AV_ERROR_REQUIRED] = NULL;
     cached->templates[AV_ERROR_TYPE] = NULL;
     cached->expected = NULL;
 
     if (AV_G(av_error_templates_cache) == NULL) {
-        AV_G(av_error_templates_cache) = emalloc(sizeof(HashTable));
-        zend_hash_init(AV_G(av_error_templates_cache), 8, NULL, error_templates_cache_dtor, 0);
+        AV_G(av_error_templates_cache) = av_emalloc(sizeof(HashTable));
+        av_hash_init(AV_G(av_error_templates_cache), 8, error_templates_cache_dtor, 0);
     }
 
-    zend_hash_index_add_ptr(AV_G(av_error_templates_cache), (zend_ulong)(uintptr_t)property->property, cached);
+    av_hash_index_add_ptr(AV_G(av_error_templates_cache), (zend_ulong)(uintptr_t)property->property, cached);
 
     return cached;
 }
@@ -517,7 +517,7 @@ static zend_string *get_custom_error_template(av_error_type type, av_property_in
     }
 
     zend_string *template = resolve_error_template(type, property);
-    if (UNEXPECTED(EG(exception) != NULL)) {
+    if (UNEXPECTED(av_has_exception())) {
         return NULL;
     }
 
