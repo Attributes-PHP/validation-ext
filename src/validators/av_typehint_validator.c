@@ -16,6 +16,14 @@
 zend_class_entry *datetime_ce;
 zend_class_entry *datetime_interface_ce;
 
+/*
+ * Cached pieces of the string-to-DateTime coercion: the format string
+ * and the resolved date_create_from_format live for the whole request,
+ * so coercions make no per-call allocations and no callable resolution.
+ */
+static zend_string *av_datetime_format;
+static zend_function *av_date_create_from_format_fn;
+
 /**
  * Initializes necessary class entries.
  */
@@ -31,6 +39,25 @@ void av_init_typehint_validator()
 
     if (!datetime_ce || !datetime_interface_ce) {
         zend_throw_error(NULL, "DateTime or DateTimeInterface class not available. Ensure the datetime extension is loaded.");
+        return;
+    }
+
+    av_datetime_format = zend_string_init("X-m-d\\TH:i:sP", sizeof("X-m-d\\TH:i:sP") - 1, 0);
+
+    zend_string *fn_name = zend_string_init("date_create_from_format", sizeof("date_create_from_format") - 1, 0);
+    av_date_create_from_format_fn = zend_hash_find_ptr(EG(function_table), fn_name);
+    zend_string_release(fn_name);
+
+    if (av_date_create_from_format_fn == NULL) {
+        zend_throw_error(NULL, "date_create_from_format not available. Ensure the datetime extension is loaded.");
+    }
+}
+
+void av_shutdown_typehint_validator(void)
+{
+    if (av_datetime_format != NULL) {
+        zend_string_release(av_datetime_format);
+        av_datetime_format = NULL;
     }
 }
 
@@ -102,40 +129,25 @@ static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_c
         return false;
     }
 
-    zval format, datetime_obj;
-    ZVAL_STRING(&format, "X-m-d\\TH:i:sP");
-
+    // The call frame copies and releases its own parameter references:
+    // args[0] borrows the request-lifetime format string, args[1] owns
+    // the single reference released after the call
     zval args[2];
-    ZVAL_COPY(&args[0], &format);
+    ZVAL_STR(&args[0], av_datetime_format);
     ZVAL_COPY(&args[1], value);
 
-    zend_fcall_info fci;
-    zend_fcall_info_cache fcc;
-    zval function_name;
+    zval datetime_obj;
+    ZVAL_UNDEF(&datetime_obj);
 
-    ZVAL_STRING(&function_name, "date_create_from_format");
+    zend_call_known_function(av_date_create_from_format_fn, NULL, NULL, &datetime_obj, 2, args, NULL);
 
-    fci.size = sizeof(fci);
-    fci.object = NULL;
-    fci.function_name = function_name;
-    fci.retval = &datetime_obj;
-    fci.param_count = 2;
-    fci.params = args;
-    fci.named_params = NULL;
+    zval_ptr_dtor(&args[1]);
 
-    fcc.function_handler = NULL;
-    fcc.calling_scope = NULL;
-    fcc.called_scope = NULL;
-    fcc.object = NULL;
-
-    zend_result result = zend_call_function(&fci, &fcc);
-
-    zval_ptr_dtor(&format);
-    zval_ptr_dtor(&function_name);
-
-    if (result == SUCCESS && Z_TYPE(datetime_obj) == IS_OBJECT && Z_OBJCE_P(&datetime_obj) == datetime_ce) {
+    if (Z_TYPE(datetime_obj) == IS_OBJECT && Z_OBJCE_P(&datetime_obj) == datetime_ce) {
         zval_ptr_dtor(value);
-        ZVAL_COPY(value, &datetime_obj);
+        // Move the single reference owned by the retval instead of
+        // copying: ZVAL_COPY would leak one reference per coercion
+        ZVAL_COPY_VALUE(value, &datetime_obj);
         return true;
     }
 

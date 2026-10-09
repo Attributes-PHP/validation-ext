@@ -31,6 +31,7 @@ bool av_handle_class_by_ce(av_field *field, av_property_info *prop_info, zend_cl
 bool av_coerce_bool(av_field *field);
 
 void av_init_typehint_validator(void);
+void av_shutdown_typehint_validator(void);
 
 /**
  * Validates that a value matches the property's compiled type arms.
