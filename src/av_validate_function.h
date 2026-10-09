@@ -25,6 +25,7 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *property_info,
  *                  throwing (ValidationException or a hook exception)
  */
 zend_result av_hydrate_model(zval *raw_data, zval *model);
+void av_clear_field_name_cache(void);
 
 static zend_always_inline zend_string *transform_property_name(zend_string *property_name, char alias_generator);
 static zend_always_inline zend_string *get_property_name(av_property_info *property_info, zend_string *property_name, char alias_generator);

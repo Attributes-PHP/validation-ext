@@ -36,12 +36,12 @@ static zend_always_inline zend_string *transform_property_name(zend_string *prop
 }
 
 /**
- * Retrieves the property name from the following priority:
+ * Resolves the field name of a property:
  *  1) If the Alias attribute is set uses that value
  *  2) If aliasGenerator is configured, transforms the property name
  *  3) Otherwise uses the property name as-is
  */
-static zend_always_inline zend_string *get_property_name(av_property_info *property_info, zend_string *property_name, char alias_generator)
+static zend_string *resolve_field_name(av_property_info *property_info, zend_string *property_name, char alias_generator)
 {
     zend_string *field_name = NULL;
 
@@ -69,6 +69,68 @@ static zend_always_inline zend_string *get_property_name(av_property_info *prope
     }
 
     return property_name;
+}
+
+/*
+ * Field name cache, keyed by the property info: the Alias attribute and
+ * the alias generator never change within a request, so resolutions run
+ * once per property. The cache owns one reference; hits hand out an
+ * additional one. Erroring resolutions stay uncached so their errors
+ * keep firing.
+ */
+static HashTable *av_field_name_cache = NULL;
+
+static void av_field_name_cache_dtor(zval *entry)
+{
+    zend_string_release(Z_PTR_P(entry));
+}
+
+void av_clear_field_name_cache(void)
+{
+    if (av_field_name_cache != NULL) {
+        zend_hash_destroy(av_field_name_cache);
+        efree(av_field_name_cache);
+        av_field_name_cache = NULL;
+    }
+}
+
+static zend_string *get_property_name(av_property_info *property_info, zend_string *property_name, char alias_generator)
+{
+    // Properties without attributes and without a generator resolve to
+    // the property name directly: nothing to cache
+    if (property_info->property->attributes == NULL && alias_generator == false) {
+        return property_name;
+    }
+
+    if (av_field_name_cache != NULL) {
+        zend_string *cached = zend_hash_index_find_ptr(av_field_name_cache, (zend_ulong)(uintptr_t)property_info->property);
+        if (cached != NULL) {
+            return zend_string_copy(cached);
+        }
+    }
+
+    zend_string *field_name = resolve_field_name(property_info, property_name, alias_generator);
+
+    // The error path (pending exception) must keep firing
+    if (field_name == NULL || UNEXPECTED(EG(exception) != NULL)) {
+        return field_name;
+    }
+
+    // A property with attributes but no Alias and no generator resolves
+    // to the property name: cache the miss too, so its attribute lookup
+    // is not repeated on every validation
+    if (field_name == property_name) {
+        field_name = zend_string_copy(property_name);
+    }
+
+    if (av_field_name_cache == NULL) {
+        av_field_name_cache = emalloc(sizeof(HashTable));
+        zend_hash_init(av_field_name_cache, 8, NULL, av_field_name_cache_dtor, 0);
+    }
+
+    zend_hash_index_add_ptr(av_field_name_cache, (zend_ulong)(uintptr_t)property_info->property, field_name);
+
+    return zend_string_copy(field_name);
 }
 
 static zend_always_inline zval *get_property_value(zend_class_entry *model_ce, zval *raw_data, zend_string *field_name)

@@ -62,6 +62,7 @@ PHP_RSHUTDOWN_FUNCTION(attributes_validation)
 {
     av_clear_model_configs_cache();
     av_clear_array_spec_cache();
+    av_clear_field_name_cache();
 
     return SUCCESS;
 }
