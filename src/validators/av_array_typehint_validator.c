@@ -1,4 +1,5 @@
 #include "av_array_typehint_validator.h"
+#include "../av_globals.h"
 #include "../av_base_model.h"
 #include "../av_type.h"
 #include "../fields/av_dict.h"
@@ -1161,13 +1162,12 @@ static bool validate_array_elements(av_field *field, av_property_info *prop_info
  * ========================================================================= */
 
 /*
- * Spec cache, keyed by the property info: attribute arguments never
- * change within a request, so the spec tree is built once per property
- * and freed at request shutdown. Failed builds (spec errors) stay
- * uncached so their errors keep firing.
+ * Spec cache, keyed by the property info and stored in the module
+ * globals (see av_globals.h): attribute arguments never change within a
+ * request, so the spec tree is built once per property and freed at
+ * request shutdown. Failed builds (spec errors) stay uncached so their
+ * errors keep firing.
  */
-static HashTable *av_spec_cache = NULL;
-
 static void av_spec_cache_entry_dtor(zval *entry)
 {
     free_spec(Z_PTR_P(entry));
@@ -1175,10 +1175,10 @@ static void av_spec_cache_entry_dtor(zval *entry)
 
 void av_clear_array_spec_cache(void)
 {
-    if (av_spec_cache != NULL) {
-        zend_hash_destroy(av_spec_cache);
-        efree(av_spec_cache);
-        av_spec_cache = NULL;
+    if (AV_G(av_spec_cache) != NULL) {
+        zend_hash_destroy(AV_G(av_spec_cache));
+        efree(AV_G(av_spec_cache));
+        AV_G(av_spec_cache) = NULL;
     }
 }
 
@@ -1207,8 +1207,8 @@ bool av_validate_array_typehint_cached(av_field *field, av_compiled_field *cf, a
 
     av_spec *spec = NULL;
 
-    if (av_spec_cache != NULL) {
-        spec = zend_hash_index_find_ptr(av_spec_cache, (zend_ulong)(uintptr_t)prop_info->property);
+    if (AV_G(av_spec_cache) != NULL) {
+        spec = zend_hash_index_find_ptr(AV_G(av_spec_cache), (zend_ulong)(uintptr_t)prop_info->property);
     }
 
     if (spec == NULL) {
@@ -1223,12 +1223,12 @@ bool av_validate_array_typehint_cached(av_field *field, av_compiled_field *cf, a
             return false;
         }
 
-        if (av_spec_cache == NULL) {
-            av_spec_cache = emalloc(sizeof(HashTable));
-            zend_hash_init(av_spec_cache, 8, NULL, av_spec_cache_entry_dtor, 0);
+        if (AV_G(av_spec_cache) == NULL) {
+            AV_G(av_spec_cache) = emalloc(sizeof(HashTable));
+            zend_hash_init(AV_G(av_spec_cache), 8, NULL, av_spec_cache_entry_dtor, 0);
         }
 
-        zend_hash_index_add_ptr(av_spec_cache, (zend_ulong)(uintptr_t)prop_info->property, spec);
+        zend_hash_index_add_ptr(AV_G(av_spec_cache), (zend_ulong)(uintptr_t)prop_info->property, spec);
     }
 
     cf->array_spec = spec;

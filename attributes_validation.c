@@ -7,6 +7,7 @@
 #include "attributes_validation.h"
 
 /* Include the component headers */
+#include "src/av_globals.h"
 #include "src/av_base_model.h"
 #include "src/av_compiled_model.h"
 #include "src/av_exception.h"
@@ -20,6 +21,16 @@
 #include "src/fields/av_sequence.h"
 #include "src/fields/av_union.h"
 #include "src/validators/av_typehint_validator.h"
+
+ZEND_DECLARE_MODULE_GLOBALS(attributes_validation)
+
+static PHP_GINIT_FUNCTION(attributes_validation)
+{
+    attributes_validation_globals->av_model_configs_cache = NULL;
+    attributes_validation_globals->av_field_name_cache = NULL;
+    attributes_validation_globals->av_plans_cache = NULL;
+    attributes_validation_globals->av_spec_cache = NULL;
+}
 
 /* Module startup */
 PHP_MINIT_FUNCTION(attributes_validation)
@@ -93,7 +104,11 @@ zend_module_entry attributes_validation_module_entry = {
     PHP_RSHUTDOWN(attributes_validation),
     PHP_MINFO(attributes_validation),
     EXTENSION_VERSION,
-    STANDARD_MODULE_PROPERTIES
+    PHP_MODULE_GLOBALS(attributes_validation), /* globals descriptor */
+    PHP_GINIT(attributes_validation),          /* globals ctor */
+    NULL,                                      /* globals dtor */
+    NULL,                                      /* post deactivate */
+    STANDARD_MODULE_PROPERTIES_EX
 };
 
 #ifdef COMPILE_DL_ATTRIBUTES_VALIDATION

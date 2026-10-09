@@ -1,4 +1,5 @@
 #include "av_compiled_model.h"
+#include "av_globals.h"
 #include "av_base_model.h"
 #include "av_exception.h"
 #include "av_validate_function.h"
@@ -73,14 +74,12 @@ static zend_string *resolve_field_name(av_property_info *property_info, zend_str
 }
 
 /*
- * Field name cache, keyed by the property info: the Alias attribute and
- * the alias generator never change within a request, so resolutions run
- * once per property. The cache owns one reference; hits hand out an
- * additional one. Erroring resolutions stay uncached so their errors
- * keep firing.
+ * Field name cache, keyed by the property info and stored in the module
+ * globals (see av_globals.h): the Alias attribute and the alias
+ * generator never change within a request, so resolutions run once per
+ * property. The cache owns one reference; hits hand out an additional
+ * one. Erroring resolutions stay uncached so their errors keep firing.
  */
-static HashTable *av_field_name_cache = NULL;
-
 static void av_field_name_cache_dtor(zval *entry)
 {
     zend_string_release(Z_PTR_P(entry));
@@ -88,10 +87,10 @@ static void av_field_name_cache_dtor(zval *entry)
 
 void av_clear_field_name_cache(void)
 {
-    if (av_field_name_cache != NULL) {
-        zend_hash_destroy(av_field_name_cache);
-        efree(av_field_name_cache);
-        av_field_name_cache = NULL;
+    if (AV_G(av_field_name_cache) != NULL) {
+        zend_hash_destroy(AV_G(av_field_name_cache));
+        efree(AV_G(av_field_name_cache));
+        AV_G(av_field_name_cache) = NULL;
     }
 }
 
@@ -103,8 +102,8 @@ static zend_string *get_property_name(av_property_info *property_info, zend_stri
         return property_name;
     }
 
-    if (av_field_name_cache != NULL) {
-        zend_string *cached = zend_hash_index_find_ptr(av_field_name_cache, (zend_ulong)(uintptr_t)property_info->property);
+    if (AV_G(av_field_name_cache) != NULL) {
+        zend_string *cached = zend_hash_index_find_ptr(AV_G(av_field_name_cache), (zend_ulong)(uintptr_t)property_info->property);
         if (cached != NULL) {
             return zend_string_copy(cached);
         }
@@ -124,12 +123,12 @@ static zend_string *get_property_name(av_property_info *property_info, zend_stri
         field_name = zend_string_copy(property_name);
     }
 
-    if (av_field_name_cache == NULL) {
-        av_field_name_cache = emalloc(sizeof(HashTable));
-        zend_hash_init(av_field_name_cache, 8, NULL, av_field_name_cache_dtor, 0);
+    if (AV_G(av_field_name_cache) == NULL) {
+        AV_G(av_field_name_cache) = emalloc(sizeof(HashTable));
+        zend_hash_init(AV_G(av_field_name_cache), 8, NULL, av_field_name_cache_dtor, 0);
     }
 
-    zend_hash_index_add_ptr(av_field_name_cache, (zend_ulong)(uintptr_t)property_info->property, field_name);
+    zend_hash_index_add_ptr(AV_G(av_field_name_cache), (zend_ulong)(uintptr_t)property_info->property, field_name);
 
     return zend_string_copy(field_name);
 }
@@ -154,7 +153,7 @@ static zend_always_inline bool has_property_default_value(av_property_info *prop
  * Plan cache and compilation
  * ========================================================================= */
 
-static HashTable *av_plans_cache = NULL; // class entry -> av_class_plans*
+/* Class entry -> av_class_plans*, stored in the module globals (see av_globals.h) */
 
 static uint32_t generator_index(char alias_generator)
 {
@@ -207,10 +206,10 @@ static void class_plans_dtor(zval *entry)
 
 void av_clear_compiled_model_cache(void)
 {
-    if (av_plans_cache != NULL) {
-        zend_hash_destroy(av_plans_cache);
-        efree(av_plans_cache);
-        av_plans_cache = NULL;
+    if (AV_G(av_plans_cache) != NULL) {
+        zend_hash_destroy(AV_G(av_plans_cache));
+        efree(AV_G(av_plans_cache));
+        AV_G(av_plans_cache) = NULL;
     }
 }
 
@@ -218,8 +217,8 @@ static av_class_plans *get_class_plans(zend_class_entry *ce)
 {
     av_class_plans *plans = NULL;
 
-    if (av_plans_cache != NULL) {
-        plans = zend_hash_index_find_ptr(av_plans_cache, (zend_ulong)(uintptr_t)ce);
+    if (AV_G(av_plans_cache) != NULL) {
+        plans = zend_hash_index_find_ptr(AV_G(av_plans_cache), (zend_ulong)(uintptr_t)ce);
         if (plans != NULL) {
             return plans;
         }
@@ -228,12 +227,12 @@ static av_class_plans *get_class_plans(zend_class_entry *ce)
     plans = emalloc(sizeof(av_class_plans));
     memset(plans, 0, sizeof(av_class_plans));
 
-    if (av_plans_cache == NULL) {
-        av_plans_cache = emalloc(sizeof(HashTable));
-        zend_hash_init(av_plans_cache, 8, NULL, class_plans_dtor, 0);
+    if (AV_G(av_plans_cache) == NULL) {
+        AV_G(av_plans_cache) = emalloc(sizeof(HashTable));
+        zend_hash_init(AV_G(av_plans_cache), 8, NULL, class_plans_dtor, 0);
     }
 
-    return zend_hash_index_add_ptr(av_plans_cache, (zend_ulong)(uintptr_t)ce, plans);
+    return zend_hash_index_add_ptr(AV_G(av_plans_cache), (zend_ulong)(uintptr_t)ce, plans);
 }
 
 /*

@@ -1,4 +1,5 @@
 #include "av_model_configs.h"
+#include "av_globals.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_attributes.h"
 #include "Zend/zend_exceptions.h"
@@ -9,18 +10,17 @@
 zend_class_entry *AV_ModelConfigs_ce;
 
 /*
- * Cache of parsed ModelConfigs properties, keyed by the model class
- * entry: attribute arguments never change within a request, so the
- * attribute walk and the argument evaluation run once per class.
- * Entries are freed at request shutdown.
+ * Cache of parsed ModelConfigs properties, stored in the module globals
+ * (see av_globals.h) and keyed by the model class entry: attribute
+ * arguments never change within a request, so the attribute walk and
+ * the argument evaluation run once per class. Entries are freed at
+ * request shutdown.
  */
 typedef struct {
     av_model_configs_properties properties;
     char alias_generator_name[8]; // pretty name, "" when unset
     char extra_name[8];
 } av_model_configs_cache_entry;
-
-static HashTable *av_model_configs_cache = NULL;
 
 static void av_model_configs_cache_entry_dtor(zval *entry)
 {
@@ -29,10 +29,10 @@ static void av_model_configs_cache_entry_dtor(zval *entry)
 
 void av_clear_model_configs_cache(void)
 {
-    if (av_model_configs_cache != NULL) {
-        zend_hash_destroy(av_model_configs_cache);
-        efree(av_model_configs_cache);
-        av_model_configs_cache = NULL;
+    if (AV_G(av_model_configs_cache) != NULL) {
+        zend_hash_destroy(AV_G(av_model_configs_cache));
+        efree(AV_G(av_model_configs_cache));
+        AV_G(av_model_configs_cache) = NULL;
     }
 }
 
@@ -206,8 +206,8 @@ void av_get_model_configs(zval *configs, zval *model, av_model_configs_propertie
     zend_class_entry *model_ce = Z_OBJCE_P(model);
     av_model_configs_cache_entry *entry = NULL;
 
-    if (av_model_configs_cache != NULL) {
-        entry = zend_hash_index_find_ptr(av_model_configs_cache, (zend_ulong)(uintptr_t)model_ce);
+    if (AV_G(av_model_configs_cache) != NULL) {
+        entry = zend_hash_index_find_ptr(AV_G(av_model_configs_cache), (zend_ulong)(uintptr_t)model_ce);
     }
 
     if (entry == NULL) {
@@ -220,14 +220,14 @@ void av_get_model_configs(zval *configs, zval *model, av_model_configs_propertie
             return;
         }
 
-        if (av_model_configs_cache == NULL) {
-            av_model_configs_cache = emalloc(sizeof(HashTable));
-            zend_hash_init(av_model_configs_cache, 8, NULL, av_model_configs_cache_entry_dtor, 0);
+        if (AV_G(av_model_configs_cache) == NULL) {
+            AV_G(av_model_configs_cache) = emalloc(sizeof(HashTable));
+            zend_hash_init(AV_G(av_model_configs_cache), 8, NULL, av_model_configs_cache_entry_dtor, 0);
         }
 
         entry = emalloc(sizeof(av_model_configs_cache_entry));
         memcpy(entry, &new_entry, sizeof(av_model_configs_cache_entry));
-        entry = zend_hash_index_add_ptr(av_model_configs_cache, (zend_ulong)(uintptr_t)model_ce, entry);
+        entry = zend_hash_index_add_ptr(AV_G(av_model_configs_cache), (zend_ulong)(uintptr_t)model_ce, entry);
     }
 
     *properties = entry->properties;
