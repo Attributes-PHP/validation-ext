@@ -23,7 +23,7 @@ $user = validate($rawData, new User());
 
 | Parameter | Type | Description |
 | --------- | ---- | ----------- |
-| `$rawData` | `array` | The input data, keyed by property name (or by [alias](#aliases)). Missing keys fail validation unless the property is nullable. |
+| `$rawData` | `array` | The input data, keyed by property name (or by [alias](#aliases)). Missing keys fail validation unless the property is nullable or declares a default value. |
 | `$model` | `BaseModel` | The model instance to hydrate. Its public property type hints and attribute declarations define the validation schema. |
 
 ## Return value
@@ -68,7 +68,7 @@ Nested structures report dot-notation paths, including array element keys:
 
 ### Required fields
 
-Every typed, non-nullable property is required. A missing key produces a `Field is required` error. Nullable properties accept a missing key or an explicit `null`.
+Every typed, non-nullable property is required. A missing key produces a `Field is required` error. Nullable properties accept a missing key or an explicit `null`, and properties with a declared default value keep it when the key is missing.
 
 ### Strict and loose mode
 
@@ -153,7 +153,7 @@ Element types come from the `Attributes\Validation\Type` enum (`Type::int`, `Typ
 
 - `Sequence` validates every element against one element type.
 - `Union` accepts an element matching any declared arm.
-- `Intersection` requires an element to match every declared class or interface.
+- `Intersection` requires an element to match every declared class or interface. Its arms must name classes or interfaces only — enums are rejected, mirroring PHP intersection type hints.
 - `Dict` validates keys against `$key` (integer and string types only) and values against `$of`.
 
 The same attributes compose with `new` expressions to describe nested arrays:
@@ -162,6 +162,8 @@ The same attributes compose with `new` expressions to describe nested arrays:
 #[Sequence(of: new Union(string, int, float))]
 public array $values;
 ```
+
+Arguments of a composed `new` expression are validated at construction: an unsupported argument type throws a `TypeError` and a string that names no loadable class, interface or enum throws a `ValueError`.
 
 ## Hooks
 

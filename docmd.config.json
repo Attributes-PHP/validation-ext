@@ -37,7 +37,8 @@
   "pageNavigation": true,
   "navigation": [
     { "title": "Overview", "path": "/", "icon": "zap" },
-    { "title": "validate()", "path": "/validate/", "icon": "book-open" }
+    { "title": "validate()", "path": "/validate/", "icon": "book-open" },
+    { "title": "call()", "path": "/call/", "icon": "terminal" }
   ],
   "plugins": {
     "ai": {

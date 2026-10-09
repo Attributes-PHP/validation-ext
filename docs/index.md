@@ -45,6 +45,7 @@ pie install attributes-php/validation
 ## What's next
 
 - [validate()](/validate/) — the full function reference: parameters, return value, validation rules and exceptions.
+- [call()](/call/) — invoke any callable with hydrated models and injected dependencies.
 
 ## Running this documentation locally
 
