@@ -3,6 +3,7 @@
 #include "av_validate_function.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
+#include "Zend/zend_interfaces.h"
 #include "zend_hash.h"
 #include "zend_string.h"
 #include "zend_types.h"
@@ -50,46 +51,173 @@ static zend_class_entry *parameter_class_ce(const zend_arg_info *arg_info, zend_
 }
 
 /*
- * Takes the next unused positional entry of the dependencies array.
+ * The dependencies source: a plain array or an ArrayAccess container.
+ *
+ * Array entries are borrowed from the hash table; offsetGet() results are
+ * owned zvals the fetch releases after use. Containers are only asked for
+ * the dependencies the call actually consumes, so a lazy container
+ * builds a service only when a parameter needs it.
+ */
+typedef struct {
+    zval *source;
+    bool is_array;
+    uint32_t positional_cursor;
+} av_dependencies;
+
+/* A fetched dependency: owned only when it came from offsetGet() */
+typedef struct {
+    zval value;
+    bool owned;
+} av_dependency;
+
+static void av_dependency_release(av_dependency *dependency)
+{
+    if (dependency->owned) {
+        zval_ptr_dtor(&dependency->value);
+    }
+}
+
+/*
+ * Calls offsetExists()/offsetGet() on the container. Returns false without
+ * touching retval when the call fails; a container exception propagates
+ * as-is through the pending exception.
+ */
+static bool array_access_offset_call(av_dependencies *dependencies, const char *method, zval *offset, zval *retval)
+{
+    ZVAL_UNDEF(retval);
+
+    if (zend_call_method(Z_OBJ_P(dependencies->source), NULL, NULL, method, strlen(method), retval, 1, offset, NULL) == NULL || EG(exception) != NULL) {
+        if (Z_TYPE_P(retval) != IS_UNDEF) {
+            zval_ptr_dtor(retval);
+            ZVAL_UNDEF(retval);
+        }
+        return false;
+    }
+
+    return true;
+}
+
+/* Fetches a dependency by parameter name, without touching the cursor */
+static bool fetch_dependency_by_name(av_dependencies *dependencies, zend_string *name, av_dependency *dependency)
+{
+    if (dependencies->source == NULL || name == NULL) {
+        return false;
+    }
+
+    if (dependencies->is_array) {
+        zval *entry = zend_hash_find(Z_ARRVAL_P(dependencies->source), name);
+        if (entry == NULL) {
+            return false;
+        }
+
+        ZVAL_COPY_VALUE(&dependency->value, entry);
+        dependency->owned = false;
+        return true;
+    }
+
+    zval offset;
+    ZVAL_STR(&offset, name);
+
+    zval exists;
+    if (!array_access_offset_call(dependencies, "offsetexists", &offset, &exists)) {
+        return false;
+    }
+    bool has_dependency = zend_is_true(&exists);
+    zval_ptr_dtor(&exists);
+    if (!has_dependency) {
+        return false;
+    }
+
+    if (!array_access_offset_call(dependencies, "offsetget", &offset, &dependency->value)) {
+        return false;
+    }
+
+    dependency->owned = true;
+    return true;
+}
+
+/*
+ * Takes the next unused positional entry of the dependencies source.
  *
  * Positional entries are consumed in order; named entries are matched
  * against parameter names in build_call_arguments() and skipped here.
+ * Containers expose their positional entries through integer offsets, so
+ * an ArrayObject behaves exactly like the equivalent array.
  */
-static zval *next_positional_dependency(HashTable *dependencies, uint32_t *cursor)
+static bool fetch_next_positional_dependency(av_dependencies *dependencies, av_dependency *dependency)
 {
-    uint32_t index = *cursor;
-    while (index < zend_hash_num_elements(dependencies)) {
-        zval *entry = zend_hash_index_find(dependencies, index);
-        index++;
-
-        if (entry != NULL) {
-            *cursor = index;
-            return entry;
-        }
+    if (dependencies->source == NULL) {
+        return false;
     }
 
-    *cursor = index;
-    return NULL;
+    uint32_t cursor = dependencies->positional_cursor;
+
+    if (dependencies->is_array) {
+        while (cursor < zend_hash_num_elements(Z_ARRVAL_P(dependencies->source))) {
+            zval *entry = zend_hash_index_find(Z_ARRVAL_P(dependencies->source), cursor);
+            cursor++;
+
+            if (entry != NULL) {
+                dependencies->positional_cursor = cursor;
+                ZVAL_COPY_VALUE(&dependency->value, entry);
+                dependency->owned = false;
+                return true;
+            }
+        }
+
+        dependencies->positional_cursor = cursor;
+        return false;
+    }
+
+    zval offset;
+    ZVAL_LONG(&offset, (zend_long)cursor);
+
+    zval exists;
+    if (!array_access_offset_call(dependencies, "offsetexists", &offset, &exists)) {
+        return false;
+    }
+    bool has_dependency = zend_is_true(&exists);
+    zval_ptr_dtor(&exists);
+    dependencies->positional_cursor = cursor + 1;
+    if (!has_dependency) {
+        return false;
+    }
+
+    if (!array_access_offset_call(dependencies, "offsetget", &offset, &dependency->value)) {
+        return false;
+    }
+
+    dependency->owned = true;
+    return true;
 }
 
 /*
  * Builds one argument for a non-model parameter from the dependencies
- * array: matched by parameter name first, then in positional order.
+ * source: matched by parameter name first, then in positional order.
  */
-static zval *find_dependency(zval *dependencies, zend_string *name, uint32_t *cursor)
+static bool find_dependency(av_dependencies *dependencies, zend_string *name, av_dependency *dependency)
 {
-    if (dependencies == NULL) {
-        return NULL;
+    if (fetch_dependency_by_name(dependencies, name, dependency)) {
+        return true;
     }
 
-    if (name != NULL) {
-        zval *dependency = zend_hash_find(Z_ARRVAL_P(dependencies), name);
-        if (dependency != NULL) {
-            return dependency;
-        }
+    if (UNEXPECTED(EG(exception) != NULL)) {
+        return false;
     }
 
-    return next_positional_dependency(Z_ARRVAL_P(dependencies), cursor);
+    return fetch_next_positional_dependency(dependencies, dependency);
+}
+
+/* Appends an argument to the buffer, growing it when needed */
+static void args_push(zval **args, uint32_t *args_count, uint32_t *args_capacity, zval *value)
+{
+    if (*args_count == *args_capacity) {
+        *args_capacity = *args_capacity > 0 ? *args_capacity * 2 : 4;
+        *args = erealloc(*args, *args_capacity * sizeof(zval));
+    }
+
+    ZVAL_COPY(&(*args)[*args_count], value);
+    (*args_count)++;
 }
 
 /*
@@ -98,14 +226,14 @@ static zval *find_dependency(zval *dependencies, zend_string *name, uint32_t *cu
  * BaseModel parameters of userland callables are hydrated from the raw
  * data array through the regular validate() flow (ModelConfigs, hooks,
  * ValidationException on invalid data). Every other parameter takes its
- * value from the dependencies array, matched by parameter name first and
- * then in positional order; missing optional parameters fall back to
+ * value from the dependencies source, matched by parameter name first
+ * and then in positional order; missing optional parameters fall back to
  * their declared defaults.
  *
  * Arguments are built with an extra reference the caller releases with
  * release_call_arguments().
  */
-static bool build_call_arguments(zend_function *function, zval *params, zval *dependencies, uint32_t *cursor, zval *args, uint32_t *args_count)
+static bool build_call_arguments(zend_function *function, zval *params, av_dependencies *dependencies, zval **args, uint32_t *args_count, uint32_t *args_capacity)
 {
     uint32_t argument_count = 0;
     bool user_arg_info = target_has_user_arg_info(function);
@@ -136,16 +264,21 @@ static bool build_call_arguments(zend_function *function, zval *params, zval *de
                 break;
             }
 
-            ZVAL_COPY_VALUE(&args[argument_count], &model);
-            argument_count++;
+            args_push(args, &argument_count, args_capacity, &model);
+            zval_ptr_dtor(&model);
             continue;
         }
 
-        zval *dependency = find_dependency(dependencies, name, cursor);
-        if (dependency != NULL) {
-            ZVAL_COPY(&args[argument_count], dependency);
-            argument_count++;
+        av_dependency dependency;
+        if (find_dependency(dependencies, name, &dependency)) {
+            args_push(args, &argument_count, args_capacity, &dependency.value);
+            av_dependency_release(&dependency);
             continue;
+        }
+
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            result = false;
+            break;
         }
 
         // Missing values for optional parameters let the engine apply the
@@ -165,11 +298,15 @@ static bool build_call_arguments(zend_function *function, zval *params, zval *de
     }
 
     // Variadic targets receive the leftover positional dependencies
-    if (result && (function->common.fn_flags & ZEND_ACC_VARIADIC) != 0 && dependencies != NULL) {
-        zval *dependency;
-        while ((dependency = next_positional_dependency(Z_ARRVAL_P(dependencies), cursor)) != NULL) {
-            ZVAL_COPY(&args[argument_count], dependency);
-            argument_count++;
+    if (result && (function->common.fn_flags & ZEND_ACC_VARIADIC) != 0 && dependencies->source != NULL) {
+        av_dependency dependency;
+        while (fetch_next_positional_dependency(dependencies, &dependency)) {
+            args_push(args, &argument_count, args_capacity, &dependency.value);
+            av_dependency_release(&dependency);
+        }
+
+        if (UNEXPECTED(EG(exception) != NULL)) {
+            result = false;
         }
     }
 
@@ -189,7 +326,8 @@ static void release_call_arguments(zval *args, uint32_t args_count)
  *
  * Calls a function with validated models: BaseModel parameters are
  * hydrated from the raw data array, other parameters come from the
- * dependencies array. Returns the callable's return value.
+ * dependencies array or ArrayAccess container. Returns the callable's
+ * return value.
  */
 ZEND_FUNCTION(call)
 {
@@ -201,8 +339,21 @@ ZEND_FUNCTION(call)
     Z_PARAM_ZVAL(function)
     Z_PARAM_ARRAY(params)
     Z_PARAM_OPTIONAL
-    Z_PARAM_ARRAY(dependencies)
+    Z_PARAM_ZVAL(dependencies)
     ZEND_PARSE_PARAMETERS_END();
+
+    av_dependencies dependencies_source = {
+        .source = dependencies,
+        .is_array = dependencies != NULL && Z_TYPE_P(dependencies) == IS_ARRAY,
+        .positional_cursor = 0,
+    };
+
+    // A container is only required to implement ArrayAccess: ArrayObject
+    // and any lazy DI container qualify
+    if (dependencies != NULL && !dependencies_source.is_array && (Z_TYPE_P(dependencies) != IS_OBJECT || !instanceof_function(Z_OBJCE_P(dependencies), zend_ce_arrayaccess))) {
+        zend_argument_type_error(3, "must be of type array|ArrayAccess, %s given", zend_zval_type_name(dependencies));
+        RETURN_THROWS();
+    }
 
     char *error = NULL;
     zend_fcall_info fci;
@@ -217,16 +368,22 @@ ZEND_FUNCTION(call)
     }
 
     zend_function *target = fcc.function_handler;
-    uint32_t args_count = 0;
-    uint32_t cursor = 0;
 
     // The argument buffer is heap allocated: its size must cover every
     // declared parameter plus the leftover dependencies of a variadic
-    // target
-    uint32_t max_args = target->common.num_args + (dependencies != NULL ? zend_hash_num_elements(Z_ARRVAL_P(dependencies)) : 0);
-    zval *args = emalloc((max_args > 0 ? max_args : 1) * sizeof(zval));
+    // target. A container cannot be counted up front, so the buffer grows
+    // on demand instead.
+    uint32_t args_count = 0;
+    uint32_t args_capacity = target->common.num_args;
+    if (dependencies != NULL) {
+        args_capacity += dependencies_source.is_array ? zend_hash_num_elements(Z_ARRVAL_P(dependencies)) : 8;
+    }
+    if (args_capacity == 0) {
+        args_capacity = 1;
+    }
+    zval *args = emalloc(args_capacity * sizeof(zval));
 
-    if (!build_call_arguments(target, params, dependencies, &cursor, args, &args_count)) {
+    if (!build_call_arguments(target, params, &dependencies_source, &args, &args_count, &args_capacity)) {
         release_call_arguments(args, args_count);
         efree(args);
         RETURN_THROWS();
