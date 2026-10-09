@@ -40,6 +40,10 @@ struct av_spec {
     av_arm *key_arms; // Dict key arms, NULL for the list form
     uint32_t key_arms_count;
     bool is_intersection;
+    // Whether validating an element can read its name (a key or element
+    // error, a class-arm hydration or a nested array validation): pure
+    // basic-type specs never build per-element path strings
+    bool needs_element_names;
 };
 
 /*
@@ -1069,6 +1073,41 @@ static av_element_result validate_value_against_arms(av_field *element_field, av
 }
 
 /*
+ * Builds the full path of the array property on first use (field->parent
+ * excludes the property's own name): "parent.name".
+ */
+static zend_string *ensure_base_path(av_field *field, zend_string *base_path)
+{
+    if (base_path == NULL) {
+        base_path = av_string_dot_concat(field->parent, field->name);
+        if (base_path == NULL) {
+            base_path = zend_string_copy(field->name);
+        }
+    }
+
+    return base_path;
+}
+
+/*
+ * Computes whether validating an element of the spec can read its name:
+ * a key spec, a class arm or a nested array arm. Pure basic-type specs
+ * keep the happy path free of per-element string allocations.
+ */
+static void compute_needs_element_names(av_spec *spec)
+{
+    spec->needs_element_names = spec->key_arms != NULL;
+
+    for (uint32_t i = 0; i < spec->arms_count; i++) {
+        if (spec->arms[i].ce != NULL || spec->arms[i].nested != NULL) {
+            spec->needs_element_names = true;
+        }
+        if (spec->arms[i].nested != NULL) {
+            compute_needs_element_names(spec->arms[i].nested);
+        }
+    }
+}
+
+/*
  * Walks the array and validates/coerces every key and element in place
  * against the spec.
  *
@@ -1084,36 +1123,39 @@ static bool validate_array_elements(av_field *field, av_property_info *prop_info
     bool all_valid = true;
     zend_string *key_expected = NULL;
     zend_string *value_expected = NULL;
+    zend_string *base_path = NULL;
     zend_string *str_key;
     zend_ulong num_key;
     zval *element;
 
-    // Full path of the array property (field->parent excludes the
-    // property's own name), so element errors and nested model recursion
-    // compose dot-notation paths like "users.0.email"
-    zend_string *base_path = av_string_dot_concat(field->parent, field->name);
-    if (base_path == NULL) {
-        base_path = zend_string_copy(field->name);
-    }
-
+    // The full path of the array property and the per-element names are
+    // composed lazily, only when something reads them: an error report, a
+    // class-arm hydration or a nested array validation. Specs of plain
+    // basic types never build either, so the happy path of large valid
+    // arrays makes no string allocations.
     ZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(field->value), num_key, str_key, element)
     {
         if (UNEXPECTED(EG(exception) != NULL)) {
             break;
         }
 
-        zend_string *element_name = str_key != NULL ? zend_string_copy(str_key) : zend_long_to_str(num_key);
+        zend_string *element_name = NULL;
 
         // Element fields follow the parent-excludes-own-name invariant:
         // the key is the name, so error paths and the BaseModel recursion
         // both derive "users.0" from it
         av_field element_field = {
-            .parent = base_path,
-            .name = element_name,
+            .parent = NULL,
+            .name = NULL,
             .value = element,
         };
 
         if (!key_matches_arms(str_key, spec)) {
+            element_name = str_key != NULL ? zend_string_copy(str_key) : zend_long_to_str(num_key);
+            base_path = ensure_base_path(field, base_path);
+            element_field.parent = base_path;
+            element_field.name = element_name;
+
             if (key_expected == NULL) {
                 key_expected = arms_to_expected_string(spec->key_arms, spec->key_arms_count, false);
             }
@@ -1126,7 +1168,24 @@ static bool validate_array_elements(av_field *field, av_property_info *prop_info
             continue;
         }
 
+        // An array element under a class or nested arm validates (and
+        // possibly reports) through its own name; every other arm kind
+        // reads the name only on the error path below
+        if (spec->needs_element_names && Z_TYPE_P(element) == IS_ARRAY) {
+            element_name = str_key != NULL ? zend_string_copy(str_key) : zend_long_to_str(num_key);
+            base_path = ensure_base_path(field, base_path);
+            element_field.parent = base_path;
+            element_field.name = element_name;
+        }
+
         av_element_result result = validate_value_against_arms(&element_field, prop_info, spec, properties, errors);
+
+        if (result != AV_ELEMENT_VALID && element_name == NULL) {
+            element_name = str_key != NULL ? zend_string_copy(str_key) : zend_long_to_str(num_key);
+            base_path = ensure_base_path(field, base_path);
+            element_field.parent = base_path;
+            element_field.name = element_name;
+        }
 
         if (result == AV_ELEMENT_INVALID) {
             if (value_expected == NULL) {
@@ -1135,7 +1194,9 @@ static bool validate_array_elements(av_field *field, av_property_info *prop_info
             av_add_field_error_with_expected(AV_ERROR_TYPE, &element_field, prop_info, errors, value_expected);
         }
 
-        zend_string_release(element_name);
+        if (element_name != NULL) {
+            zend_string_release(element_name);
+        }
 
         if (result != AV_ELEMENT_VALID) {
             all_valid = false;
@@ -1152,7 +1213,9 @@ static bool validate_array_elements(av_field *field, av_property_info *prop_info
     if (value_expected != NULL) {
         zend_string_release(value_expected);
     }
-    zend_string_release(base_path);
+    if (base_path != NULL) {
+        zend_string_release(base_path);
+    }
 
     return all_valid;
 }
@@ -1222,6 +1285,8 @@ bool av_validate_array_typehint_cached(av_field *field, av_compiled_field *cf, a
             // Failed builds stay unprobed so their errors keep firing
             return false;
         }
+
+        compute_needs_element_names(spec);
 
         if (AV_G(av_spec_cache) == NULL) {
             AV_G(av_spec_cache) = emalloc(sizeof(HashTable));
