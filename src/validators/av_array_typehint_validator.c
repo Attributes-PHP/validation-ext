@@ -1163,6 +1163,28 @@ static bool validate_array_elements(av_field *field, av_property_info *prop_info
  * Entry point
  * ========================================================================= */
 
+/*
+ * Spec cache, keyed by the property info: attribute arguments never
+ * change within a request, so the spec tree is built once per property
+ * and freed at request shutdown. Failed builds (spec errors) stay
+ * uncached so their errors keep firing.
+ */
+static HashTable *av_spec_cache = NULL;
+
+static void av_spec_cache_entry_dtor(zval *entry)
+{
+    free_spec(Z_PTR_P(entry));
+}
+
+void av_clear_array_spec_cache(void)
+{
+    if (av_spec_cache != NULL) {
+        zend_hash_destroy(av_spec_cache);
+        efree(av_spec_cache);
+        av_spec_cache = NULL;
+    }
+}
+
 bool av_validate_array_typehint(av_field *field, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors)
 {
     if (prop_info->property->attributes == NULL) {
@@ -1174,20 +1196,30 @@ bool av_validate_array_typehint(av_field *field, av_property_info *prop_info, av
         return true;
     }
 
-    av_spec_context ctx = {
-        .prop_info = prop_info,
-        .root_attribute = attribute,
-    };
+    av_spec *spec = NULL;
 
-    av_spec *spec = build_spec_from_attribute(attribute, &ctx);
-
-    bool result;
-    if (spec == NULL) {
-        result = false;
-    } else {
-        result = validate_array_elements(field, prop_info, spec, properties, errors);
-        free_spec(spec);
+    if (av_spec_cache != NULL) {
+        spec = zend_hash_index_find_ptr(av_spec_cache, (zend_ulong)(uintptr_t)prop_info->property);
     }
 
-    return result;
+    if (spec == NULL) {
+        av_spec_context ctx = {
+            .prop_info = prop_info,
+            .root_attribute = attribute,
+        };
+
+        spec = build_spec_from_attribute(attribute, &ctx);
+        if (spec == NULL) {
+            return false;
+        }
+
+        if (av_spec_cache == NULL) {
+            av_spec_cache = emalloc(sizeof(HashTable));
+            zend_hash_init(av_spec_cache, 8, NULL, av_spec_cache_entry_dtor, 0);
+        }
+
+        zend_hash_index_add_ptr(av_spec_cache, (zend_ulong)(uintptr_t)prop_info->property, spec);
+    }
+
+    return validate_array_elements(field, prop_info, spec, properties, errors);
 }

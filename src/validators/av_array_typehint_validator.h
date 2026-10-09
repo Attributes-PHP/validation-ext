@@ -43,5 +43,6 @@
  * `array` keeps behaving as before) or when every key and element validated.
  */
 bool av_validate_array_typehint(av_field *field, av_property_info *prop_info, av_model_configs_properties *properties, zval *errors);
+void av_clear_array_spec_cache(void);
 
 #endif /* AV_ARRAY_TYPEHINT_VALIDATOR_H */
