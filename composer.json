@@ -1,7 +1,7 @@
 {
     "name": "attributes-php/validation-ext",
     "type": "library",
-    "description": "Pydantic-inspired PHP library for validating data via type hints at lightning speed ⚡️",
+    "description": "Pydantic-inspired PHP library for validating data via type hints at lightning speed \u26a1\ufe0f",
     "keywords": [
         "validation",
         "fast",
@@ -13,7 +13,8 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Attributes\\Validation\\Tests\\": "tests/Integration/"
+            "Attributes\\Validation\\Tests\\": "tests/Integration/",
+            "Attributes\\Validation\\Tests\\Benchmark\\": "tests/Benchmark/"
         },
         "classmap": [
             "tests/Integration/Models/"
@@ -21,7 +22,8 @@
     },
     "require-dev": {
         "pestphp/pest": "^3.0",
-        "carthage-software/mago": "^1.50.0"
+        "carthage-software/mago": "^1.50.0",
+        "phpbench/phpbench": "^1.7"
     },
     "prefer-stable": true,
     "config": {
