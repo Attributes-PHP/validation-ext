@@ -21,16 +21,16 @@
 typedef struct av_spec av_spec;
 
 typedef enum {
-    AV_ARM_BASIC = 1, // arm->mask holds the pure type mask
-    AV_ARM_CLASS,     // arm->ce / arm->origin hold the class arm
+    AV_ARM_BASIC = 1,    // arm->mask holds the pure type mask
+    AV_ARM_CLASS,        // arm->ce / arm->origin hold the class arm
     AV_ARM_INTERSECTION, // arm->origin holds the intersection type
 } av_compiled_arm_kind;
 
 typedef struct {
     uint8_t kind;
-    uint32_t mask;                 // AV_ARM_BASIC
-    zend_class_entry *ce;           // AV_ARM_CLASS: resolved CE, NULL while unresolved
-    const zend_type *origin;       // AV_ARM_CLASS / AV_ARM_INTERSECTION: the original type arm
+    uint32_t mask;           // AV_ARM_BASIC
+    zend_class_entry *ce;    // AV_ARM_CLASS: resolved CE, NULL while unresolved
+    const zend_type *origin; // AV_ARM_CLASS / AV_ARM_INTERSECTION: the original type arm
 } av_compiled_arm;
 
 typedef enum {
@@ -58,8 +58,8 @@ typedef struct {
 typedef struct {
     av_compiled_field *fields;
     uint32_t count;
-    char generator;  // alias generator the field names are compiled under
-    bool is_root;    // compiled for a top-level validate() call
+    char generator;                      // alias generator the field names are compiled under
+    bool is_root;                        // compiled for a top-level validate() call
     av_model_configs_properties configs; // valid when is_root
     bool hooks_overridden;
 } av_compiled_model;

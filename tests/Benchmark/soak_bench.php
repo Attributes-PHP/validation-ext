@@ -36,6 +36,7 @@ use function Attributes\Validation\validate;
 // these iteration counts, while engine-internal caches (last exception,
 // interned strings) drift a few kilobytes at most.
 const DRIFT_LIMIT = 262144;
+const MIN_RUNS = 10_000_000;
 
 $failures = 0;
 $filter = $argv[1] ?? '';
@@ -141,28 +142,28 @@ for ($i = 0; $i < 40; $i++) {
 
 $cases = [
     'wide model, 32 typed fields' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($wideData) {
             validate($wideData, new BenchWideModel);
         },
     ],
 
     'extra keys, 100 keys into 3 fields' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($extraKeysData) {
             validate($extraKeysData, new BenchShallowModel);
         },
     ],
 
     'alias attribute + snake generator lookup' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($signupData) {
             validate($signupData, new BenchSignup);
         },
     ],
 
     'datetime coercion, 4 per call' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($stamp) {
             // Rebuilt each iteration: a successful coercion replaces the
             // string with a DateTime object, and a reused bucket would skip
@@ -177,7 +178,7 @@ $cases = [
     ],
 
     'datetime coercion failure, dynamic strings' => [
-        1_000_000,
+        MIN_RUNS,
         function () {
             // Dynamic (non-interned) strings: interned literals would mask
             // a refcount leak on the failure path
@@ -196,7 +197,7 @@ $cases = [
     ],
 
     'error collection, 8 errors + exception' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($errorData) {
             try {
                 validate($errorData, new BenchErrorForm);
@@ -207,28 +208,28 @@ $cases = [
     ],
 
     'nested sequences, 20 x 50 ints' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($matrixData) {
             validate($matrixData, new BenchNestedShape);
         },
     ],
 
     'dict of sequences, 20 x 50 ints' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($groupsData) {
             validate($groupsData, new BenchNestedShape);
         },
     ],
 
     'scalar sequence, 1000 elements' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($tagListData) {
             validate($tagListData, new BenchTagList);
         },
     ],
 
     'nested model hydration, 20 per call' => [
-        1_000_000,
+        MIN_RUNS,
         function () {
             // Rebuilt each iteration: hydration replaces the address buckets
             // with model objects, and a reused array would skip hydration
@@ -241,7 +242,7 @@ $cases = [
     ],
 
     'loose coercion, int/float/bool/string' => [
-        1_000_000,
+        MIN_RUNS,
         function () {
             // Rebuilt each iteration: loose-mode coercion rewrites the
             // bucket values in place
@@ -256,14 +257,14 @@ $cases = [
     ],
 
     'union scalars, exact 100 per call' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($unionScalarsData) {
             validate($unionScalarsData, new BenchUnionPayload);
         },
     ],
 
     'union coercion, 50 per call' => [
-        500_000,
+        MIN_RUNS,
         function () {
             // Rebuilt each iteration: loose-mode coercion rewrites the
             // element buckets in place
@@ -276,7 +277,7 @@ $cases = [
     ],
 
     'union class-arm hydration, 20 per call' => [
-        500_000,
+        MIN_RUNS,
         function () {
             // Rebuilt each iteration: hydration replaces the item buckets
             // with model objects, and a reused array would skip hydration
@@ -289,21 +290,21 @@ $cases = [
     ],
 
     'intersection instances, 50 per call' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($intersectionData) {
             validate($intersectionData, new BenchIntersectionPayload);
         },
     ],
 
     'composed union/intersection, 40 payloads' => [
-        1_000_000,
+        MIN_RUNS,
         function () use ($unionIntersectionData) {
             validate($unionIntersectionData, new BenchNestedUnionIntersection);
         },
     ],
 
     'union tree hydration, 31 nodes per call' => [
-        200_000,
+        MIN_RUNS,
         function () {
             // Rebuilt each iteration: each raw subtree bucket becomes a
             // hydrated BenchUnionTree, recursively, and a reused array
@@ -328,7 +329,7 @@ $cases = [
     ],
 
     'failed spec build, uncached ValueError' => [
-        1_000_000,
+        MIN_RUNS,
         function () {
             // The Dict attribute is missing `of`: the spec build fails and
             // stays uncached on purpose, exercising the free path

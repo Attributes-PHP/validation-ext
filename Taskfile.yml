@@ -119,6 +119,22 @@ tasks:
       - test:unit
       - test:integration
 
+  bench:
+    desc: Run PHP benchmarks via phpbench
+    deps:
+      - build
+      - _ensure-vendor
+    cmds:
+      - ./vendor/bin/phpbench run
+
+  bench:soak:
+    desc: Run soak benchmarks (memory stability, ns/op)
+    deps:
+      - build
+      - _ensure-vendor
+    cmds:
+      - php tests/Benchmark/soak_bench.php {{.CLI_ARGS}}
+
   clean:src:
     desc: Clean extension build artifacts
     cmds:

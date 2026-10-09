@@ -248,7 +248,7 @@ static av_compiled_model *compile_plan_skeleton(zend_class_entry *model_ce, char
         zend_property_info *property;
         ZEND_HASH_FOREACH_PTR(&ce->properties_info, property)
         {
-            (void) property;
+            (void)property;
             count++;
         }
         ZEND_HASH_FOREACH_END();
@@ -272,7 +272,7 @@ static av_compiled_model *compile_plan_skeleton(zend_class_entry *model_ce, char
 
         ZEND_HASH_FOREACH_STR_KEY_PTR(&ce->properties_info, property_name, property)
         {
-            (void) property_name;
+            (void)property_name;
             if (property->flags & ZEND_ACC_STATIC)
                 continue;
             if (property->flags & (ZEND_ACC_PROTECTED | ZEND_ACC_PRIVATE))
