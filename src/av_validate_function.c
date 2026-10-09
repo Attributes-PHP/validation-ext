@@ -258,7 +258,12 @@ bool av_validate_model_internal(zval *raw_data, av_property_info *prop_info, av_
                 continue;
             }
 
-            zend_update_property(prop_info->model_ce, Z_OBJ_P(prop_info->model), ZSTR_VAL(property_name), ZSTR_LEN(property_name), field.value);
+            // Direct offset write: the value is already of the declared
+            // type, so the property name lookup and the type
+            // re-verification of zend_update_property() are redundant
+            zval *property_slot = OBJ_PROP(Z_OBJ_P(prop_info->model), prop_info->property->offset);
+            zval_ptr_dtor(property_slot);
+            ZVAL_COPY(property_slot, field.value);
         }
         ZEND_HASH_FOREACH_END();
 
