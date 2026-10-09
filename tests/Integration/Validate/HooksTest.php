@@ -156,6 +156,25 @@ describe('validate function hook handling', function () {
         $result = validate($model->getExpectedRawData(), $model);
         expect($result->number)->toBe('20.99');
     });
+
+    it('calls hooks overridden in an intermediate class', function () {
+        $model = new HooksLeafClass;
+
+        $result = validate(['number' => '1.23'], $model);
+
+        expect($model->calledBeforeValidation)->toBeTrue();
+        expect($model->calledAfterValidation)->toBeTrue();
+        expect($result->number)->toBe('20.99');
+    });
+
+    it('calls a hook overridden in an intermediate class when only one hook is overridden', function () {
+        $model = new PartialHooksLeafClass;
+
+        $result = validate(['number' => '1.23'], $model);
+
+        expect($model->calledBeforeValidation)->toBeTrue();
+        expect($result->number)->toBe('20.99');
+    });
 });
 
 class NoHooks extends BaseModel
@@ -166,3 +185,46 @@ class NoHooks extends BaseModel
 
     public string $number;
 }
+
+class HooksIntermediateClass extends BaseModel
+{
+    public bool $calledBeforeValidation = false;
+
+    public bool $calledAfterValidation = false;
+
+    public string $number;
+
+    public function beforeValidation(array $rawData, ModelConfigs $configs): array
+    {
+        $this->calledBeforeValidation = true;
+
+        $rawData['number'] = '20.99';
+
+        return $rawData;
+    }
+
+    public function afterValidation(array $rawData, ModelConfigs $configs): void
+    {
+        $this->calledAfterValidation = true;
+    }
+}
+
+class HooksLeafClass extends HooksIntermediateClass {}
+
+class PartialHooksIntermediateClass extends BaseModel
+{
+    public bool $calledBeforeValidation = false;
+
+    public string $number;
+
+    public function beforeValidation(array $rawData, ModelConfigs $configs): array
+    {
+        $this->calledBeforeValidation = true;
+
+        $rawData['number'] = '20.99';
+
+        return $rawData;
+    }
+}
+
+class PartialHooksLeafClass extends PartialHooksIntermediateClass {}
