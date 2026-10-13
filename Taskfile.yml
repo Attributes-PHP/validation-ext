@@ -140,6 +140,7 @@ tasks:
     cmds:
       - make clean || true
       - phpize --clean || true
+      - rm stubs/**/*_arginfo.h
 
   clean:test:
     desc: Clean Ceedling test artifacts

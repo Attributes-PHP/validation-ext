@@ -20,6 +20,20 @@
 #include "src/fields/av_intersection.h"
 #include "src/fields/av_sequence.h"
 #include "src/fields/av_union.h"
+#include "src/fields/constraints/av_alpha_dash.h"
+#include "src/fields/constraints/av_ascii.h"
+#include "src/fields/constraints/av_between.h"
+#include "src/fields/constraints/av_contains.h"
+#include "src/fields/constraints/av_datetime.h"
+#include "src/fields/constraints/av_ends_with.h"
+#include "src/fields/constraints/av_in.h"
+#include "src/fields/constraints/av_max.h"
+#include "src/fields/constraints/av_min.h"
+#include "src/fields/constraints/av_multiple_of.h"
+#include "src/fields/constraints/av_regex.h"
+#include "src/fields/constraints/av_size.h"
+#include "src/fields/constraints/av_starts_with.h"
+#include "src/fields/constraints/av_ulid.h"
 #include "src/validators/av_typehint_validator.h"
 #include "src/helpers/av_error_messages.h"
 
@@ -46,7 +60,7 @@ PHP_MINIT_FUNCTION(attributes_validation)
     av_register_Type_enum();
     av_register_type_constants(module_number);
 
-    // Register fields
+    /** Fields **/
     av_register_Field_interface();
     av_register_Alias_class();
     av_register_ErrorMessage_class();
@@ -54,6 +68,25 @@ PHP_MINIT_FUNCTION(attributes_validation)
     av_register_Union_class();
     av_register_Intersection_class();
     av_register_Dict_class();
+    // Constraints
+    av_register_Size_class();
+    av_register_In_class();
+    // Array-specific
+    av_register_Contains_class();
+    // String-specific
+    av_register_AlphaDash_class();
+    av_register_Ascii_class();
+    av_register_Ulid_class();
+    av_register_Regex_class();
+    av_register_StartsWith_class();
+    av_register_EndsWith_class();
+    // Number-specific
+    av_register_Between_class();
+    av_register_Max_class();
+    av_register_Min_class();
+    av_register_MultipleOf_class();
+    // Date-specific
+    av_register_DateTime_class();
     return SUCCESS;
 }
 

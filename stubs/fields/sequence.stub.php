@@ -4,6 +4,6 @@
 namespace Attributes\Validation\Fields {
     #[Attribute]
     class Sequence implements Field {
-        public function __construct(public int|string|\Attributes\Validation\Type|Sequence|Union|Intersection|Dict $of) {}
+        public function __construct(public int|string|\Attributes\Validation\Type|Sequence|Union|Intersection|Dict $of, public bool $uniqueValues = false, public bool $sequential = true) {}
     }
 }
