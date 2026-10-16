@@ -4,6 +4,7 @@
 #include "av_exception.h"
 #include "av_validate_function.h"
 #include "fields/constraints/av_alpha_dash.h"
+#include "fields/constraints/av_ascii.h"
 #include "helpers/av_error_messages.h"
 #include "helpers/av_string.h"
 #include "validators/av_array_typehint_validator.h"
@@ -171,6 +172,7 @@ typedef struct {
 
 static const av_constraint_dispatch_entry constraint_dispatch_table[] = {
     AV_CONSTRAINT_ENTRY("alphadash", AlphaDash),
+    AV_CONSTRAINT_ENTRY("ascii", Ascii),
 };
 
 #define CONSTRAINT_DISPATCH_TABLE_SIZE (sizeof(constraint_dispatch_table) / sizeof(constraint_dispatch_table[0]))
