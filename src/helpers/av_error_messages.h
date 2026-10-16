@@ -8,7 +8,26 @@
 
 typedef enum {
     AV_ERROR_REQUIRED,
-    AV_ERROR_TYPE
+    AV_ERROR_TYPE,
+    /* Constraint error types: one per constraint, each with its own
+     * default template. The #[ErrorMessage] attribute only declares
+     * the required and type arguments, so constraint errors always use
+     * their default template. */
+    AV_ERROR_ALPHA_DASH,
+    AV_ERROR_ASCII,
+    AV_ERROR_BETWEEN,
+    AV_ERROR_CONTAINS,
+    AV_ERROR_DATETIME,
+    AV_ERROR_ENDS_WITH,
+    AV_ERROR_IN,
+    AV_ERROR_MAX,
+    AV_ERROR_MIN,
+    AV_ERROR_MULTIPLE_OF,
+    AV_ERROR_REGEX,
+    AV_ERROR_SIZE,
+    AV_ERROR_STARTS_WITH,
+    AV_ERROR_ULID,
+    AV_ERROR_TYPE_COUNT
 } av_error_type;
 
 typedef struct {
@@ -32,6 +51,12 @@ static zend_string *get_property_full_path(av_field *field);
 
 // Value conversion
 zend_string *av_value_to_string(zval *value);
+
+// Renders a list of scalar values as "a, b, c" (each through
+// av_value_to_string), for constraint messages listing allowed or
+// searched values. The result is a freshly allocated zend_string the
+// caller must release.
+zend_string *av_values_to_list_string(zval *values);
 
 // Updates errors
 static zend_always_inline void add_field_error_to_array(zval *errors_array, const char *error_message, size_t length);

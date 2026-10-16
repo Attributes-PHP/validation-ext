@@ -20,6 +20,18 @@
 /* Forward declaration: the array attribute spec, owned by the spec cache */
 typedef struct av_spec av_spec;
 
+/*
+ * A constraint attribute instantiated once per field compile: the
+ * instance zval is owned by the plan, the validator runs the
+ * constraint's logic against the field value at validation time.
+ */
+typedef bool (*av_constraint_validator_t)(zval *constraint, av_field *field, av_property_info *property, zval *errors);
+
+typedef struct {
+    zval instance; // owned constraint object, constructed via its C constructor
+    av_constraint_validator_t validate;
+} av_compiled_constraint;
+
 typedef enum {
     AV_ARM_BASIC = 1,    // arm->mask holds the pure type mask
     AV_ARM_CLASS,        // arm->ce / arm->origin hold the class arm
@@ -53,6 +65,9 @@ typedef struct {
 
     av_array_state array_state;
     av_spec *array_spec; // borrowed, owned by the array spec cache
+
+    av_compiled_constraint *constraints; // owned, NULL when the field declares none
+    uint32_t constraints_count;
 } av_compiled_field;
 
 typedef struct {

@@ -150,6 +150,186 @@ static zend_always_inline bool has_property_default_value(av_property_info *prop
 }
 
 /* =========================================================================
+ * Constraint attributes
+ * ========================================================================= */
+
+/*
+ * Constraint attribute dispatch: attribute lowercase name -> class entry
+ * and validation function. The validation logic itself lives in each
+ * constraint's own file; this table only wires attributes to it.
+ */
+typedef struct {
+    const char *lcname;
+    size_t lcname_len;
+    zend_class_entry **ce;
+    av_constraint_validator_t validate;
+} av_constraint_dispatch_entry;
+
+#define AV_CONSTRAINT_ENTRY(lower, upper) \
+    {"attributes\\validation\\fields\\constraints\\" lower, sizeof("attributes\\validation\\fields\\constraints\\" lower) - 1, &AV_Fields_Constraints_##upper##_ce, av_validate_##upper##_constraint}
+
+static const av_constraint_dispatch_entry constraint_dispatch_table[] = {};
+
+#define CONSTRAINT_DISPATCH_TABLE_SIZE (sizeof(constraint_dispatch_table) / sizeof(constraint_dispatch_table[0]))
+
+static const av_constraint_dispatch_entry *find_constraint_dispatch(const zend_string *lcname)
+{
+    if (lcname == NULL) {
+        return NULL;
+    }
+
+    for (size_t i = 0; i < CONSTRAINT_DISPATCH_TABLE_SIZE; i++) {
+        const av_constraint_dispatch_entry *entry = &constraint_dispatch_table[i];
+        if (ZSTR_LEN(lcname) == entry->lcname_len && memcmp(ZSTR_VAL(lcname), entry->lcname, entry->lcname_len) == 0) {
+            return entry;
+        }
+    }
+
+    return NULL;
+}
+
+/*
+ * Instantiates a constraint attribute: evaluates its arguments and
+ * runs the constraint class's internal constructor, the same way a
+ * userland new expression does (the constructor enforces the stub
+ * signature). Positional arguments stay positional; named arguments
+ * (for example #[Size(min: 3)]) go through the engine's
+ * named-parameter machinery.
+ *
+ * The instance zval is owned by the caller. Returns false with a
+ * pending exception when an argument cannot be evaluated or the
+ * constructor rejects it.
+ */
+static bool instantiate_constraint_attribute(zval *instance, zend_class_entry *ce, zend_attribute *attribute, zend_class_entry *scope)
+{
+    object_init_ex(instance, ce);
+
+    zend_function *constructor = ce->constructor;
+    if (constructor == NULL) {
+        /* The class has no constructor: as with userland classes, the
+         * arguments are ignored. */
+        return true;
+    }
+
+    uint32_t argc = attribute->argc;
+    if (argc == 0) {
+        /* The constructor still runs: it initializes the properties
+         * (for example In's empty $values array), like a userland
+         * new In() expression. */
+        zend_call_known_function(constructor, Z_OBJ_P(instance), ce, NULL, 0, NULL, NULL);
+        if (EG(exception) != NULL) {
+            zval_ptr_dtor(instance);
+            return false;
+        }
+        return true;
+    }
+
+    zval *params = safe_emalloc(argc, sizeof(zval), 0);
+    for (uint32_t i = 0; i < argc; i++) {
+        ZVAL_UNDEF(&params[i]);
+    }
+
+    HashTable *named_params = NULL;
+    uint32_t positional_count = 0;
+    bool failed = false;
+
+    for (uint32_t i = 0; i < argc; i++) {
+        zval *param = &params[i];
+        if (zend_get_attribute_value(param, attribute, i, scope) != SUCCESS) {
+            failed = true;
+            break;
+        }
+
+        if (attribute->args[i].name == NULL) {
+            positional_count++;
+            continue;
+        }
+
+        if (named_params == NULL) {
+            named_params = emalloc(sizeof(HashTable));
+            zend_hash_init(named_params, argc, NULL, ZVAL_PTR_DTOR, 0);
+        }
+        zend_hash_add(named_params, attribute->args[i].name, param);
+        ZVAL_UNDEF(param);
+    }
+
+    if (!failed) {
+        zval retval;
+        ZVAL_UNDEF(&retval);
+        zend_call_known_function(constructor, Z_OBJ_P(instance), ce, &retval, positional_count, params, named_params);
+        if (Z_TYPE(retval) != IS_UNDEF) {
+            zval_ptr_dtor(&retval);
+        }
+    }
+
+    for (uint32_t i = 0; i < argc; i++) {
+        if (Z_TYPE(params[i]) != IS_UNDEF) {
+            zval_ptr_dtor(&params[i]);
+        }
+    }
+    efree(params);
+    if (named_params != NULL) {
+        zend_hash_destroy(named_params);
+        efree(named_params);
+    }
+
+    if (failed || EG(exception) != NULL) {
+        zval_ptr_dtor(instance);
+        return false;
+    }
+
+    return true;
+}
+
+/*
+ * Collects the constraint attributes of a field, instantiating each
+ * once (the plan owns the instances). Non-constraint attributes
+ * (Alias, ErrorMessage, the array type-hint attributes) are skipped.
+ * A failure (pending exception from a bad constructor argument)
+ * returns false with the partial array freed.
+ */
+static bool compile_field_constraints(av_compiled_field *cf)
+{
+    if (cf->prop->attributes == NULL) {
+        return true;
+    }
+
+    av_compiled_constraint *constraints = NULL;
+    uint32_t count = 0;
+    uint32_t capacity = 0;
+
+    zend_attribute *attribute;
+    ZEND_HASH_FOREACH_PTR(cf->prop->attributes, attribute)
+    {
+        const av_constraint_dispatch_entry *entry = find_constraint_dispatch(attribute->lcname);
+        if (entry == NULL) {
+            continue;
+        }
+
+        if (count == capacity) {
+            capacity = capacity == 0 ? 4 : capacity * 2;
+            constraints = erealloc(constraints, capacity * sizeof(av_compiled_constraint));
+        }
+
+        if (!instantiate_constraint_attribute(&constraints[count].instance, *entry->ce, attribute, cf->declaring_ce)) {
+            for (uint32_t i = 0; i < count; i++) {
+                zval_ptr_dtor(&constraints[i].instance);
+            }
+            efree(constraints);
+            return false;
+        }
+
+        constraints[count].validate = entry->validate;
+        count++;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    cf->constraints = constraints;
+    cf->constraints_count = count;
+    return true;
+}
+
+/* =========================================================================
  * Plan cache and compilation
  * ========================================================================= */
 
@@ -178,6 +358,12 @@ static void free_compiled_field(av_compiled_field *cf)
     }
     if (cf->arms != NULL) {
         efree(cf->arms);
+    }
+    if (cf->constraints != NULL) {
+        for (uint32_t i = 0; i < cf->constraints_count; i++) {
+            zval_ptr_dtor(&cf->constraints[i].instance);
+        }
+        efree(cf->constraints);
     }
 }
 
@@ -314,9 +500,6 @@ static bool compile_field(av_compiled_field *cf, av_compiled_model *plan)
         return false;
     }
 
-    // The plan owns one reference to a stable string
-    cf->name = (resolved == cf->prop->name) ? zend_string_copy(cf->prop->name) : resolved;
-
     zend_type type = cf->prop->type;
     if (!ZEND_TYPE_IS_SET(type)) {
         cf->untyped = true;
@@ -367,6 +550,22 @@ static bool compile_field(av_compiled_field *cf, av_compiled_model *plan)
             }
         }
     }
+
+    /*
+     * Constraint attributes instantiate their objects once per field
+     * compile. A failure leaves the slot uncompiled (the name is only
+     * assigned below) so the constructor error keeps firing on every
+     * validation.
+     */
+    if (!compile_field_constraints(cf)) {
+        if (resolved != cf->prop->name) {
+            zend_string_release(resolved);
+        }
+        return false;
+    }
+
+    // The plan owns one reference to a stable string
+    cf->name = (resolved == cf->prop->name) ? zend_string_copy(cf->prop->name) : resolved;
 
     cf->has_default = has_property_default_value(&property_info);
     return true;
@@ -475,6 +674,35 @@ bool av_compiled_validate_model(zval *raw_data, zval *model, av_model_configs_pr
                 return false;
             }
             continue;
+        }
+
+        /* Constraints run on the (possibly coerced) value; a failing
+         * constraint keeps the value out of the model. Every declared
+         * constraint reports its own error unless stopFirstError
+         * aborts the run. */
+        if (cf->constraints_count > 0) {
+            bool constraints_valid = true;
+
+            for (uint32_t c = 0; c < cf->constraints_count; c++) {
+                av_compiled_constraint *compiled = &cf->constraints[c];
+                if (!compiled->validate(&compiled->instance, &field, &property_info, errors)) {
+                    constraints_valid = false;
+                    if (properties->stop_first_error) {
+                        return false;
+                    }
+                }
+
+                /* A constraint may throw instead of reporting an error
+                 * (for example an invalid timezone name): let the
+                 * exception propagate. */
+                if (UNEXPECTED(EG(exception) != NULL)) {
+                    return false;
+                }
+            }
+
+            if (!constraints_valid) {
+                continue;
+            }
         }
 
         // Direct offset write: the value is already of the declared

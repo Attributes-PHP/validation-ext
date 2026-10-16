@@ -17,6 +17,20 @@
 const char *av_default_error_type_messages[] = {
     [AV_ERROR_REQUIRED] = "Field is required",
     [AV_ERROR_TYPE] = "Must be {expected}",
+    [AV_ERROR_ALPHA_DASH] = "Must only contain letters, numbers, dashes and underscores",
+    [AV_ERROR_ASCII] = "Must only contain ASCII characters",
+    [AV_ERROR_BETWEEN] = "Must be between {expected}",
+    [AV_ERROR_CONTAINS] = "Must contain {expected}",
+    [AV_ERROR_DATETIME] = "Must be a datetime in the format {expected}",
+    [AV_ERROR_ENDS_WITH] = "Must end with one of: {expected}",
+    [AV_ERROR_IN] = "Must be one of: {expected}",
+    [AV_ERROR_MAX] = "Must be at most {expected}",
+    [AV_ERROR_MIN] = "Must be at least {expected}",
+    [AV_ERROR_MULTIPLE_OF] = "Must be a multiple of {expected}",
+    [AV_ERROR_REGEX] = "Must match the pattern {expected}",
+    [AV_ERROR_SIZE] = "Must have a size {expected}",
+    [AV_ERROR_STARTS_WITH] = "Must start with one of: {expected}",
+    [AV_ERROR_ULID] = "Must be a valid ULID",
 };
 
 static const av_basic_type_mapping basic_type_mappings[] = {
@@ -355,15 +369,15 @@ zend_string *build_union_type_string(zend_type property_type)
  * resolutions stay uncached so their errors keep firing.
  */
 typedef struct {
-    zend_string *templates[2]; // one per av_error_type, owned
-    zend_string *expected;     // {expected} from the native hint, owned
+    zend_string *templates[AV_ERROR_TYPE_COUNT]; // one per av_error_type, owned
+    zend_string *expected;                       // {expected} from the native hint, owned
 } av_property_error_templates;
 
 static void error_templates_cache_dtor(zval *entry)
 {
     av_property_error_templates *cached = Z_PTR_P(entry);
 
-    for (uint32_t i = 0; i < 2; i++) {
+    for (uint32_t i = 0; i < AV_ERROR_TYPE_COUNT; i++) {
         if (cached->templates[i] != NULL) {
             av_string_release(cached->templates[i]);
         }
@@ -393,9 +407,7 @@ static av_property_error_templates *get_property_error_templates(av_property_inf
     }
 
     av_property_error_templates *cached = av_emalloc(sizeof(av_property_error_templates));
-    cached->templates[AV_ERROR_REQUIRED] = NULL;
-    cached->templates[AV_ERROR_TYPE] = NULL;
-    cached->expected = NULL;
+    memset(cached, 0, sizeof(av_property_error_templates));
 
     if (AV_G(av_error_templates_cache) == NULL) {
         AV_G(av_error_templates_cache) = av_emalloc(sizeof(HashTable));
@@ -434,6 +446,13 @@ static zend_always_inline bool attribute_argument_name_equals(const zend_string 
  */
 static zend_string *resolve_error_template(av_error_type type, av_property_info *property)
 {
+    /* The ErrorMessage attribute only declares the required and type
+     * arguments: constraint error types always use their default
+     * template. */
+    if (type != AV_ERROR_REQUIRED && type != AV_ERROR_TYPE) {
+        return NULL;
+    }
+
     zend_attribute *attribute = get_error_message_attribute(property);
     if (attribute == NULL) {
         return NULL;
@@ -508,7 +527,7 @@ static zend_string *resolve_error_template(av_error_type type, av_property_info 
  */
 static zend_string *get_custom_error_template(av_error_type type, av_property_info *property)
 {
-    ZEND_ASSERT(AV_ERROR_TYPE == type || AV_ERROR_REQUIRED == type);
+    ZEND_ASSERT(type < AV_ERROR_TYPE_COUNT);
 
     av_property_error_templates *cached = get_property_error_templates(property);
 
@@ -651,6 +670,43 @@ zend_string *av_value_to_string(zval *value)
         default:
             return av_string_init("(unknown)", sizeof("(unknown)") - 1, 0);
     }
+}
+
+/*
+ * Renders a list of values as "a, b, c" for constraint messages that
+ * enumerate allowed or searched values (In, Contains, StartsWith,
+ * EndsWith). Each value goes through av_value_to_string. The result is
+ * a freshly allocated zend_string the caller must release; an empty
+ * array renders as the empty string.
+ */
+zend_string *av_values_to_list_string(zval *values)
+{
+    ZEND_ASSERT(Z_TYPE_P(values) == IS_ARRAY);
+
+    zend_string *result = NULL;
+    zval *entry;
+
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(values), entry)
+    {
+        zend_string *rendered = av_value_to_string(entry);
+
+        if (result == NULL) {
+            result = rendered;
+            continue;
+        }
+
+        zend_string *joined = av_string_concat3(ZSTR_VAL(result), ZSTR_LEN(result), ", ", sizeof(", ") - 1, ZSTR_VAL(rendered), ZSTR_LEN(rendered));
+        av_string_release(result);
+        av_string_release(rendered);
+        result = joined;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    if (result == NULL) {
+        return av_string_init("", 0, 0);
+    }
+
+    return result;
 }
 
 /*
