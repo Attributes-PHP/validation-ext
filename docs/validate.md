@@ -127,6 +127,26 @@ class User extends BaseModel
 
 The `{expected}` placeholder renders the expected type list.
 
+### Constraints
+
+Value-level rules are declared with constraint attributes from `Attributes\Validation\Fields\Constraints`. They run after the property's type check, before the value is written, and each failing constraint reports its own error:
+
+```php
+use Attributes\Validation\Fields\Constraints\Between;
+use Attributes\Validation\Fields\Constraints\Regex;
+
+class User extends BaseModel
+{
+    #[Between(18, 99)]
+    public int $age;
+
+    #[Regex('/^[a-z][a-z0-9-]*$/')]
+    public string $username;
+}
+```
+
+Constraints apply to the property value itself, not to `Sequence`/`Dict` elements. Custom constraints can be written in PHP userland by implementing `Attributes\Validation\Fields\Constraint`. The [constraints reference](/constraints/) lists every built-in with its semantics and default message, and the userland contract.
+
 ## Array type validation
 
 Typed `array` properties declare their element shape with the `Sequence`, `Union`, `Intersection` and `Dict` attributes:
