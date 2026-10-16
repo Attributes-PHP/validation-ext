@@ -11,6 +11,7 @@
 #include "fields/constraints/av_ends_with.h"
 #include "fields/constraints/av_in.h"
 #include "fields/constraints/av_max.h"
+#include "fields/constraints/av_min.h"
 #include "helpers/av_error_messages.h"
 #include "helpers/av_string.h"
 #include "validators/av_array_typehint_validator.h"
@@ -185,6 +186,7 @@ static const av_constraint_dispatch_entry constraint_dispatch_table[] = {
     AV_CONSTRAINT_ENTRY("endswith", EndsWith),
     AV_CONSTRAINT_ENTRY("in", In),
     AV_CONSTRAINT_ENTRY("max", Max),
+    AV_CONSTRAINT_ENTRY("min", Min),
 };
 
 #define CONSTRAINT_DISPATCH_TABLE_SIZE (sizeof(constraint_dispatch_table) / sizeof(constraint_dispatch_table[0]))
