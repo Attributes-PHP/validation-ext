@@ -3,7 +3,7 @@
 
 namespace Attributes\Validation\Fields\Constraints {
     #[Attribute]
-    class Contains implements Field {
+    final class Contains implements Field {
         public array $values;
 
         public function __construct(string|int|float ...$values) {}

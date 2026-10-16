@@ -3,7 +3,7 @@
 
 namespace Attributes\Validation\Fields\Constraints {
     #[Attribute]
-    class EndsWith implements Field {
+    final class EndsWith implements Field {
         public array $values;
 
         public function __construct(string|int|float ...$values) {}

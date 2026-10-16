@@ -3,5 +3,5 @@
 
 namespace Attributes\Validation\Fields\Constraints {
     #[Attribute]
-    class AlphaDash implements Field {}
+    final class AlphaDash implements Field {}
 }

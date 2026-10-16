@@ -109,6 +109,8 @@ The contract:
 - Constructor arguments are passed through unchanged, named arguments included: `#[LessThan(bound: 10)]` reaches the constructor as a named parameter.
 - Exceptions thrown inside `validate()` or `message()` propagate to the caller of `validate()`, like model hook errors.
 
+The built-in constraint classes are final: custom constraints implement the `Constraint` interface rather than extending a built-in.
+
 Unlike the built-ins, userland constraints may declare `Attribute::IS_REPEATABLE` and be declared multiple times on one property. Instances are compiled once per property and reused for every `validate()` call of the request.
 
 Attribute classes that do not exist or do not implement `Constraint` are ignored, exactly like any other attribute the validation engine does not know — a property can carry unrelated documentation attributes without affecting validation.
