@@ -3,6 +3,7 @@
 #include "av_base_model.h"
 #include "av_exception.h"
 #include "av_validate_function.h"
+#include "fields/av_constraint.h"
 #include "fields/constraints/av_alpha_dash.h"
 #include "fields/constraints/av_ascii.h"
 #include "fields/constraints/av_between.h"
@@ -331,8 +332,27 @@ static bool compile_field_constraints(av_compiled_field *cf)
     ZEND_HASH_FOREACH_PTR(cf->prop->attributes, attribute)
     {
         const av_constraint_dispatch_entry *entry = find_constraint_dispatch(attribute->lcname);
-        if (entry == NULL) {
-            continue;
+        av_constraint_validator_t validate;
+        zend_class_entry *ce;
+
+        if (entry != NULL) {
+            ce = *entry->ce;
+            validate = entry->validate;
+        } else {
+            /*
+             * Userland constraint: any attribute class implementing the
+             * Constraint interface. Unresolvable classes and classes not
+             * implementing the interface are skipped, exactly like any
+             * other attribute the engine does not know (doc attributes,
+             * typos): the lookup only runs once per field compile.
+             */
+            zend_class_entry *userland_ce = zend_lookup_class(attribute->name);
+            if (userland_ce == NULL || !instanceof_function(userland_ce, AV_Fields_Constraint_ce)) {
+                continue;
+            }
+
+            ce = userland_ce;
+            validate = av_validate_userland_constraint;
         }
 
         if (count == capacity) {
@@ -340,7 +360,7 @@ static bool compile_field_constraints(av_compiled_field *cf)
             constraints = erealloc(constraints, capacity * sizeof(av_compiled_constraint));
         }
 
-        if (!instantiate_constraint_attribute(&constraints[count].instance, *entry->ce, attribute, cf->declaring_ce)) {
+        if (!instantiate_constraint_attribute(&constraints[count].instance, ce, attribute, cf->declaring_ce)) {
             for (uint32_t i = 0; i < count; i++) {
                 zval_ptr_dtor(&constraints[i].instance);
             }
@@ -348,7 +368,7 @@ static bool compile_field_constraints(av_compiled_field *cf)
             return false;
         }
 
-        constraints[count].validate = entry->validate;
+        constraints[count].validate = validate;
         count++;
     }
     ZEND_HASH_FOREACH_END();

@@ -584,6 +584,20 @@ void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_prop
 }
 
 /*
+ * Appends an already-rendered error message under the field's dot path,
+ * bypassing the template machinery. Used by userland constraints, whose
+ * message() result is final text (after placeholder substitution).
+ */
+void av_add_field_message(zend_string *message, av_field *field, zval *errors)
+{
+    ZEND_ASSERT(Z_TYPE_P(errors) == IS_ARRAY);
+
+    zend_string *full_path = get_property_full_path(field);
+    add_field_error(errors, full_path, ZSTR_VAL(message), ZSTR_LEN(message));
+    av_string_release(full_path);
+}
+
+/*
  * Like av_add_field_error_with_prefix(), but substitutes {expected} with
  * the given string instead of the property's native type hint. Used for
  * array element errors described by the array type-hint attributes, where

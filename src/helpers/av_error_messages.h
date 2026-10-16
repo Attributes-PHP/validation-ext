@@ -70,4 +70,8 @@ void av_clear_error_templates_cache(void);
 // errors whose expected type cannot be derived from the native type hint
 void av_add_field_error_with_expected(av_error_type type, av_field *field, av_property_info *property, zval *errors, const zend_string *expected);
 
+// Appends an already-rendered message under the field's dot path, for
+// userland constraints whose message() result is final text
+void av_add_field_message(zend_string *message, av_field *field, zval *errors);
+
 #endif /* AV_ERROR_MESSAGES_H */
