@@ -254,6 +254,10 @@ static bool instantiate_constraint_attribute(zval *instance, zend_class_entry *c
         return true;
     }
 
+    /* The UNDEF pre-initialization is load-bearing: an evaluation
+     * failure leaves the failing slot untouched, and named arguments
+     * are moved into named_params below with the source slot reset to
+     * UNDEF — both keep the cleanup loop exact. */
     zval *params = safe_emalloc(argc, sizeof(zval), 0);
     for (uint32_t i = 0; i < argc; i++) {
         ZVAL_UNDEF(&params[i]);
@@ -263,6 +267,9 @@ static bool instantiate_constraint_attribute(zval *instance, zend_class_entry *c
     uint32_t positional_count = 0;
     bool failed = false;
 
+    /* Positional arguments always precede named ones (the compiler
+     * rejects the opposite), so the first positional_count slots of
+     * params form a gap-free prefix passed to the constructor. */
     for (uint32_t i = 0; i < argc; i++) {
         zval *param = &params[i];
         if (zend_get_attribute_value(param, attribute, i, scope) != SUCCESS) {
@@ -271,6 +278,7 @@ static bool instantiate_constraint_attribute(zval *instance, zend_class_entry *c
         }
 
         if (attribute->args[i].name == NULL) {
+            ZEND_ASSERT(i == positional_count);
             positional_count++;
             continue;
         }
@@ -284,12 +292,8 @@ static bool instantiate_constraint_attribute(zval *instance, zend_class_entry *c
     }
 
     if (!failed) {
-        zval retval;
-        ZVAL_UNDEF(&retval);
-        zend_call_known_function(constructor, Z_OBJ_P(instance), ce, &retval, positional_count, params, named_params);
-        if (Z_TYPE(retval) != IS_UNDEF) {
-            zval_ptr_dtor(&retval);
-        }
+        /* Constructors cannot return anything meaningful: discard. */
+        zend_call_known_function(constructor, Z_OBJ_P(instance), ce, NULL, positional_count, params, named_params);
     }
 
     for (uint32_t i = 0; i < argc; i++) {
