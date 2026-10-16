@@ -1,18 +1,39 @@
 #include "av_starts_with.h"
 #include "../av_field.h"
+#include "../../helpers/av_error_messages.h"
+#include "../../helpers/av_wrappers.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_attributes.h"
+#include "Zend/zend_operators.h"
 
 zend_class_entry *AV_Fields_Constraints_StartsWith_ce;
 
+/*
+ * $values: string|int|float
+ *
+ * Enforced per element because PHP 8.2 arginfo cannot express a
+ * union-typed variadic parameter.
+ */
 ZEND_METHOD(AV_Fields_Constraints_StartsWith, __construct)
 {
     zval *values;
     uint32_t values_count;
 
-    ZEND_PARSE_PARAMETERS_START(1, -1)
+    ZEND_PARSE_PARAMETERS_START(0, -1)
     Z_PARAM_VARIADIC('z', values, values_count)
     ZEND_PARSE_PARAMETERS_END();
+
+    for (uint32_t i = 0; i < values_count; i++) {
+        switch (Z_TYPE(values[i])) {
+            case IS_STRING:
+            case IS_LONG:
+            case IS_DOUBLE:
+                continue;
+            default:
+                zend_argument_type_error(i + 1, "must be of type string|int|float, %s given", zend_zval_type_name(&values[i]));
+                RETURN_THROWS();
+        }
+    }
 
     zval member;
     array_init_size(&member, values_count);
@@ -23,6 +44,37 @@ ZEND_METHOD(AV_Fields_Constraints_StartsWith, __construct)
 
     zend_update_property(AV_Fields_Constraints_StartsWith_ce, Z_OBJ_P(getThis()), "values", sizeof("values") - 1, &member);
     zval_ptr_dtor(&member);
+}
+
+/*
+ * #[StartsWith(...values)]: the string value must start with one of the
+ * declared values (numeric values match by their string
+ * representation). Non-string values fail the constraint.
+ */
+bool av_validate_StartsWith_constraint(zval *constraint, av_field *field, av_property_info *property, zval *errors)
+{
+    zval *prefixes = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "values", sizeof("values") - 1, false, NULL);
+
+    zval *value = field->value;
+    if (Z_TYPE_P(value) == IS_STRING) {
+        zval *prefix;
+        ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(prefixes), prefix)
+        {
+            zend_string *prefix_str = zval_get_string(prefix);
+            bool matches = ZSTR_LEN(prefix_str) <= Z_STRLEN_P(value) && memcmp(Z_STRVAL_P(value), ZSTR_VAL(prefix_str), ZSTR_LEN(prefix_str)) == 0;
+            zend_string_release(prefix_str);
+
+            if (matches) {
+                return true;
+            }
+        }
+        ZEND_HASH_FOREACH_END();
+    }
+
+    zend_string *expected = av_values_to_list_string(prefixes);
+    av_add_field_error_with_expected(AV_ERROR_STARTS_WITH, field, property, errors, expected);
+    av_string_release(expected);
+    return false;
 }
 
 void av_register_StartsWith_class(void)
