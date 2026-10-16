@@ -1,6 +1,7 @@
 ---
 title: "validate()"
-description: "Reference for the Attributes\Validation\validate() function: parameters, return value, validation rules and exceptions."
+description: 'Reference for the Attributes\Validation\validate() function: parameters, return value, validation rules and exceptions.'
+
 ---
 
 # validate()

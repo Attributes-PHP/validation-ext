@@ -1,6 +1,7 @@
 ---
 title: "Constraints"
-description: "Reference for the Attributes\Validation constraint attributes: the built-in constraints and how to write custom constraints in PHP userland."
+description: 'Reference for the Attributes\Validation constraint attributes: the built-in constraints and how to write custom constraints in PHP userland.'
+
 ---
 
 # Constraints

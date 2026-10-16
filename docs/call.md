@@ -1,6 +1,7 @@
 ---
 title: "call()"
-description: "Reference for the Attributes\Validation\call() function: model hydration, dependencies and lazy ArrayAccess containers."
+description: 'Reference for the Attributes\Validation\call() function: model hydration, dependencies and lazy ArrayAccess containers.'
+
 ---
 
 # call()
