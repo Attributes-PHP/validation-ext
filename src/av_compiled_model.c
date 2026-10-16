@@ -3,6 +3,7 @@
 #include "av_base_model.h"
 #include "av_exception.h"
 #include "av_validate_function.h"
+#include "fields/constraints/av_alpha_dash.h"
 #include "helpers/av_error_messages.h"
 #include "helpers/av_string.h"
 #include "validators/av_array_typehint_validator.h"
@@ -168,7 +169,9 @@ typedef struct {
 #define AV_CONSTRAINT_ENTRY(lower, upper) \
     {"attributes\\validation\\fields\\constraints\\" lower, sizeof("attributes\\validation\\fields\\constraints\\" lower) - 1, &AV_Fields_Constraints_##upper##_ce, av_validate_##upper##_constraint}
 
-static const av_constraint_dispatch_entry constraint_dispatch_table[] = {};
+static const av_constraint_dispatch_entry constraint_dispatch_table[] = {
+    AV_CONSTRAINT_ENTRY("alphadash", AlphaDash),
+};
 
 #define CONSTRAINT_DISPATCH_TABLE_SIZE (sizeof(constraint_dispatch_table) / sizeof(constraint_dispatch_table[0]))
 
