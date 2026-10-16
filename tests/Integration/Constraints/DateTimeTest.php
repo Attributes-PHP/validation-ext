@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Attributes\Validation\Tests\Integration\Constraints;
 
+use Attributes\Validation\BaseModel;
+use Attributes\Validation\Exceptions\ValidationException;
 use Attributes\Validation\Fields\Constraints\DateTime;
 use DateTimeZone;
 use ReflectionClass;
@@ -11,6 +13,7 @@ use stdClass;
 use TypeError;
 use ValueError;
 
+use function Attributes\Validation\validate;
 
 describe('DateTime constraint constructor argument validation', function () {
     it('applies the stub defaults when no arguments are given', function () {
@@ -77,4 +80,87 @@ describe('DateTime constraint constructor argument validation', function () {
         ValueError::class,
         'Argument #2 ($timezone) must be a constructed DateTimeZone object',
     );
+});
+
+describe('DateTime validation', function () {
+    it('accepts date strings parseable in the declared format', function () {
+        $model = new class extends BaseModel {
+            #[DateTime('Y-m-d')]
+            public string $value;
+        };
+
+        $result = validate(['value' => '2026-10-16'], $model);
+        expect($result->value)->toBe('2026-10-16');
+
+        $model = new class extends BaseModel {
+            #[DateTime('d/m/Y H:i')]
+            public string $value;
+        };
+
+        $result = validate(['value' => '16/10/2026 09:00'], $model);
+        expect($result->value)->toBe('16/10/2026 09:00');
+    });
+
+    it('reports an error for strings not parseable in the declared format', function (string $value) {
+        $model = new class extends BaseModel {
+            #[DateTime('Y-m-d')]
+            public string $value;
+        };
+
+        try {
+            validate(['value' => $value], $model);
+            expect(false)->toBeTrue();
+        } catch (ValidationException $e) {
+            expect($e->getErrors())->toBe(['value' => ["Must be a datetime in the format 'Y-m-d'"]]);
+        }
+    })->with([
+        '2026/10/16',
+        'not a date',
+        '16-10-2026',
+        '',
+    ]);
+
+    it('applies the declared timezone', function () {
+        $model = new class extends BaseModel {
+            #[DateTime('Y-m-d H:i', timezone: 'Europe/London')]
+            public string $value;
+        };
+
+        $result = validate(['value' => '2026-10-16 09:00'], $model);
+        expect($result->value)->toBe('2026-10-16 09:00');
+    });
+
+    it('accepts a DateTimeZone instance as the timezone', function () {
+        $model = new class extends BaseModel {
+            #[DateTime('Y-m-d H:i', new DateTimeZone('America/Sao_Paulo'))]
+            public string $value;
+        };
+
+        $result = validate(['value' => '2026-10-16 09:00'], $model);
+        expect($result->value)->toBe('2026-10-16 09:00');
+    });
+
+    it('passes DateTimeInterface instances as-is', function () {
+        $model = new class extends BaseModel {
+            #[DateTime('Y-m-d')]
+            public \DateTime $value;
+        };
+
+        $result = validate(['value' => new \DateTime('2026-10-16 09:00')], $model);
+        expect($result->value)->toBeInstanceOf(\DateTime::class);
+    });
+
+    it('propagates the DateTimeZone error for an invalid timezone name', function () {
+        $model = new class extends BaseModel {
+            #[DateTime(timezone: 'Nope/Nope')]
+            public string $value;
+        };
+
+        try {
+            validate(['value' => '2026-10-16'], $model);
+            expect(false)->toBeTrue();
+        } catch (\Exception $e) {
+            expect($e->getMessage())->toBe('DateTimeZone::__construct(): Unknown or bad timezone (Nope/Nope)');
+        }
+    });
 });
