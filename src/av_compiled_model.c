@@ -16,6 +16,7 @@
 #include "fields/constraints/av_regex.h"
 #include "fields/constraints/av_size.h"
 #include "fields/constraints/av_starts_with.h"
+#include "fields/constraints/av_ulid.h"
 #include "helpers/av_error_messages.h"
 #include "helpers/av_string.h"
 #include "validators/av_array_typehint_validator.h"
@@ -195,6 +196,7 @@ static const av_constraint_dispatch_entry constraint_dispatch_table[] = {
     AV_CONSTRAINT_ENTRY("regex", Regex),
     AV_CONSTRAINT_ENTRY("size", Size),
     AV_CONSTRAINT_ENTRY("startswith", StartsWith),
+    AV_CONSTRAINT_ENTRY("ulid", Ulid),
 };
 
 #define CONSTRAINT_DISPATCH_TABLE_SIZE (sizeof(constraint_dispatch_table) / sizeof(constraint_dispatch_table[0]))
