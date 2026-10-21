@@ -55,7 +55,7 @@ Named constructor arguments work everywhere: `#[Size(min: 3)]` validates only th
 - **Numeric constraints** (`Between`, `Max`, `Min`, `MultipleOf`) apply to `int` and `float` values; any other type fails. `MultipleOf` compares integer pairs with integer modulo and float pairs with `fmod` plus a small tolerance, so `0.3` counts as a multiple of `0.1`. Only `0` is a multiple of `0`.
 - **String constraints** (`AlphaDash`, `Ascii`, `Regex`, `StartsWith`, `EndsWith`, `Ulid`) fail for non-string values. `StartsWith`/`EndsWith` accept numeric declared values and match them by their string representation.
 - **Membership constraints** (`In`, `Contains`) compare strictly: `In('1')` rejects the integer `1`. On arrays, `Contains` requires every declared value to be present; on strings, every declared value must appear as a substring.
-- **`DateTime`** parses with the date extension in the declared format and timezone. `DateTimeInterface` instances pass as-is, and an invalid timezone name throws the `DateTimeZone` exception on the first `validate()` call.
+- **`DateTime`** parses with the date extension in the declared format and timezone. `DateTimeInterface` instances pass as-is, and an invalid timezone name throws a `ValueError` at construction.
 - **`Size`** measures strings in bytes and arrays in element count. With only one bound declared, only that bound applies; with neither, every value passes.
 
 ### Error messages

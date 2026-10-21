@@ -80,6 +80,17 @@ describe('DateTime constraint constructor argument validation', function () {
         ValueError::class,
         'Argument #2 ($timezone) must be a constructed DateTimeZone object',
     );
+
+    it('throws a ValueError when $timezone is an unknown timezone name', function (string $timezone) {
+        expect(fn () => new DateTime(timezone: $timezone))->toThrow(
+            ValueError::class,
+            'Argument #2 ($timezone) must be a valid timezone identifier',
+        );
+    })->with([
+        'Nope/Nope',
+        'hello world',
+        '',
+    ]);
 });
 
 describe('DateTime validation', function () {
@@ -150,17 +161,15 @@ describe('DateTime validation', function () {
         expect($result->value)->toBeInstanceOf(\DateTime::class);
     });
 
-    it('propagates the DateTimeZone error for an invalid timezone name', function () {
+    it('fails eagerly for an invalid timezone name in the attribute', function () {
         $model = new class extends BaseModel {
             #[DateTime(timezone: 'Nope/Nope')]
             public string $value;
         };
 
-        try {
-            validate(['value' => '2026-10-16'], $model);
-            expect(false)->toBeTrue();
-        } catch (\Exception $e) {
-            expect($e->getMessage())->toBe('DateTimeZone::__construct(): Unknown or bad timezone (Nope/Nope)');
-        }
+        expect(fn () => validate(['value' => '2026-10-16'], $model))->toThrow(
+            ValueError::class,
+            'Argument #2 ($timezone) must be a valid timezone identifier',
+        );
     });
 });

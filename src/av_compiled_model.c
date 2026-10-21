@@ -746,7 +746,7 @@ bool av_compiled_validate_model(zval *raw_data, zval *model, av_model_configs_pr
                 }
 
                 /* A constraint may throw instead of reporting an error
-                 * (for example an invalid timezone name): let the
+                 * (for example a throwing userland constraint): let the
                  * exception propagate. */
                 if (UNEXPECTED(EG(exception) != NULL)) {
                     return false;

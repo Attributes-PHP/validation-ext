@@ -4,6 +4,7 @@
 #include "../../helpers/av_wrappers.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_attributes.h"
+#include "Zend/zend_exceptions.h"
 #include "Zend/zend_operators.h"
 #include <ext/date/php_date.h>
 
@@ -12,8 +13,9 @@ zend_class_entry *AV_Fields_Constraints_DateTime_ce;
 /*
  * $timezone: DateTimeZone|string|null
  *
- * Checked eagerly so a malformed timezone fails at construction instead of
- * at validation time.
+ * Only the type is checked here; a timezone name is resolved by
+ * build_timezone_from_name() so a malformed value fails at
+ * construction instead of at validation time.
  */
 static bool is_valid_timezone(zval *value)
 {
@@ -28,6 +30,32 @@ static bool is_valid_timezone(zval *value)
         default:
             return false;
     }
+}
+
+/*
+ * Builds a DateTimeZone for a timezone name through its internal
+ * constructor. The result is an owned zval; returns false with a
+ * pending exception when the timezone name is invalid.
+ */
+static bool build_timezone_from_name(zval *result, zval *name)
+{
+    zend_class_entry *tz_ce = php_date_get_timezone_ce();
+    object_init_ex(result, tz_ce);
+
+    zend_function *constructor = zend_hash_str_find_ptr(&tz_ce->function_table, "__construct", sizeof("__construct") - 1);
+    zval retval;
+    ZVAL_UNDEF(&retval);
+    zend_call_known_instance_method_with_1_params(constructor, Z_OBJ_P(result), &retval, name);
+    if (Z_TYPE(retval) != IS_UNDEF) {
+        zval_ptr_dtor(&retval);
+    }
+
+    if (EG(exception) != NULL) {
+        zval_ptr_dtor(result);
+        return false;
+    }
+
+    return true;
 }
 
 ZEND_METHOD(AV_Fields_Constraints_DateTime, __construct)
@@ -51,6 +79,16 @@ ZEND_METHOD(AV_Fields_Constraints_DateTime, __construct)
         RETURN_THROWS();
     }
 
+    if (timezone != NULL && Z_TYPE_P(timezone) == IS_STRING) {
+        zval tz_obj;
+        if (!build_timezone_from_name(&tz_obj, timezone)) {
+            zend_clear_exception();
+            zend_argument_value_error(2, "must be a valid timezone identifier");
+            RETURN_THROWS();
+        }
+        zval_ptr_dtor(&tz_obj);
+    }
+
     zend_update_property_string(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(getThis()), "format", sizeof("format") - 1, format == NULL ? "X-m-d\\TH:i:sP" : ZSTR_VAL(format));
 
     if (timezone == NULL) {
@@ -66,7 +104,8 @@ ZEND_METHOD(AV_Fields_Constraints_DateTime, __construct)
  * DateTimeZone instance is reused and a string names the timezone of a
  * fresh DateTimeZone built through its internal constructor. The
  * result is an owned zval; returns false with a pending exception
- * when the timezone name is invalid.
+ * when the timezone name is invalid. Unreachable for names validated
+ * at construction, kept defensive.
  */
 static bool prepare_timezone_for_parse(zval *result, zval *timezone, bool *has_timezone)
 {
@@ -82,23 +121,7 @@ static bool prepare_timezone_for_parse(zval *result, zval *timezone, bool *has_t
         return true;
     }
 
-    zend_class_entry *tz_ce = php_date_get_timezone_ce();
-    object_init_ex(result, tz_ce);
-
-    zend_function *constructor = zend_hash_str_find_ptr(&tz_ce->function_table, "__construct", sizeof("__construct") - 1);
-    zval retval;
-    ZVAL_UNDEF(&retval);
-    zend_call_known_instance_method_with_1_params(constructor, Z_OBJ_P(result), &retval, timezone);
-    if (Z_TYPE(retval) != IS_UNDEF) {
-        zval_ptr_dtor(&retval);
-    }
-
-    if (EG(exception) != NULL) {
-        zval_ptr_dtor(result);
-        return false;
-    }
-
-    return true;
+    return build_timezone_from_name(result, timezone);
 }
 
 /*
