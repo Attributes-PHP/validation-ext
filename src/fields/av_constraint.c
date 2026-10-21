@@ -27,8 +27,6 @@ void av_register_Constraint_interface(void)
  */
 bool av_validate_userland_constraint(zval *constraint, av_field *field, av_property_info *property, zval *errors)
 {
-    (void)property;
-
     zend_class_entry *ce = Z_OBJCE_P(constraint);
     zend_function *validate = zend_hash_str_find_ptr(&ce->function_table, "validate", sizeof("validate") - 1);
     ZEND_ASSERT(validate != NULL);
