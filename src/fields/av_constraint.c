@@ -1,5 +1,5 @@
 #include "av_constraint.h"
-#include "av_config_aware.h"
+#include "av_config_aware_constraint.h"
 #include "av_field.h"
 #include "../av_model_configs.h"
 #include "../helpers/av_error_messages.h"
@@ -21,7 +21,7 @@ void av_register_Constraint_interface(void)
 }
 
 /*
- * ConfigAware constraints receive the owning model's resolved configs
+ * ConfigAwareConstraint constraints receive the owning model's resolved configs
  * before validate() runs (and thus before message()). Exceptions thrown
  * by setModelConfigs() propagate to the caller of validate() like model
  * hook errors.
@@ -29,7 +29,7 @@ void av_register_Constraint_interface(void)
 static void av_set_model_configs_if_aware(zval *constraint, av_property_info *property)
 {
     zend_class_entry *ce = Z_OBJCE_P(constraint);
-    if (!instanceof_function(ce, AV_Fields_ConfigAware_ce)) {
+    if (!instanceof_function(ce, AV_Fields_ConfigAwareConstraint_ce)) {
         return;
     }
 

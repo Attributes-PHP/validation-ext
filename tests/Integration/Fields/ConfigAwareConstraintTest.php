@@ -4,24 +4,24 @@ declare(strict_types=1);
 
 namespace Attributes\Validation\Tests\Integration\Fields;
 
-use Attributes\Validation\Fields\ConfigAware;
+use Attributes\Validation\Fields\ConfigAwareConstraint;
 use Attributes\Validation\Fields\Constraint;
 use Attributes\Validation\ModelConfigs;
 use ReflectionClass;
 use ReflectionMethod;
 use TypeError;
 
-describe('ConfigAware interface', function () {
+describe('ConfigAwareConstraint interface', function () {
     it('is registered and extends Constraint', function () {
-        expect(interface_exists(ConfigAware::class))->toBeTrue();
+        expect(interface_exists(ConfigAwareConstraint::class))->toBeTrue();
 
-        $reflection = new ReflectionClass(ConfigAware::class);
+        $reflection = new ReflectionClass(ConfigAwareConstraint::class);
         expect($reflection->isInterface())->toBeTrue();
-        expect(is_subclass_of(ConfigAware::class, Constraint::class))->toBeTrue();
+        expect(is_subclass_of(ConfigAwareConstraint::class, Constraint::class))->toBeTrue();
     });
 
     it('declares setModelConfigs(ModelConfigs): void', function () {
-        $method = new ReflectionMethod(ConfigAware::class, 'setModelConfigs');
+        $method = new ReflectionMethod(ConfigAwareConstraint::class, 'setModelConfigs');
 
         expect($method->isPublic())->toBeTrue();
         expect($method->getReturnType()->__toString())->toBe('void');
@@ -34,7 +34,7 @@ describe('ConfigAware interface', function () {
     });
 
     it('forces implementing classes to define all contract methods', function () {
-        $class = new class implements ConfigAware {
+        $class = new class implements ConfigAwareConstraint {
             public function setModelConfigs(ModelConfigs $configs): void {}
 
             public function validate(mixed $value): bool
@@ -48,7 +48,7 @@ describe('ConfigAware interface', function () {
             }
         };
 
-        expect($class)->toBeInstanceOf(ConfigAware::class);
+        expect($class)->toBeInstanceOf(ConfigAwareConstraint::class);
         expect($class)->toBeInstanceOf(Constraint::class);
 
         $class->setModelConfigs(new ModelConfigs);
@@ -56,7 +56,7 @@ describe('ConfigAware interface', function () {
     });
 
     it('rejects a non-ModelConfigs argument to setModelConfigs', function () {
-        $class = new class implements ConfigAware {
+        $class = new class implements ConfigAwareConstraint {
             public function setModelConfigs(ModelConfigs $configs): void {}
 
             public function validate(mixed $value): bool

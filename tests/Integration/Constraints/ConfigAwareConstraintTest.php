@@ -6,14 +6,14 @@ namespace Attributes\Validation\Tests\Integration\Constraints;
 
 use Attributes\Validation\BaseModel;
 use Attributes\Validation\Exceptions\ValidationException;
-use Attributes\Validation\Fields\ConfigAware;
+use Attributes\Validation\Fields\ConfigAwareConstraint;
 use Attributes\Validation\ModelConfigs;
 use RuntimeException;
 
 use function Attributes\Validation\validate;
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
-final class TracksCalls implements ConfigAware
+final class TracksCalls implements ConfigAwareConstraint
 {
     /** @var list<string> */
     public static array $calls = [];
@@ -41,7 +41,7 @@ final class TracksCalls implements ConfigAware
 }
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
-final class RejectingConfigs implements ConfigAware
+final class RejectingConfigs implements ConfigAwareConstraint
 {
     public function setModelConfigs(ModelConfigs $configs): void
     {
@@ -59,7 +59,7 @@ final class RejectingConfigs implements ConfigAware
     }
 }
 
-describe('ConfigAware constraints', function () {
+describe('ConfigAwareConstraint constraints', function () {
     beforeEach(function () {
         TracksCalls::$calls = [];
         TracksCalls::$configs = null;
