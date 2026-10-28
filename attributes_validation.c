@@ -14,6 +14,7 @@
 #include "src/av_model_configs.h"
 #include "src/av_type.h"
 #include "src/fields/av_constraint.h"
+#include "src/fields/av_config_aware.h"
 #include "src/fields/av_field.h"
 #include "src/fields/av_alias.h"
 #include "src/fields/av_dict.h"
@@ -64,6 +65,7 @@ PHP_MINIT_FUNCTION(attributes_validation)
     /** Fields **/
     av_register_Field_interface();
     av_register_Constraint_interface();
+    av_register_ConfigAware_interface();
     av_register_Alias_class();
     av_register_ErrorMessage_class();
     av_register_Sequence_class();
