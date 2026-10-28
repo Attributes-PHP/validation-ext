@@ -18,8 +18,11 @@ const char *av_default_error_type_messages[] = {
     [AV_ERROR_REQUIRED] = "Field is required",
     [AV_ERROR_TYPE] = "Must be {expected}",
     [AV_ERROR_ALPHA_DASH] = "Must only contain letters, numbers, dashes and underscores",
+    [AV_ERROR_ALPHA_DASH_TYPE] = "Must be a string containing only letters, numbers, dashes and underscores",
     [AV_ERROR_ASCII] = "Must only contain ASCII characters",
+    [AV_ERROR_ASCII_TYPE] = "Must be a string containing only ASCII characters",
     [AV_ERROR_BETWEEN] = "Must be between {expected}",
+    [AV_ERROR_BETWEEN_TYPE] = "Must be a number between {expected}",
     [AV_ERROR_CONTAINS] = "Must contain {expected}",
     [AV_ERROR_DATETIME] = "Must be a datetime in the format {expected}",
     [AV_ERROR_ENDS_WITH] = "Must end with one of: {expected}",
@@ -716,11 +719,7 @@ zend_string *av_values_to_list_string(zval *values)
     }
     ZEND_HASH_FOREACH_END();
 
-    if (result == NULL) {
-        return av_string_init("", 0, 0);
-    }
-
-    return result;
+    return result == NULL ? av_string_init("", 0, 0) : result;
 }
 
 /*

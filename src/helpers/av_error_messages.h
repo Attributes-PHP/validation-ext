@@ -14,8 +14,17 @@ typedef enum {
      * the required and type arguments, so constraint errors always use
      * their default template. */
     AV_ERROR_ALPHA_DASH,
+    /* Non-string value under #[AlphaDash]: reported with its own template
+     * because it is a type failure, not a character-content failure */
+    AV_ERROR_ALPHA_DASH_TYPE,
     AV_ERROR_ASCII,
+    /* Non-string value under #[Ascii]: reported with its own template
+     * because it is a type failure, not a character-content failure */
+    AV_ERROR_ASCII_TYPE,
     AV_ERROR_BETWEEN,
+    /* Non-numeric value under #[Between]: reported with its own template
+     * because it is a type failure, not a range failure */
+    AV_ERROR_BETWEEN_TYPE,
     AV_ERROR_CONTAINS,
     AV_ERROR_DATETIME,
     AV_ERROR_ENDS_WITH,

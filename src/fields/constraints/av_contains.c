@@ -12,14 +12,14 @@ zend_class_entry *AV_Fields_Constraints_Contains_ce;
  * $values: string|int|float
  *
  * Enforced per element because PHP 8.2 arginfo cannot express a
- * union-typed variadic parameter.
+ * union-typed variadic parameter. At least one value is required.
  */
 ZEND_METHOD(AV_Fields_Constraints_Contains, __construct)
 {
     zval *values;
     uint32_t values_count;
 
-    ZEND_PARSE_PARAMETERS_START(0, -1)
+    ZEND_PARSE_PARAMETERS_START(1, -1)
     Z_PARAM_VARIADIC('z', values, values_count)
     ZEND_PARSE_PARAMETERS_END();
 
@@ -58,32 +58,13 @@ bool av_validate_Contains_constraint(zval *constraint, av_field *field, av_prope
     zval *required = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "values", sizeof("values") - 1, false, NULL);
 
     zval *value = field->value;
-    bool valid = false;
 
-    if (Z_TYPE_P(value) == IS_ARRAY) {
-        valid = true;
-        zval *needle;
-        ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(required), needle)
-        {
-            bool found = false;
-            zval *element;
-            ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(value), element)
-            {
-                if (zend_is_identical(needle, element)) {
-                    found = true;
-                    break;
-                }
-            }
-            ZEND_HASH_FOREACH_END();
+    if (Z_TYPE_P(value) != IS_ARRAY && Z_TYPE_P(value) != IS_STRING) {
+        add_invalid_contains_error_message(required, field, property, errors);
+        return false;
+    }
 
-            if (!found) {
-                valid = false;
-                break;
-            }
-        }
-        ZEND_HASH_FOREACH_END();
-    } else if (Z_TYPE_P(value) == IS_STRING) {
-        valid = true;
+    if (Z_TYPE_P(value) == IS_STRING) {
         zval *needle;
         ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(required), needle)
         {
@@ -92,21 +73,43 @@ bool av_validate_Contains_constraint(zval *constraint, av_field *field, av_prope
             zend_string_release(needle_str);
 
             if (!found) {
-                valid = false;
+                add_invalid_contains_error_message(required, field, property, errors);
+                return false;
+            }
+        }
+        ZEND_HASH_FOREACH_END();
+        return true;
+    }
+
+    // Needs to contain all array values
+    zval *needle;
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(required), needle)
+    {
+        bool found = false;
+        zval *element;
+        ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(value), element)
+        {
+            if (zend_is_identical(needle, element)) {
+                found = true;
                 break;
             }
         }
         ZEND_HASH_FOREACH_END();
-    }
 
-    if (valid) {
-        return true;
+        if (!found) {
+            add_invalid_contains_error_message(required, field, property, errors);
+            return false;
+        }
     }
+    ZEND_HASH_FOREACH_END();
+    return true;
+}
 
+zend_always_inline static void add_invalid_contains_error_message(zval *required, av_field *field, av_property_info *property, zval *errors)
+{
     zend_string *expected = av_values_to_list_string(required);
     av_add_field_error_with_expected(AV_ERROR_CONTAINS, field, property, errors, expected);
     av_string_release(expected);
-    return false;
 }
 
 void av_register_Contains_class(void)

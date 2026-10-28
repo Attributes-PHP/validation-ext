@@ -36,7 +36,7 @@ All built-ins live in `Attributes\Validation\Fields\Constraints` and may be decl
 | `AlphaDash` | `()` | the string contains characters other than letters, numbers, dashes and underscores |
 | `Ascii` | `()` | the string contains bytes outside 7-bit ASCII (0x00-0x7F) |
 | `Between` | `(int\|float $min, int\|float $max)` | the number is outside the inclusive range |
-| `Contains` | `(string\|int\|float ...$values)` | an array is missing one of the declared values, or a string is missing one of them as a substring |
+| `Contains` | `(string\|int\|float ...$values, at least one)` | an array is missing one of the declared values, or a string is missing one of them as a substring |
 | `DateTime` | `(string $format = 'X-m-d\TH:i:sP', DateTimeZone\|string\|null $timezone = null)` | the value does not parse in the declared format and timezone |
 | `EndsWith` | `(string\|int\|float ...$values)` | the string ends with none of the declared values |
 | `In` | `(string\|int\|float\|bool ...$values)` | the value matches none of the declared values |

@@ -12,29 +12,25 @@ zend_class_entry *AV_Fields_Constraints_Ascii_ce;
  */
 bool av_validate_Ascii_constraint(zval *constraint, av_field *field, av_property_info *property, zval *errors)
 {
-    (void)constraint;
-
     zval *value = field->value;
-    if (Z_TYPE_P(value) == IS_STRING) {
-        const unsigned char *str = (const unsigned char *)Z_STRVAL_P(value);
-        size_t len = Z_STRLEN_P(value);
-        bool valid = true;
-
-        for (size_t i = 0; i < len; i++) {
-            if (str[i] <= 0x7F) {
-                continue;
-            }
-            valid = false;
-            break;
-        }
-
-        if (valid) {
-            return true;
-        }
+    if (Z_TYPE_P(value) != IS_STRING) {
+        av_add_field_error_with_prefix(AV_ERROR_ASCII_TYPE, field, property, errors);
+        return false;
     }
 
-    av_add_field_error_with_prefix(AV_ERROR_ASCII, field, property, errors);
-    return false;
+    const unsigned char *str = (const unsigned char *)Z_STRVAL_P(value);
+    size_t len = Z_STRLEN_P(value);
+
+    for (size_t i = 0; i < len; i++) {
+        if (str[i] <= 0x7F) {
+            continue;
+        }
+
+        av_add_field_error_with_prefix(AV_ERROR_ASCII, field, property, errors);
+        return false;
+    }
+
+    return true;
 }
 
 void av_register_Ascii_class(void)

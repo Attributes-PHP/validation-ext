@@ -61,7 +61,7 @@ describe('Between validation', function () {
             validate(['value' => 'nope'], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            expect($e->getErrors())->toBe(['value' => ['Must be between 1 and 10']]);
+            expect($e->getErrors())->toBe(['value' => ['Must be a number between 1 and 10']]);
         }
     });
 

@@ -59,7 +59,7 @@ describe('AlphaDash constraint', function () {
             validate(['value' => 123], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            expect($e->getErrors())->toBe(['value' => ['Must only contain letters, numbers, dashes and underscores']]);
+            expect($e->getErrors())->toBe(['value' => ['Must be a string containing only letters, numbers, dashes and underscores']]);
         }
     });
 });

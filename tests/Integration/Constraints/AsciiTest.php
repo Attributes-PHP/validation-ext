@@ -56,7 +56,7 @@ describe('Ascii constraint', function () {
             validate(['value' => ['a']], $model);
             expect(false)->toBeTrue();
         } catch (ValidationException $e) {
-            expect($e->getErrors())->toBe(['value' => ['Must only contain ASCII characters']]);
+            expect($e->getErrors())->toBe(['value' => ['Must be a string containing only ASCII characters']]);
         }
     });
 });

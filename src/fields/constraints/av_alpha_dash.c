@@ -12,30 +12,26 @@ zend_class_entry *AV_Fields_Constraints_AlphaDash_ce;
  */
 bool av_validate_AlphaDash_constraint(zval *constraint, av_field *field, av_property_info *property, zval *errors)
 {
-    (void)constraint;
-
     zval *value = field->value;
-    if (Z_TYPE_P(value) == IS_STRING) {
-        const char *str = Z_STRVAL_P(value);
-        size_t len = Z_STRLEN_P(value);
-        bool valid = true;
-
-        for (size_t i = 0; i < len; i++) {
-            const unsigned char c = (unsigned char)str[i];
-            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
-                continue;
-            }
-            valid = false;
-            break;
-        }
-
-        if (valid) {
-            return true;
-        }
+    if (Z_TYPE_P(value) != IS_STRING) {
+        av_add_field_error_with_prefix(AV_ERROR_ALPHA_DASH_TYPE, field, property, errors);
+        return false;
     }
 
-    av_add_field_error_with_prefix(AV_ERROR_ALPHA_DASH, field, property, errors);
-    return false;
+    const char *str = Z_STRVAL_P(value);
+    size_t len = Z_STRLEN_P(value);
+
+    for (size_t i = 0; i < len; i++) {
+        const unsigned char c = (unsigned char)str[i];
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
+            continue;
+        }
+
+        av_add_field_error_with_prefix(AV_ERROR_ALPHA_DASH, field, property, errors);
+        return false;
+    }
+
+    return true;
 }
 
 void av_register_AlphaDash_class(void)

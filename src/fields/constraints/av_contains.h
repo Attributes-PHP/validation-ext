@@ -7,7 +7,7 @@
 /* Class entry */
 extern zend_class_entry *AV_Fields_Constraints_Contains_ce;
 
-ZEND_BEGIN_ARG_INFO_EX(arginfo_class_AV_Fields_Constraints_Contains___construct, 0, 0, 0)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_class_AV_Fields_Constraints_Contains___construct, 0, 0, 1)
 /* Union-typed variadics need PHP 8.3 arginfo macros; untyped on 8.2 */
 ZEND_ARG_VARIADIC_INFO(0, values)
 ZEND_END_ARG_INFO()
@@ -17,11 +17,9 @@ ZEND_METHOD(AV_Fields_Constraints_Contains, __construct);
 static const zend_function_entry class_AV_Fields_Constraints_Contains_methods[] = {ZEND_ME(AV_Fields_Constraints_Contains, __construct, arginfo_class_AV_Fields_Constraints_Contains___construct, ZEND_ACC_PUBLIC)
                                                                                        ZEND_FE_END};
 
-/* Validation logic: returns true when the field value satisfies the
- * constraint, false after appending the constraint error message. */
 bool av_validate_Contains_constraint(zval *constraint, av_field *field, av_property_info *property, zval *errors);
-
-/* Registration function */
 void av_register_Contains_class(void);
+
+zend_always_inline static void add_invalid_contains_error_message(zval *required, av_field *field, av_property_info *property, zval *errors);
 
 #endif /* AV_Fields_Constraints_Contains_H */

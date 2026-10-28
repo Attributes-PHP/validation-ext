@@ -14,7 +14,8 @@ static zend_always_inline double zval_to_double(zval *value)
 
 /*
  * #[Between(min, max)]: the value must be a number between min and max
- * (inclusive). Non-numeric values fail the constraint.
+ * (inclusive). Non-numeric values fail the constraint with a dedicated
+ * type error.
  */
 bool av_validate_Between_constraint(zval *constraint, av_field *field, av_property_info *property, zval *errors)
 {
@@ -22,7 +23,8 @@ bool av_validate_Between_constraint(zval *constraint, av_field *field, av_proper
     zval *max = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "max", sizeof("max") - 1, false, NULL);
 
     zval *value = field->value;
-    if (Z_TYPE_P(value) == IS_LONG || Z_TYPE_P(value) == IS_DOUBLE) {
+    const bool is_number = Z_TYPE_P(value) == IS_LONG || Z_TYPE_P(value) == IS_DOUBLE;
+    if (is_number) {
         double number = zval_to_double(value);
         if (number >= zval_to_double(min) && number <= zval_to_double(max)) {
             return true;
@@ -35,7 +37,7 @@ bool av_validate_Between_constraint(zval *constraint, av_field *field, av_proper
     av_string_release(min_str);
     av_string_release(max_str);
 
-    av_add_field_error_with_expected(AV_ERROR_BETWEEN, field, property, errors, expected);
+    av_add_field_error_with_expected(is_number ? AV_ERROR_BETWEEN : AV_ERROR_BETWEEN_TYPE, field, property, errors, expected);
     av_string_release(expected);
     return false;
 }

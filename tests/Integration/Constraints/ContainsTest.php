@@ -7,6 +7,7 @@ namespace Attributes\Validation\Tests\Integration\Constraints;
 use Attributes\Validation\BaseModel;
 use Attributes\Validation\Exceptions\ValidationException;
 use Attributes\Validation\Fields\Constraints\Contains;
+use ArgumentCountError;
 use TypeError;
 
 use function Attributes\Validation\validate;
@@ -18,10 +19,8 @@ describe('Contains constructor argument validation', function () {
         expect($constraint->values)->toBe(['red', 2, 3.5]);
     });
 
-    it('accepts zero values per the stub', function () {
-        $constraint = new Contains;
-
-        expect($constraint->values)->toBeEmpty();
+    it('throws an ArgumentCountError for zero values', function () {
+        expect(fn () => new Contains)->toThrow(ArgumentCountError::class);
     });
 
     it('throws a TypeError for unsupported element types', function (mixed $value) {
