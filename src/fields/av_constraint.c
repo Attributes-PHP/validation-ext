@@ -1,5 +1,7 @@
 #include "av_constraint.h"
+#include "av_config_aware.h"
 #include "av_field.h"
+#include "../av_model_configs.h"
 #include "../helpers/av_error_messages.h"
 #include "Zend/zend_API.h"
 #include "Zend/zend_exceptions.h"
@@ -19,6 +21,39 @@ void av_register_Constraint_interface(void)
 }
 
 /*
+ * ConfigAware constraints receive the owning model's resolved configs
+ * before validate() runs (and thus before message()). Exceptions thrown
+ * by setModelConfigs() propagate to the caller of validate() like model
+ * hook errors.
+ */
+static void av_set_model_configs_if_aware(zval *constraint, av_property_info *property)
+{
+    zend_class_entry *ce = Z_OBJCE_P(constraint);
+    if (!instanceof_function(ce, AV_Fields_ConfigAware_ce)) {
+        return;
+    }
+
+    zval configs;
+    av_model_configs_properties properties;
+    av_get_model_configs(&configs, property->model, &properties, true);
+    if (UNEXPECTED(EG(exception) != NULL)) {
+        return;
+    }
+
+    zend_function *set_model_configs = zend_hash_str_find_ptr(&ce->function_table, "setmodelconfigs", sizeof("setmodelconfigs") - 1);
+    ZEND_ASSERT(set_model_configs != NULL);
+
+    zval ignored;
+    ZVAL_UNDEF(&ignored);
+    zend_call_known_instance_method_with_1_params(set_model_configs, Z_OBJ_P(constraint), &ignored, &configs);
+    if (Z_TYPE(ignored) != IS_UNDEF) {
+        zval_ptr_dtor(&ignored);
+    }
+
+    zval_ptr_dtor(&configs);
+}
+
+/*
  * Userland constraint validation: the interface contract guarantees the
  * validate() and message() methods, with the engine enforcing their
  * signatures since PHP classes cannot implement an interface without
@@ -28,6 +63,12 @@ void av_register_Constraint_interface(void)
 bool av_validate_userland_constraint(zval *constraint, av_field *field, av_property_info *property, zval *errors)
 {
     zend_class_entry *ce = Z_OBJCE_P(constraint);
+
+    av_set_model_configs_if_aware(constraint, property);
+    if (UNEXPECTED(EG(exception) != NULL)) {
+        return false;
+    }
+
     zend_function *validate = zend_hash_str_find_ptr(&ce->function_table, "validate", sizeof("validate") - 1);
     ZEND_ASSERT(validate != NULL);
 
