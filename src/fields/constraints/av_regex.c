@@ -24,7 +24,7 @@ bool av_validate_Regex_constraint(zval *constraint, av_field *field, av_property
         if (pce != NULL) {
             zval match;
             ZVAL_UNDEF(&match);
-            php_pcre_match_impl(pce, Z_STR_P(value), &match, NULL, 0, 0, 0, 0);
+            php_pcre_match_impl(pce, Z_STR_P(value), &match, NULL, 0, 0, 0);
             if (Z_TYPE(match) == IS_LONG && Z_LVAL(match) > 0) {
                 return true;
             }

@@ -83,7 +83,7 @@ ZEND_METHOD(AV_Fields_Constraints_DateTime, __construct)
         zval tz_obj;
         if (!build_timezone_from_name(&tz_obj, timezone)) {
             zend_clear_exception();
-            zend_argument_value_error(2, "must be a valid timezone identifier");
+            zend_argument_value_error(2, "must be a valid timezone identifier, '%s' given");
             RETURN_THROWS();
         }
         zval_ptr_dtor(&tz_obj);

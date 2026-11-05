@@ -84,7 +84,7 @@ describe('DateTime constraint constructor argument validation', function () {
     it('throws a ValueError when $timezone is an unknown timezone name', function (string $timezone) {
         expect(fn () => new DateTime(timezone: $timezone))->toThrow(
             ValueError::class,
-            'Argument #2 ($timezone) must be a valid timezone identifier',
+            "Argument #2 (\$timezone) must be a valid timezone identifier, '$timezone' given",
         );
     })->with([
         'Nope/Nope',
