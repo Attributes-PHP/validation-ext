@@ -73,9 +73,6 @@ static const av_constraint_dispatch_entry constraint_dispatch_table[] = {
  * Field name resolution (moved from av_validate_function.c, compile-time only)
  * ========================================================================= */
 
-/**
- * Transforms a property name based on the alias generator type
- */
 static zend_always_inline zend_string *transform_property_name(zend_string *property_name, char alias_generator);
 static zend_string *resolve_field_name(av_property_info *property_info, zend_string *property_name, char alias_generator);
 static void av_field_name_cache_dtor(zval *entry);
@@ -92,6 +89,9 @@ static av_class_plans *get_class_plans(zend_class_entry *ce);
 static av_compiled_model *compile_plan_skeleton(zend_class_entry *model_ce, char generator);
 static bool compile_field(av_compiled_field *cf, av_compiled_model *plan);
 
+/**
+ * Transforms a property name based on the alias generator type
+ */
 static zend_always_inline zend_string *transform_property_name(zend_string *property_name, char alias_generator)
 {
     switch (alias_generator) {

@@ -29,12 +29,6 @@ typedef struct {
     bool owned;
 } av_dependency;
 
-/*
- * Whether the target's arg_info uses the userland layout (zend_arg_info
- * with zend_string names). Internal functions keep a different layout
- * (zend_internal_arg_info with char* names) and cannot declare model
- * parameters, so they receive their dependencies positionally only.
- */
 static bool target_has_user_arg_info(const zend_function *function);
 static zend_class_entry *parameter_class_ce(const zend_arg_info *arg_info, zend_class_entry *scope);
 static void av_dependency_release(av_dependency *dependency);
@@ -46,6 +40,12 @@ static void args_push(zval **args, uint32_t *args_count, uint32_t *args_capacity
 static bool build_call_arguments(zend_function *function, zval *params, av_dependencies *dependencies, zval **args, uint32_t *args_count, uint32_t *args_capacity);
 static void release_call_arguments(zval *args, uint32_t args_count);
 
+/*
+ * Whether the target's arg_info uses the userland layout (zend_arg_info
+ * with zend_string names). Internal functions keep a different layout
+ * (zend_internal_arg_info with char* names) and cannot declare model
+ * parameters, so they receive their dependencies positionally only.
+ */
 static bool target_has_user_arg_info(const zend_function *function)
 {
     return function->type != ZEND_INTERNAL_FUNCTION || (function->common.fn_flags & ZEND_ACC_USER_ARG_INFO) != 0;

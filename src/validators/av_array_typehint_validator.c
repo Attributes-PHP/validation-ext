@@ -103,7 +103,6 @@ static const struct {
  * Attribute lookup
  * ========================================================================= */
 
-/* Matches an attribute lowercase name against one of the array attribute names */
 static bool is_array_attribute_name(const zend_string *lcname);
 static bool lcname_equals(const zend_string *lcname, const char *name, size_t length);
 static const zend_attribute *find_array_attribute(HashTable *attributes);
@@ -137,6 +136,7 @@ static void compute_needs_element_names(av_spec *spec);
 static bool validate_array_elements(av_field *field, av_property_info *prop_info, const av_spec *spec, av_model_configs_properties *properties, zval *errors);
 static void av_spec_cache_entry_dtor(zval *entry);
 
+/* Matches an attribute lowercase name against one of the array attribute names */
 static bool is_array_attribute_name(const zend_string *lcname)
 {
     for (size_t i = 0; i < ARRAY_ATTRIBUTE_NAMES_SIZE; i++) {

@@ -9,6 +9,9 @@
 
 zend_class_entry *AV_Fields_Union_ce;
 
+static bool is_valid_union_arm(zval *value);
+static bool is_resolvable_class_name(zval *value, uint32_t arg_num);
+
 /*
  * Each variadic arm: int|string|\Attributes\Validation\Type|Sequence|Union|Intersection|Dict
  *
@@ -16,9 +19,6 @@ zend_class_entry *AV_Fields_Union_ce;
  * validation time; the validator still applies the semantic rules (valid
  * masks, resolvable class names).
  */
-static bool is_valid_union_arm(zval *value);
-static bool is_resolvable_class_name(zval *value, uint32_t arg_num);
-
 static bool is_valid_union_arm(zval *value)
 {
     switch (Z_TYPE_P(value)) {

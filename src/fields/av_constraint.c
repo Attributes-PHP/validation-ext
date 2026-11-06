@@ -20,14 +20,14 @@ void av_register_Constraint_interface(void)
     zend_class_implements(AV_Fields_Constraint_ce, 1, AV_Fields_Field_ce);
 }
 
+static void av_set_model_configs_if_aware(zval *constraint, av_property_info *property);
+
 /*
  * ConfigAwareConstraint constraints receive the owning model's resolved configs
  * before validate() runs (and thus before message()). Exceptions thrown
  * by setModelConfigs() propagate to the caller of validate() like model
  * hook errors.
  */
-static void av_set_model_configs_if_aware(zval *constraint, av_property_info *property);
-
 static void av_set_model_configs_if_aware(zval *constraint, av_property_info *property)
 {
     zend_class_entry *ce = Z_OBJCE_P(constraint);
@@ -45,13 +45,7 @@ static void av_set_model_configs_if_aware(zval *constraint, av_property_info *pr
     zend_function *set_model_configs = zend_hash_str_find_ptr(&ce->function_table, "setmodelconfigs", sizeof("setmodelconfigs") - 1);
     ZEND_ASSERT(set_model_configs != NULL);
 
-    zval ignored;
-    ZVAL_UNDEF(&ignored);
-    zend_call_known_instance_method_with_1_params(set_model_configs, Z_OBJ_P(constraint), &ignored, &configs);
-    if (Z_TYPE(ignored) != IS_UNDEF) {
-        zval_ptr_dtor(&ignored);
-    }
-
+    zend_call_known_instance_method_with_1_params(set_model_configs, Z_OBJ_P(constraint), NULL, &configs);
     zval_ptr_dtor(&configs);
 }
 

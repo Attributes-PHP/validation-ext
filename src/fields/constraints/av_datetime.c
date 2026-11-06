@@ -10,6 +10,10 @@
 
 zend_class_entry *AV_Fields_Constraints_DateTime_ce;
 
+static bool is_valid_timezone(zval *value);
+static bool build_timezone_from_name(zval *result, zval *name);
+zend_always_inline static void add_invalid_datetime_error_message(zval *format, av_field *field, av_property_info *property, zval *errors);
+
 /*
  * $timezone: DateTimeZone|string|null
  *
@@ -17,10 +21,6 @@ zend_class_entry *AV_Fields_Constraints_DateTime_ce;
  * build_timezone_from_name() so a malformed value fails at
  * construction instead of at validation time.
  */
-static bool is_valid_timezone(zval *value);
-static bool build_timezone_from_name(zval *result, zval *name);
-zend_always_inline static void add_invalid_datetime_error_message(zval *format, av_field *field, av_property_info *property, zval *errors);
-
 static bool is_valid_timezone(zval *value)
 {
     switch (Z_TYPE_P(value)) {

@@ -16,11 +16,11 @@ zend_class_entry *AV_Fields_Dict_ce;
  * the integer and string types, valid masks, resolvable class names).
  */
 
-/* $key: int|\Attributes\Validation\Type|Union */
 static bool is_valid_dict_key(zval *value);
 static bool is_valid_dict_of(zval *value);
 static bool is_resolvable_class_name(zval *value, uint32_t arg_num);
 
+/* $key: int|\Attributes\Validation\Type|Union */
 static bool is_valid_dict_key(zval *value)
 {
     switch (Z_TYPE_P(value)) {

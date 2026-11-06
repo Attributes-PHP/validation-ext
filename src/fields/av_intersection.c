@@ -5,14 +5,14 @@
 
 zend_class_entry *AV_Fields_Intersection_ce;
 
+static bool is_valid_intersection_class_name(zval *value, uint32_t arg_num);
+
 /*
  * Each arm must name a loadable class or interface, mimicking PHP
  * intersection type hints: enums and traits cannot participate. A missing
  * name autoloads, and a name that still cannot be resolved throws a
  * ValueError (an autoloader error propagates as-is).
  */
-static bool is_valid_intersection_class_name(zval *value, uint32_t arg_num);
-
 static bool is_valid_intersection_class_name(zval *value, uint32_t arg_num)
 {
     zend_class_entry *ce = zend_lookup_class(Z_STR_P(value));
