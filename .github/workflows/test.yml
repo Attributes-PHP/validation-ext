@@ -82,8 +82,6 @@ jobs:
           phpize
           ./configure --enable-attributes-validation
           make
-          sudo make install
-          echo "extension=attributes_validation" | sudo tee "$(php-config --ini-dir)/attributes_validation.ini"
 
       - name: Run linter
         run: task test:lint:php

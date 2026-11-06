@@ -95,9 +95,10 @@ tasks:
   test:coverage:
     desc: Run Pest tests with coverage
     deps:
+      - build
       - _ensure-vendor
     cmds:
-      - ./vendor/bin/pest --coverage tests/Integration
+      - php -d extension={{.TASKFILE_DIR}}/modules/attributes_validation.so ./vendor/bin/pest --coverage tests/Integration
 
   test:unit:
     desc: Run C unit tests via Ceedling
@@ -107,9 +108,10 @@ tasks:
   test:integration:
     desc: Run PHP integration tests
     deps:
+      - build
       - _ensure-vendor
     cmds:
-      - ./vendor/bin/pest --colors=always tests/Integration
+      - php -d extension={{.TASKFILE_DIR}}/modules/attributes_validation.so ./vendor/bin/pest --colors=always tests/Integration
 
   test:
     desc: Run all tests (lint, unit, integration)
