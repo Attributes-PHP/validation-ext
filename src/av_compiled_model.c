@@ -31,12 +31,67 @@
 #include <string.h>
 
 /* =========================================================================
+ * Constraint attributes
+ * ========================================================================= */
+
+/*
+ * Constraint attribute dispatch: attribute lowercase name -> class entry
+ * and validation function. The validation logic itself lives in each
+ * constraint's own file; this table only wires attributes to it.
+ */
+typedef struct {
+    const char *lcname;
+    size_t lcname_len;
+    zend_class_entry **ce;
+    av_constraint_validator_t validate;
+} av_constraint_dispatch_entry;
+
+#define AV_CONSTRAINT_ENTRY(lower, upper) \
+    {"attributes\\validation\\fields\\constraints\\" lower, sizeof("attributes\\validation\\fields\\constraints\\" lower) - 1, &AV_Fields_Constraints_##upper##_ce, av_validate_##upper##_constraint}
+
+static const av_constraint_dispatch_entry constraint_dispatch_table[] = {
+    AV_CONSTRAINT_ENTRY("alphadash", AlphaDash),
+    AV_CONSTRAINT_ENTRY("ascii", Ascii),
+    AV_CONSTRAINT_ENTRY("between", Between),
+    AV_CONSTRAINT_ENTRY("contains", Contains),
+    AV_CONSTRAINT_ENTRY("datetime", DateTime),
+    AV_CONSTRAINT_ENTRY("endswith", EndsWith),
+    AV_CONSTRAINT_ENTRY("in", In),
+    AV_CONSTRAINT_ENTRY("max", Max),
+    AV_CONSTRAINT_ENTRY("min", Min),
+    AV_CONSTRAINT_ENTRY("multipleof", MultipleOf),
+    AV_CONSTRAINT_ENTRY("regex", Regex),
+    AV_CONSTRAINT_ENTRY("size", Size),
+    AV_CONSTRAINT_ENTRY("startswith", StartsWith),
+    AV_CONSTRAINT_ENTRY("ulid", Ulid),
+    AV_CONSTRAINT_ENTRY("uuid", Uuid),
+};
+
+#define CONSTRAINT_DISPATCH_TABLE_SIZE (sizeof(constraint_dispatch_table) / sizeof(constraint_dispatch_table[0]))
+
+/* =========================================================================
  * Field name resolution (moved from av_validate_function.c, compile-time only)
  * ========================================================================= */
 
 /**
  * Transforms a property name based on the alias generator type
  */
+static zend_always_inline zend_string *transform_property_name(zend_string *property_name, char alias_generator);
+static zend_string *resolve_field_name(av_property_info *property_info, zend_string *property_name, char alias_generator);
+static void av_field_name_cache_dtor(zval *entry);
+static zend_string *get_property_name(av_property_info *property_info, zend_string *property_name, char alias_generator);
+static zend_always_inline bool has_property_default_value(av_property_info *property_info);
+static const av_constraint_dispatch_entry *find_constraint_dispatch(const zend_string *lcname);
+static bool instantiate_constraint_attribute(zval *instance, zend_class_entry *ce, zend_attribute *attribute, zend_class_entry *scope);
+static bool compile_field_constraints(av_compiled_field *cf);
+static uint32_t generator_index(char alias_generator);
+static void free_compiled_field(av_compiled_field *cf);
+static void free_compiled_model(av_compiled_model *plan);
+static void class_plans_dtor(zval *entry);
+static av_class_plans *get_class_plans(zend_class_entry *ce);
+static av_compiled_model *compile_plan_skeleton(zend_class_entry *model_ce, char generator);
+static bool compile_field(av_compiled_field *cf, av_compiled_model *plan);
+
 static zend_always_inline zend_string *transform_property_name(zend_string *property_name, char alias_generator)
 {
     switch (alias_generator) {
@@ -164,45 +219,6 @@ static zend_always_inline bool has_property_default_value(av_property_info *prop
     const zval *default_value = &property_info->model_ce->default_properties_table[index];
     return Z_TYPE_P(default_value) != IS_UNDEF;
 }
-
-/* =========================================================================
- * Constraint attributes
- * ========================================================================= */
-
-/*
- * Constraint attribute dispatch: attribute lowercase name -> class entry
- * and validation function. The validation logic itself lives in each
- * constraint's own file; this table only wires attributes to it.
- */
-typedef struct {
-    const char *lcname;
-    size_t lcname_len;
-    zend_class_entry **ce;
-    av_constraint_validator_t validate;
-} av_constraint_dispatch_entry;
-
-#define AV_CONSTRAINT_ENTRY(lower, upper) \
-    {"attributes\\validation\\fields\\constraints\\" lower, sizeof("attributes\\validation\\fields\\constraints\\" lower) - 1, &AV_Fields_Constraints_##upper##_ce, av_validate_##upper##_constraint}
-
-static const av_constraint_dispatch_entry constraint_dispatch_table[] = {
-    AV_CONSTRAINT_ENTRY("alphadash", AlphaDash),
-    AV_CONSTRAINT_ENTRY("ascii", Ascii),
-    AV_CONSTRAINT_ENTRY("between", Between),
-    AV_CONSTRAINT_ENTRY("contains", Contains),
-    AV_CONSTRAINT_ENTRY("datetime", DateTime),
-    AV_CONSTRAINT_ENTRY("endswith", EndsWith),
-    AV_CONSTRAINT_ENTRY("in", In),
-    AV_CONSTRAINT_ENTRY("max", Max),
-    AV_CONSTRAINT_ENTRY("min", Min),
-    AV_CONSTRAINT_ENTRY("multipleof", MultipleOf),
-    AV_CONSTRAINT_ENTRY("regex", Regex),
-    AV_CONSTRAINT_ENTRY("size", Size),
-    AV_CONSTRAINT_ENTRY("startswith", StartsWith),
-    AV_CONSTRAINT_ENTRY("ulid", Ulid),
-    AV_CONSTRAINT_ENTRY("uuid", Uuid),
-};
-
-#define CONSTRAINT_DISPATCH_TABLE_SIZE (sizeof(constraint_dispatch_table) / sizeof(constraint_dispatch_table[0]))
 
 static const av_constraint_dispatch_entry *find_constraint_dispatch(const zend_string *lcname)
 {

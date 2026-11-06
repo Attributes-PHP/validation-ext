@@ -10,11 +10,42 @@
 #include <string.h>
 
 /*
+ * The dependencies source: a plain array or an ArrayAccess container.
+ *
+ * Array entries are borrowed from the hash table; offsetGet() results are
+ * owned zvals the fetch releases after use. Containers are only asked for
+ * the dependencies the call actually consumes, so a lazy container
+ * builds a service only when a parameter needs it.
+ */
+typedef struct {
+    zval *source;
+    bool is_array;
+    uint32_t positional_cursor;
+} av_dependencies;
+
+/* A fetched dependency: owned only when it came from offsetGet() */
+typedef struct {
+    zval value;
+    bool owned;
+} av_dependency;
+
+/*
  * Whether the target's arg_info uses the userland layout (zend_arg_info
  * with zend_string names). Internal functions keep a different layout
  * (zend_internal_arg_info with char* names) and cannot declare model
  * parameters, so they receive their dependencies positionally only.
  */
+static bool target_has_user_arg_info(const zend_function *function);
+static zend_class_entry *parameter_class_ce(const zend_arg_info *arg_info, zend_class_entry *scope);
+static void av_dependency_release(av_dependency *dependency);
+static bool array_access_offset_call(av_dependencies *dependencies, const char *method, zval *offset, zval *retval);
+static bool fetch_dependency_by_name(av_dependencies *dependencies, zend_string *name, av_dependency *dependency);
+static bool fetch_next_positional_dependency(av_dependencies *dependencies, av_dependency *dependency);
+static bool find_dependency(av_dependencies *dependencies, zend_string *name, av_dependency *dependency);
+static void args_push(zval **args, uint32_t *args_count, uint32_t *args_capacity, zval *value);
+static bool build_call_arguments(zend_function *function, zval *params, av_dependencies *dependencies, zval **args, uint32_t *args_count, uint32_t *args_capacity);
+static void release_call_arguments(zval *args, uint32_t args_count);
+
 static bool target_has_user_arg_info(const zend_function *function)
 {
     return function->type != ZEND_INTERNAL_FUNCTION || (function->common.fn_flags & ZEND_ACC_USER_ARG_INFO) != 0;
@@ -49,26 +80,6 @@ static zend_class_entry *parameter_class_ce(const zend_arg_info *arg_info, zend_
 
     return zend_lookup_class_ex(name, NULL, ZEND_FETCH_CLASS_DEFAULT);
 }
-
-/*
- * The dependencies source: a plain array or an ArrayAccess container.
- *
- * Array entries are borrowed from the hash table; offsetGet() results are
- * owned zvals the fetch releases after use. Containers are only asked for
- * the dependencies the call actually consumes, so a lazy container
- * builds a service only when a parameter needs it.
- */
-typedef struct {
-    zval *source;
-    bool is_array;
-    uint32_t positional_cursor;
-} av_dependencies;
-
-/* A fetched dependency: owned only when it came from offsetGet() */
-typedef struct {
-    zval value;
-    bool owned;
-} av_dependency;
 
 static void av_dependency_release(av_dependency *dependency)
 {

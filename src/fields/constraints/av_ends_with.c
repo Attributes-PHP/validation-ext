@@ -77,6 +77,8 @@ bool av_validate_EndsWith_constraint(zval *constraint, av_field *field, av_prope
     return false;
 }
 
+zend_always_inline static void add_invalid_ends_with_error_message(zval *suffixes, av_field *field, av_property_info *property, zval *errors);
+
 zend_always_inline static void add_invalid_ends_with_error_message(zval *suffixes, av_field *field, av_property_info *property, zval *errors)
 {
     zend_string *expected = av_values_to_list_string(suffixes);

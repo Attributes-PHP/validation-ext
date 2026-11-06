@@ -26,6 +26,8 @@ void av_register_Constraint_interface(void)
  * by setModelConfigs() propagate to the caller of validate() like model
  * hook errors.
  */
+static void av_set_model_configs_if_aware(zval *constraint, av_property_info *property);
+
 static void av_set_model_configs_if_aware(zval *constraint, av_property_info *property)
 {
     zend_class_entry *ce = Z_OBJCE_P(constraint);
@@ -76,7 +78,7 @@ bool av_validate_userland_constraint(zval *constraint, av_field *field, av_prope
     ZVAL_UNDEF(&result);
     zend_call_known_instance_method_with_1_params(validate, Z_OBJ_P(constraint), &result, field->value);
 
-    bool valid = Z_TYPE(result) == IS_TRUE;
+    const bool valid = Z_TYPE(result) == IS_TRUE;
     if (Z_TYPE(result) != IS_UNDEF) {
         zval_ptr_dtor(&result);
     }

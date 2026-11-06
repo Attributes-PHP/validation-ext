@@ -61,6 +61,13 @@ void av_shutdown_typehint_validator(void)
     }
 }
 
+static zend_class_entry *resolve_single_class_type(zend_string *name, zend_class_entry *self_ce);
+static bool handle_intersection(av_field *field, av_property_info *prop_info, const zend_type *value_type);
+static bool is_datetime_class(zend_class_entry *ce);
+static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_configs_properties *properties);
+static bool is_basemodel_class_type_hint(av_property_info *prop_info, const zend_type *property_type);
+static bool validate_intersection_group(av_field *field, av_compiled_field *cf, av_property_info *prop_info, zval *errors);
+
 static zend_class_entry *resolve_single_class_type(zend_string *name, zend_class_entry *self_ce)
 {
     if (zend_string_equals_literal_ci(name, "self")) {

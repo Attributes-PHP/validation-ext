@@ -105,6 +105,8 @@ bool av_validate_Contains_constraint(zval *constraint, av_field *field, av_prope
     return true;
 }
 
+zend_always_inline static void add_invalid_contains_error_message(zval *required, av_field *field, av_property_info *property, zval *errors);
+
 zend_always_inline static void add_invalid_contains_error_message(zval *required, av_field *field, av_property_info *property, zval *errors)
 {
     zend_string *expected = av_values_to_list_string(required);

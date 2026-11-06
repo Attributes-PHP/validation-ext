@@ -6,6 +6,8 @@
 
 zend_class_entry *AV_Fields_Constraints_Ulid_ce;
 
+static zend_always_inline bool is_crockford_base32(char c);
+
 static zend_always_inline bool is_crockford_base32(char c)
 {
     return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');

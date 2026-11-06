@@ -46,6 +46,8 @@ ZEND_METHOD(AV_Fields_Constraints_StartsWith, __construct)
     zval_ptr_dtor(&member);
 }
 
+zend_always_inline static void add_invalid_starts_with_error_message(zval *prefixes, av_field *field, av_property_info *property, zval *errors);
+
 zend_always_inline static void add_invalid_starts_with_error_message(zval *prefixes, av_field *field, av_property_info *property, zval *errors)
 {
     zend_string *expected = av_values_to_list_string(prefixes);

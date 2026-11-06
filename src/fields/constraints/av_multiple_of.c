@@ -56,6 +56,8 @@ bool av_validate_MultipleOf_constraint(zval *constraint, av_field *field, av_pro
     return true;
 }
 
+zend_always_inline static void add_invalid_multiple_of_error_message(zval *bound, av_field *field, av_property_info *property, zval *errors);
+
 zend_always_inline static void add_invalid_multiple_of_error_message(zval *bound, av_field *field, av_property_info *property, zval *errors)
 {
     zend_string *expected = av_value_to_string(bound);

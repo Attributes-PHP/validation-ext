@@ -7,6 +7,9 @@
 
 zend_class_entry *AV_Fields_Constraints_Min_ce;
 
+static zend_always_inline double zval_to_double(zval *value);
+zend_always_inline static void add_invalid_min_error_message(zval *bound, av_field *field, av_property_info *property, zval *errors);
+
 static zend_always_inline double zval_to_double(zval *value)
 {
     return Z_TYPE_P(value) == IS_LONG ? (double)Z_LVAL_P(value) : Z_DVAL_P(value);

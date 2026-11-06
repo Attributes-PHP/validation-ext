@@ -99,15 +99,44 @@ static const struct {
 
 #define ARRAY_ATTRIBUTE_NAMES_SIZE (sizeof(array_attribute_names) / sizeof(array_attribute_names[0]))
 
-static bool validate_array_elements(av_field *field, av_property_info *prop_info, const av_spec *spec, av_model_configs_properties *properties, zval *errors);
-static av_spec *build_spec_from_object(zval *object, av_spec_context *ctx);
-static av_spec *build_spec_from_attribute(const zend_attribute *attribute, av_spec_context *ctx);
-
 /* =========================================================================
  * Attribute lookup
  * ========================================================================= */
 
 /* Matches an attribute lowercase name against one of the array attribute names */
+static bool is_array_attribute_name(const zend_string *lcname);
+static bool lcname_equals(const zend_string *lcname, const char *name, size_t length);
+static const zend_attribute *find_array_attribute(HashTable *attributes);
+static bool is_array_attribute_ce(const zend_class_entry *ce);
+static zval *read_object_property(zval *object, const char *name, size_t length);
+static zend_string *qualify_name_with_namespace(zend_string *name, zend_class_entry *self_ce);
+static zend_class_entry *resolve_arm_class_name(zend_string *name, zend_class_entry *self_ce);
+static void throw_arm_class_not_found(zend_string *name, av_property_info *prop_info);
+static void free_spec(av_spec *spec);
+static void free_arms(av_arm *arms, uint32_t arms_count);
+static bool build_basic_arm(zend_long type_value, bool is_key, av_arm *arm);
+static bool evaluate_attribute_argument(zval *value, const zend_attribute *attribute, uint32_t index, zend_class_entry *scope);
+static bool build_nested_arm(zval *object, av_spec_context *ctx, av_arm *arm);
+static bool build_reference_arm(zend_string *name, bool is_key, av_spec_context *ctx, av_arm *arm);
+static bool build_arm(zval *arm_value, bool is_key, av_spec_context *ctx, av_arm *arm);
+static bool build_arms_from_zval(zval *arms_value, bool is_key, av_spec_context *ctx, av_arm **arms_out, uint32_t *arms_count_out);
+static bool build_key_arms(zval *key_value, av_spec_context *ctx, av_spec *spec);
+static bool validate_intersection_arms(const av_spec *spec);
+static bool build_value_arms(zval *of_value, av_spec_context *ctx, av_spec *spec);
+static av_spec *build_spec_from_object(zval *object, av_spec_context *ctx);
+static bool find_dict_arguments(const zend_attribute *attribute, av_property_info *prop_info, uint32_t *key_index, uint32_t *of_index);
+static av_spec *build_spec_from_attribute(const zend_attribute *attribute, av_spec_context *ctx);
+static zend_string *arm_to_expected_string(const av_arm *arm);
+static zend_string *arms_to_expected_string(const av_arm *arms, uint32_t arms_count, bool is_intersection);
+static zend_string *spec_to_nested_string(const av_spec *spec);
+static void coerce_scalar_element(uint32_t mask, zval *value);
+static bool key_matches_arms(const zend_string *str_key, const av_spec *spec);
+static av_element_result validate_value_against_arms(av_field *element_field, av_property_info *prop_info, const av_spec *spec, av_model_configs_properties *properties, zval *errors);
+static zend_string *ensure_base_path(av_field *field, zend_string *base_path);
+static void compute_needs_element_names(av_spec *spec);
+static bool validate_array_elements(av_field *field, av_property_info *prop_info, const av_spec *spec, av_model_configs_properties *properties, zval *errors);
+static void av_spec_cache_entry_dtor(zval *entry);
+
 static bool is_array_attribute_name(const zend_string *lcname)
 {
     for (size_t i = 0; i < ARRAY_ATTRIBUTE_NAMES_SIZE; i++) {
@@ -797,9 +826,6 @@ static av_spec *build_spec_from_attribute(const zend_attribute *attribute, av_sp
 /* =========================================================================
  * Expected type strings for error messages
  * ========================================================================= */
-
-static zend_string *spec_to_nested_string(const av_spec *spec);
-static zend_string *arms_to_expected_string(const av_arm *arms, uint32_t arms_count, bool is_intersection);
 
 /*
  * Renders a single arm for an error message: basic types by name (a

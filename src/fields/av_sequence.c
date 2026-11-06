@@ -16,6 +16,9 @@ zend_class_entry *AV_Fields_Sequence_ce;
  * at validation time; the validator still applies the semantic rules
  * (valid masks, resolvable class names).
  */
+static bool is_valid_sequence_of(zval *value);
+static bool is_resolvable_class_name(zval *value);
+
 static bool is_valid_sequence_of(zval *value)
 {
     switch (Z_TYPE_P(value)) {

@@ -47,6 +47,8 @@ ZEND_METHOD(AV_Fields_Constraints_Size, __construct)
     }
 }
 
+static void add_invalid_size_error_message(min_max_constraints size_constraints, av_field *field, av_property_info *property, zval *errors);
+
 static void add_invalid_size_error_message(min_max_constraints size_constraints, av_field *field, av_property_info *property, zval *errors)
 {
     zend_string *expected;

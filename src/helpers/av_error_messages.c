@@ -37,6 +37,39 @@ const char *av_default_error_type_messages[] = {
     [AV_ERROR_UUID] = "Must be a valid UUID",
 };
 
+/*
+ * Per-property error rendering cache, keyed by the property info and
+ * stored in the module globals (see av_globals.h): the ErrorMessage
+ * attribute and the native type hint never change within a request, so
+ * the templates and the {expected} string are resolved once per
+ * property instead of on every reported error. Failed template
+ * resolutions stay uncached so their errors keep firing.
+ */
+typedef struct {
+    zend_string *templates[AV_ERROR_TYPE_COUNT]; // one per av_error_type, owned
+    zend_string *expected;                       // {expected} from the native hint, owned
+} av_property_error_templates;
+
+static zend_always_inline void add_field_error_to_array(zval *errors_array, const char *error_message, size_t length);
+static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, const char *error_message, size_t length);
+static zend_string *generate_type_name(const zend_type type);
+static zend_class_entry *resolve_enum_ce(const zend_type type);
+static zend_string *enum_case_label(zend_class_entry *ce, zend_object *case_obj);
+static uint32_t count_basic_types(uint32_t pure_mask);
+static zend_always_inline zend_string *build_union_only_basic_types(uint32_t pure_mask);
+static zend_always_inline zend_string *build_single_type_string(zend_type property_type);
+static zend_always_inline void append_union_type_part(zend_string **result, uint32_t index, uint32_t total, const char *name, size_t name_len);
+static uint32_t count_enum_type_parts(zend_class_entry *ce);
+static uint32_t append_enum_type_parts(zend_string **result, uint32_t index, uint32_t total, zend_class_entry *ce);
+static void error_templates_cache_dtor(zval *entry);
+static av_property_error_templates *get_property_error_templates(av_property_info *property);
+static zend_attribute *get_error_message_attribute(av_property_info *property);
+static zend_always_inline bool attribute_argument_name_equals(const zend_string *name, const char *expected, size_t length);
+static zend_string *resolve_error_template(av_error_type type, av_property_info *property);
+static zend_string *get_custom_error_template(av_error_type type, av_property_info *property);
+static zend_string *get_property_full_path(av_field *field);
+static zend_string *replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info, const zend_string *expected_override);
+
 static const av_basic_type_mapping basic_type_mappings[] = {
     {MAY_BE_BOOL, "boolean", sizeof("boolean") - 1}, {MAY_BE_LONG, "integer", sizeof("integer") - 1}, {MAY_BE_DOUBLE, "float", sizeof("float") - 1}, {MAY_BE_STRING, "string", sizeof("string") - 1},
     {MAY_BE_ARRAY, "array", sizeof("array") - 1},    {MAY_BE_OBJECT, "object", sizeof("object") - 1}, {MAY_BE_NULL, "null", sizeof("null") - 1},
@@ -364,19 +397,6 @@ zend_string *build_union_type_string(zend_type property_type)
     return result;
 }
 
-/*
- * Per-property error rendering cache, keyed by the property info and
- * stored in the module globals (see av_globals.h): the ErrorMessage
- * attribute and the native type hint never change within a request, so
- * the templates and the {expected} string are resolved once per
- * property instead of on every reported error. Failed template
- * resolutions stay uncached so their errors keep firing.
- */
-typedef struct {
-    zend_string *templates[AV_ERROR_TYPE_COUNT]; // one per av_error_type, owned
-    zend_string *expected;                       // {expected} from the native hint, owned
-} av_property_error_templates;
-
 static void error_templates_cache_dtor(zval *entry)
 {
     av_property_error_templates *cached = Z_PTR_P(entry);
@@ -565,8 +585,6 @@ static zend_string *get_property_full_path(av_field *field)
 
     return av_string_concat3(ZSTR_VAL(field->parent), ZSTR_LEN(field->parent), ".", 1, ZSTR_VAL(field->name), ZSTR_LEN(field->name));
 }
-
-static zend_string *replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info, const zend_string *expected_override);
 
 void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_property_info *property, zval *errors)
 {

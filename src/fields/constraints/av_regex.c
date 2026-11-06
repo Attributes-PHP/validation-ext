@@ -39,6 +39,8 @@ bool av_validate_Regex_constraint(zval *constraint, av_field *field, av_property
     return is_valid;
 }
 
+zend_always_inline static void add_invalid_regex_error_message(zval *regex, av_field *field, av_property_info *property, zval *errors);
+
 zend_always_inline static void add_invalid_regex_error_message(zval *regex, av_field *field, av_property_info *property, zval *errors)
 {
     zend_string *expected = av_value_to_string(regex);

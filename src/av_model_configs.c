@@ -9,16 +9,6 @@
 
 zend_class_entry *AV_ModelConfigs_ce;
 
-static void update_model_properties(zend_object *this, av_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra);
-static zend_always_inline void set_default_properties(av_model_configs_properties *properties);
-static bool validate_alias_generator(char *pretty_alias_generator);
-static bool validate_extra(char *pretty_extra);
-static zend_always_inline void declare_typed_property_bool(const char *name, size_t length, bool default_value);
-static zend_always_inline void declare_typed_property_string(const char *name, size_t length, char *default_value, size_t default_length, bool allow_null);
-static zend_always_inline void declare_typed_property(const char *name, size_t length, zval *default_value, int type, int visibility);
-static zend_attribute *get_model_configs_attribute(zend_class_entry *base_model_class_entry);
-static int get_argument_index_by_name(zend_string *name);
-
 /*
  * Cache of parsed ModelConfigs properties, stored in the module globals
  * (see av_globals.h) and keyed by the model class entry: attribute
@@ -31,6 +21,18 @@ typedef struct {
     char alias_generator_name[8]; // pretty name, "" when unset
     char extra_name[8];
 } av_model_configs_cache_entry;
+
+static void av_model_configs_cache_entry_dtor(zval *entry);
+static void av_parse_model_configs(zend_class_entry *model_ce, av_model_configs_properties *properties, char *alias_generator_name, char *extra_name);
+static void update_model_properties(zend_object *this, av_model_configs_properties *properties, char *pretty_alias_generator, char *pretty_extra);
+static zend_always_inline void set_default_properties(av_model_configs_properties *properties);
+static bool validate_alias_generator(char *pretty_alias_generator);
+static bool validate_extra(char *pretty_extra);
+static zend_always_inline void declare_typed_property_bool(const char *name, size_t length, bool default_value);
+static zend_always_inline void declare_typed_property_string(const char *name, size_t length, char *default_value, size_t default_length, bool allow_null);
+static zend_always_inline void declare_typed_property(const char *name, size_t length, zval *default_value, int type, int visibility);
+static zend_attribute *get_model_configs_attribute(zend_class_entry *base_model_class_entry);
+static int get_argument_index_by_name(zend_string *name);
 
 static void av_model_configs_cache_entry_dtor(zval *entry)
 {
