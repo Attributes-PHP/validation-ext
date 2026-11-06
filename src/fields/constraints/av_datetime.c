@@ -69,23 +69,36 @@ ZEND_METHOD(AV_Fields_Constraints_DateTime, __construct)
     Z_PARAM_ZVAL(timezone)
     ZEND_PARSE_PARAMETERS_END();
 
-    if (timezone != NULL && !is_valid_timezone(timezone)) {
+    if (timezone == NULL) {
+        zend_update_property_string(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(getThis()), "format", sizeof("format") - 1, format == NULL ? "X-m-d\\TH:i:sP" : ZSTR_VAL(format));
+        zend_update_property_null(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(getThis()), "timezone", sizeof("timezone") - 1);
+        return;
+    }
+
+    if (!is_valid_timezone(timezone)) {
         zend_argument_type_error(2, "must be of type DateTimeZone|string|null, %s given", zend_zval_type_name(timezone));
         RETURN_THROWS();
     }
 
-    if (timezone != NULL && Z_TYPE_P(timezone) == IS_OBJECT && !Z_PHPTIMEZONE_P(timezone)->initialized) {
-        zend_argument_value_error(2, "must be a constructed DateTimeZone object");
-        RETURN_THROWS();
-    }
-
-    if (timezone != NULL && Z_TYPE_P(timezone) == IS_STRING) {
+    /*
+     * $timezone keeps the raw value while the resolved DateTimeZone
+     * is cached in the private $timezone_obj, so validation reuses it
+     * instead of resolving the name a second time.
+     */
+    if (Z_TYPE_P(timezone) == IS_OBJECT) {
+        if (!Z_PHPTIMEZONE_P(timezone)->initialized) {
+            zend_argument_value_error(2, "must be a constructed DateTimeZone object");
+            RETURN_THROWS();
+        }
+        zend_update_property(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(getThis()), "timezone_obj", sizeof("timezone_obj") - 1, timezone);
+    } else if (Z_TYPE_P(timezone) == IS_STRING) {
         zval tz_obj;
         if (!build_timezone_from_name(&tz_obj, timezone)) {
             zend_clear_exception();
-            zend_argument_value_error(2, "must be a valid timezone identifier, '%s' given");
+            zend_argument_value_error(2, "must be a valid timezone identifier, '%s' given", Z_STRVAL_P(timezone));
             RETURN_THROWS();
         }
+        zend_update_property(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(getThis()), "timezone_obj", sizeof("timezone_obj") - 1, &tz_obj);
         zval_ptr_dtor(&tz_obj);
     }
 
@@ -96,32 +109,6 @@ ZEND_METHOD(AV_Fields_Constraints_DateTime, __construct)
     } else {
         zend_update_property(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(getThis()), "timezone", sizeof("timezone") - 1, timezone);
     }
-}
-
-/*
- * Prepares the timezone argument for php_date_initialize(): NULL sets
- * *has_timezone to false (the parse uses the default timezone), a
- * DateTimeZone instance is reused and a string names the timezone of a
- * fresh DateTimeZone built through its internal constructor. The
- * result is an owned zval; returns false with a pending exception
- * when the timezone name is invalid. Unreachable for names validated
- * at construction, kept defensive.
- */
-static bool prepare_timezone_for_parse(zval *result, zval *timezone, bool *has_timezone)
-{
-    if (Z_TYPE_P(timezone) == IS_NULL) {
-        *has_timezone = false;
-        return true;
-    }
-
-    *has_timezone = true;
-
-    if (Z_TYPE_P(timezone) == IS_OBJECT) {
-        ZVAL_COPY(result, timezone);
-        return true;
-    }
-
-    return build_timezone_from_name(result, timezone);
 }
 
 /*
@@ -141,25 +128,13 @@ bool av_validate_DateTime_constraint(zval *constraint, av_field *field, av_prope
 
     if (Z_TYPE_P(value) == IS_STRING) {
         zval *format = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "format", sizeof("format") - 1, false, NULL);
-        zval *timezone = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "timezone", sizeof("timezone") - 1, false, NULL);
-
-        zval tz_obj;
-        bool has_timezone;
-        if (!prepare_timezone_for_parse(&tz_obj, timezone, &has_timezone)) {
-            return false;
-        }
+        zval *timezone_obj = zend_read_property(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(constraint), "timezone_obj", sizeof("timezone_obj") - 1, false, NULL);
 
         zval date_obj;
         php_date_instantiate(php_date_get_date_ce(), &date_obj);
-        valid = php_date_initialize(php_date_obj_from_obj(Z_OBJ_P(&date_obj)), Z_STRVAL_P(value), Z_STRLEN_P(value), ZSTR_VAL(Z_STR_P(format)), has_timezone ? &tz_obj : NULL, 0);
+        const bool valid = php_date_initialize(php_date_obj_from_obj(Z_OBJ_P(&date_obj)), Z_STRVAL_P(value), Z_STRLEN_P(value), ZSTR_VAL(Z_STR_P(format)), Z_TYPE_P(timezone_obj) == IS_OBJECT ? timezone_obj : NULL, 0);
         zval_ptr_dtor(&date_obj);
-        if (has_timezone) {
-            zval_ptr_dtor(&tz_obj);
-        }
-    }
-
-    if (valid) {
-        return true;
+        if (valid) return true;
     }
 
     zval *format = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "format", sizeof("format") - 1, false, NULL);
@@ -184,6 +159,7 @@ void av_register_DateTime_class(void)
     /* Register promoted $format and $timezone properties */
     zend_declare_property_null(AV_Fields_Constraints_DateTime_ce, "format", sizeof("format") - 1, ZEND_ACC_PUBLIC);
     zend_declare_property_null(AV_Fields_Constraints_DateTime_ce, "timezone", sizeof("timezone") - 1, ZEND_ACC_PUBLIC);
+    zend_declare_property_null(AV_Fields_Constraints_DateTime_ce, "timezone_obj", sizeof("timezone_obj") - 1, ZEND_ACC_PRIVATE);
 
     /* Register as an internal attribute that can be used on properties and parameters */
     zend_internal_attribute_register(AV_Fields_Constraints_DateTime_ce, ZEND_ATTRIBUTE_TARGET_PROPERTY | ZEND_ATTRIBUTE_TARGET_PARAMETER);
