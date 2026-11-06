@@ -21,5 +21,6 @@ bool av_validate_Max_constraint(zval *constraint, av_field *field, av_property_i
 
 /* Registration function */
 void av_register_Max_class(void);
+zend_always_inline static void add_invalid_max_error_message(zval *bound, av_field *field, av_property_info *property, zval *errors);
 
 #endif /* AV_Fields_Constraints_Max_H */
