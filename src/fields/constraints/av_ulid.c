@@ -18,32 +18,32 @@ static zend_always_inline bool is_crockford_base32(char c)
  */
 bool av_validate_Ulid_constraint(zval *constraint, av_field *field, av_property_info *property, zval *errors)
 {
-    (void)constraint;
-
     zval *value = field->value;
-    if (Z_TYPE_P(value) == IS_STRING && Z_STRLEN_P(value) == 26) {
-        const char *str = Z_STRVAL_P(value);
-        bool valid = true;
+    if (Z_TYPE_P(value) != IS_STRING) {
+        av_add_field_error_with_prefix(AV_ERROR_ULID, field, property, errors);
+        return false;
+    }
 
-        for (size_t i = 0; i < 26; i++) {
-            const char c = str[i];
-            if (c == 'i' || c == 'l' || c == 'o' || c == 'u' || c == 'I' || c == 'L' || c == 'O' || c == 'U') {
-                valid = false;
-                break;
-            }
-            if (!is_crockford_base32(c)) {
-                valid = false;
-                break;
-            }
+    if (Z_STRLEN_P(value) != 26) {
+        av_add_field_error_with_prefix(AV_ERROR_ULID, field, property, errors);
+        return false;
+    }
+
+    const char *str = Z_STRVAL_P(value);
+    for (size_t i = 0; i < 26; i++) {
+        const char c = str[i];
+        if (c == 'i' || c == 'l' || c == 'o' || c == 'u' || c == 'I' || c == 'L' || c == 'O' || c == 'U') {
+            av_add_field_error_with_prefix(AV_ERROR_ULID, field, property, errors);
+            return false;
         }
 
-        if (valid) {
-            return true;
+        if (!is_crockford_base32(c)) {
+            av_add_field_error_with_prefix(AV_ERROR_ULID, field, property, errors);
+            return false;
         }
     }
 
-    av_add_field_error_with_prefix(AV_ERROR_ULID, field, property, errors);
-    return false;
+    return true;
 }
 
 void av_register_Ulid_class(void)
