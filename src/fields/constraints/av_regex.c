@@ -32,7 +32,12 @@ bool av_validate_Regex_constraint(zval *constraint, av_field *field, av_property
 
     zval match;
     ZVAL_UNDEF(&match);
+#if PHP_VERSION_ID >= 80400
+    /* PHP 8.4 removed the use_flags argument. */
     php_pcre_match_impl(pce, Z_STR_P(value), &match, NULL, 0, 0, 0);
+#else
+    php_pcre_match_impl(pce, Z_STR_P(value), &match, NULL, 0, 0, 0, 0);
+#endif
     const bool is_valid = (Z_TYPE(match) == IS_LONG && Z_LVAL(match) > 0);
     if (!is_valid)
         add_invalid_regex_error_message(regex, field, property, errors);
