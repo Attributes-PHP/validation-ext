@@ -18,6 +18,7 @@ use Attributes\Validation\Fields\Constraints\Regex;
 use Attributes\Validation\Fields\Constraints\Size;
 use Attributes\Validation\Fields\Constraints\StartsWith;
 use Attributes\Validation\Fields\Constraints\Ulid;
+use Attributes\Validation\Fields\Constraints\Uuid;
 use Attributes\Validation\Fields\Field;
 
 describe('built-in constraint classes', function () {
@@ -40,5 +41,6 @@ describe('built-in constraint classes', function () {
         Size::class,
         StartsWith::class,
         Ulid::class,
+        Uuid::class,
     ]);
 });

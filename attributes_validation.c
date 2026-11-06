@@ -36,6 +36,7 @@
 #include "src/fields/constraints/av_size.h"
 #include "src/fields/constraints/av_starts_with.h"
 #include "src/fields/constraints/av_ulid.h"
+#include "src/fields/constraints/av_uuid.h"
 #include "src/validators/av_typehint_validator.h"
 #include "src/helpers/av_error_messages.h"
 
@@ -81,6 +82,7 @@ PHP_MINIT_FUNCTION(attributes_validation)
     av_register_AlphaDash_class();
     av_register_Ascii_class();
     av_register_Ulid_class();
+    av_register_Uuid_class();
     av_register_Regex_class();
     av_register_StartsWith_class();
     av_register_EndsWith_class();

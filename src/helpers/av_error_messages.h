@@ -36,6 +36,7 @@ typedef enum {
     AV_ERROR_SIZE,
     AV_ERROR_STARTS_WITH,
     AV_ERROR_ULID,
+    AV_ERROR_UUID,
     AV_ERROR_TYPE_COUNT
 } av_error_type;
 

@@ -34,6 +34,7 @@ const char *av_default_error_type_messages[] = {
     [AV_ERROR_SIZE] = "Must have a size {expected}",
     [AV_ERROR_STARTS_WITH] = "Must start with one of: {expected}",
     [AV_ERROR_ULID] = "Must be a valid ULID",
+    [AV_ERROR_UUID] = "Must be a valid UUID",
 };
 
 static const av_basic_type_mapping basic_type_mappings[] = {
