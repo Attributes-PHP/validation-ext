@@ -21,5 +21,6 @@ bool av_validate_Regex_constraint(zval *constraint, av_field *field, av_property
 
 /* Registration function */
 void av_register_Regex_class(void);
+zend_always_inline static void add_invalid_regex_error_message(zval *regex, av_field *field, av_property_info *property, zval *errors);
 
 #endif /* AV_Fields_Constraints_Regex_H */
