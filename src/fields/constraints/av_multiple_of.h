@@ -22,5 +22,6 @@ bool av_validate_MultipleOf_constraint(zval *constraint, av_field *field, av_pro
 
 /* Registration function */
 void av_register_MultipleOf_class(void);
+zend_always_inline static void add_invalid_multiple_of_error_message(zval *bound, av_field *field, av_property_info *property, zval *errors);
 
 #endif /* AV_Fields_Constraints_MultipleOf_H */
