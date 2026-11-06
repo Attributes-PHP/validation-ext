@@ -7,6 +7,13 @@
 
 zend_class_entry *AV_Fields_Constraints_Size_ce;
 
+typedef struct {
+    zval *min;
+    zval *max;
+    bool has_min;
+    bool has_max;
+} min_max_constraints;
+
 /*
  * #[Size(min: ?, max: ?)]: the size of the value must respect the
  * declared bounds (inclusive). Strings are measured in bytes, arrays
@@ -40,14 +47,41 @@ ZEND_METHOD(AV_Fields_Constraints_Size, __construct)
     }
 }
 
+static void add_invalid_size_error_message(min_max_constraints size_constraints, av_field *field, av_property_info *property, zval *errors)
+{
+    zend_string *expected;
+
+    if (size_constraints.has_min && size_constraints.has_max) {
+        zend_string *min_str = av_value_to_string(size_constraints.min);
+        zend_string *max_str = av_value_to_string(size_constraints.max);
+        zend_string *part = av_string_concat3(ZSTR_VAL(min_str), ZSTR_LEN(min_str), " and ", sizeof(" and ") - 1, ZSTR_VAL(max_str), ZSTR_LEN(max_str));
+        expected = av_string_concat3("between ", sizeof("between ") - 1, ZSTR_VAL(part), ZSTR_LEN(part), "", 0);
+        av_string_release(part);
+        av_string_release(min_str);
+        av_string_release(max_str);
+    } else if (size_constraints.has_min) {
+        zend_string *min_str = av_value_to_string(size_constraints.min);
+        expected = av_string_concat3("of at least ", sizeof("of at least ") - 1, ZSTR_VAL(min_str), ZSTR_LEN(min_str), "", 0);
+        av_string_release(min_str);
+    } else {
+        zend_string *max_str = av_value_to_string(size_constraints.max);
+        expected = av_string_concat3("of at most ", sizeof("of at most ") - 1, ZSTR_VAL(max_str), ZSTR_LEN(max_str), "", 0);
+        av_string_release(max_str);
+    }
+
+    av_add_field_error_with_expected(AV_ERROR_SIZE, field, property, errors, expected);
+    av_string_release(expected);
+}
+
 bool av_validate_Size_constraint(zval *constraint, av_field *field, av_property_info *property, zval *errors)
 {
-    zval *min = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "min", sizeof("min") - 1, false, NULL);
-    zval *max = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "max", sizeof("max") - 1, false, NULL);
+    min_max_constraints size_constraints;
+    size_constraints.min = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "min", sizeof("min") - 1, false, NULL);
+    size_constraints.max = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "max", sizeof("max") - 1, false, NULL);
+    size_constraints.has_min = Z_TYPE_P(size_constraints.min) != IS_NULL;
+    size_constraints.has_max = Z_TYPE_P(size_constraints.max) != IS_NULL;
 
-    bool has_min = Z_TYPE_P(min) != IS_NULL;
-    bool has_max = Z_TYPE_P(max) != IS_NULL;
-    if (!has_min && !has_max) {
+    if (!size_constraints.has_min && !size_constraints.has_max) {
         return true;
     }
 
@@ -58,44 +92,21 @@ bool av_validate_Size_constraint(zval *constraint, av_field *field, av_property_
     } else if (Z_TYPE_P(value) == IS_ARRAY) {
         size = (zend_long)zend_hash_num_elements(Z_ARRVAL_P(value));
     } else {
-        goto invalid;
+        add_invalid_size_error_message(size_constraints, field, property, errors);
+        return false;
     }
 
-    if (has_min && size < Z_LVAL_P(min)) {
-        goto invalid;
+    if (size_constraints.has_min && size < Z_LVAL_P(size_constraints.min)) {
+        add_invalid_size_error_message(size_constraints, field, property, errors);
+        return false;
     }
-    if (has_max && size > Z_LVAL_P(max)) {
-        goto invalid;
+
+    if (size_constraints.has_max && size > Z_LVAL_P(size_constraints.max)) {
+        add_invalid_size_error_message(size_constraints, field, property, errors);
+        return false;
     }
 
     return true;
-
-invalid:
-    {
-        zend_string *expected;
-
-        if (has_min && has_max) {
-            zend_string *min_str = av_value_to_string(min);
-            zend_string *max_str = av_value_to_string(max);
-            zend_string *part = av_string_concat3(ZSTR_VAL(min_str), ZSTR_LEN(min_str), " and ", sizeof(" and ") - 1, ZSTR_VAL(max_str), ZSTR_LEN(max_str));
-            expected = av_string_concat3("between ", sizeof("between ") - 1, ZSTR_VAL(part), ZSTR_LEN(part), "", 0);
-            av_string_release(part);
-            av_string_release(min_str);
-            av_string_release(max_str);
-        } else if (has_min) {
-            zend_string *min_str = av_value_to_string(min);
-            expected = av_string_concat3("of at least ", sizeof("of at least ") - 1, ZSTR_VAL(min_str), ZSTR_LEN(min_str), "", 0);
-            av_string_release(min_str);
-        } else {
-            zend_string *max_str = av_value_to_string(max);
-            expected = av_string_concat3("of at most ", sizeof("of at most ") - 1, ZSTR_VAL(max_str), ZSTR_LEN(max_str), "", 0);
-            av_string_release(max_str);
-        }
-
-        av_add_field_error_with_expected(AV_ERROR_SIZE, field, property, errors, expected);
-        av_string_release(expected);
-        return false;
-    }
 }
 
 void av_register_Size_class(void)
