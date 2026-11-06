@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Attributes\Validation\Tests\Integration\Constraints;
 
+use ArgumentCountError;
 use Attributes\Validation\BaseModel;
 use Attributes\Validation\Exceptions\ValidationException;
 use Attributes\Validation\Fields\Constraints\Contains;
-use ArgumentCountError;
 use TypeError;
 
 use function Attributes\Validation\validate;

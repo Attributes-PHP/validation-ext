@@ -56,26 +56,32 @@ bool av_validate_EndsWith_constraint(zval *constraint, av_field *field, av_prope
     zval *suffixes = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "values", sizeof("values") - 1, false, NULL);
 
     zval *value = field->value;
-    if (Z_TYPE_P(value) == IS_STRING) {
-        zval *suffix;
-        ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(suffixes), suffix)
-        {
-            zend_string *suffix_str = zval_get_string(suffix);
-            size_t suffix_len = ZSTR_LEN(suffix_str);
-            bool matches = suffix_len <= Z_STRLEN_P(value) && memcmp(Z_STRVAL_P(value) + (Z_STRLEN_P(value) - suffix_len), ZSTR_VAL(suffix_str), suffix_len) == 0;
-            zend_string_release(suffix_str);
-
-            if (matches) {
-                return true;
-            }
-        }
-        ZEND_HASH_FOREACH_END();
+    if (Z_TYPE_P(value) != IS_STRING) {
+        add_invalid_ends_with_error_message(suffixes, field, property, errors);
+        return false;
     }
 
+    zval *suffix;
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(suffixes), suffix)
+    {
+        zend_string *suffix_str = zval_get_string(suffix);
+        const size_t suffix_len = ZSTR_LEN(suffix_str);
+        const bool matches = suffix_len <= Z_STRLEN_P(value) && memcmp(Z_STRVAL_P(value) + (Z_STRLEN_P(value) - suffix_len), ZSTR_VAL(suffix_str), suffix_len) == 0;
+        zend_string_release(suffix_str);
+        if (matches)
+            return true;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    add_invalid_ends_with_error_message(suffixes, field, property, errors);
+    return false;
+}
+
+zend_always_inline static void add_invalid_ends_with_error_message(zval *suffixes, av_field *field, av_property_info *property, zval *errors)
+{
     zend_string *expected = av_values_to_list_string(suffixes);
     av_add_field_error_with_expected(AV_ERROR_ENDS_WITH, field, property, errors, expected);
     av_string_release(expected);
-    return false;
 }
 
 void av_register_EndsWith_class(void)

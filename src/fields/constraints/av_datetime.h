@@ -23,5 +23,6 @@ bool av_validate_DateTime_constraint(zval *constraint, av_field *field, av_prope
 
 /* Registration function */
 void av_register_DateTime_class(void);
+zend_always_inline static void add_invalid_datetime_error_message(zval *constraint, av_field *field, av_property_info *property, zval *errors);
 
 #endif /* AV_Fields_Constraints_DateTime_H */

@@ -103,12 +103,7 @@ ZEND_METHOD(AV_Fields_Constraints_DateTime, __construct)
     }
 
     zend_update_property_string(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(getThis()), "format", sizeof("format") - 1, format == NULL ? "X-m-d\\TH:i:sP" : ZSTR_VAL(format));
-
-    if (timezone == NULL) {
-        zend_update_property_null(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(getThis()), "timezone", sizeof("timezone") - 1);
-    } else {
-        zend_update_property(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(getThis()), "timezone", sizeof("timezone") - 1, timezone);
-    }
+    zend_update_property(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(getThis()), "timezone", sizeof("timezone") - 1, timezone);
 }
 
 /*
@@ -121,27 +116,34 @@ ZEND_METHOD(AV_Fields_Constraints_DateTime, __construct)
 bool av_validate_DateTime_constraint(zval *constraint, av_field *field, av_property_info *property, zval *errors)
 {
     zval *value = field->value;
-    bool valid = false;
     if (Z_TYPE_P(value) == IS_OBJECT && instanceof_function(Z_OBJCE_P(value), php_date_get_interface_ce())) {
         return true;
     }
 
-    if (Z_TYPE_P(value) == IS_STRING) {
+    if (Z_TYPE_P(value) != IS_STRING) {
         zval *format = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "format", sizeof("format") - 1, false, NULL);
-        zval *timezone_obj = zend_read_property(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(constraint), "timezone_obj", sizeof("timezone_obj") - 1, false, NULL);
-
-        zval date_obj;
-        php_date_instantiate(php_date_get_date_ce(), &date_obj);
-        const bool valid = php_date_initialize(php_date_obj_from_obj(Z_OBJ_P(&date_obj)), Z_STRVAL_P(value), Z_STRLEN_P(value), ZSTR_VAL(Z_STR_P(format)), Z_TYPE_P(timezone_obj) == IS_OBJECT ? timezone_obj : NULL, 0);
-        zval_ptr_dtor(&date_obj);
-        if (valid) return true;
+        add_invalid_datetime_error_message(format, field, property, errors);
+        return false;
     }
 
     zval *format = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "format", sizeof("format") - 1, false, NULL);
+    zval *timezone_obj = zend_read_property(AV_Fields_Constraints_DateTime_ce, Z_OBJ_P(constraint), "timezone_obj", sizeof("timezone_obj") - 1, false, NULL);
+
+    zval date_obj;
+    php_date_instantiate(php_date_get_date_ce(), &date_obj);
+    const bool valid = php_date_initialize(php_date_obj_from_obj(Z_OBJ_P(&date_obj)), Z_STRVAL_P(value), Z_STRLEN_P(value), ZSTR_VAL(Z_STR_P(format)), Z_TYPE_P(timezone_obj) == IS_OBJECT ? timezone_obj : NULL, 0);
+    if (!valid)
+        add_invalid_datetime_error_message(format, field, property, errors);
+
+    zval_ptr_dtor(&date_obj);
+    return valid;
+}
+
+zend_always_inline static void add_invalid_datetime_error_message(zval *format, av_field *field, av_property_info *property, zval *errors)
+{
     zend_string *expected = av_value_to_string(format);
     av_add_field_error_with_expected(AV_ERROR_DATETIME, field, property, errors, expected);
     av_string_release(expected);
-    return false;
 }
 
 void av_register_DateTime_class(void)

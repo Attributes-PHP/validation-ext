@@ -23,5 +23,6 @@ bool av_validate_EndsWith_constraint(zval *constraint, av_field *field, av_prope
 
 /* Registration function */
 void av_register_EndsWith_class(void);
+zend_always_inline static void add_invalid_ends_with_error_message(zval *suffixes, av_field *field, av_property_info *property, zval *errors);
 
 #endif /* AV_Fields_Constraints_EndsWith_H */

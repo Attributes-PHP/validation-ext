@@ -214,8 +214,10 @@ describe('userland constraints', function () {
             public int $value;
         };
 
-        expect(fn () => validate(['value' => 1], $model))
-            ->toThrow(RuntimeException::class, 'userland constraint failure');
+        expect(fn () => validate(['value' => 1], $model))->toThrow(
+            RuntimeException::class,
+            'userland constraint failure',
+        );
     });
 
     it('ignores attribute classes that do not implement Constraint', function () {
