@@ -7,6 +7,9 @@
 zend_class_entry *class_AV_Exceptions_BaseException;
 zend_class_entry *class_AV_Exceptions_ValidationException;
 
+static void register_BaseException_class(void);
+static void register_ValidationException_class(void);
+
 void av_register_all_exception_classes(void)
 {
     register_BaseException_class();

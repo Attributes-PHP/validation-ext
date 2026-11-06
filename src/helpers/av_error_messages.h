@@ -53,10 +53,7 @@ extern const char *av_default_error_type_messages[];
 zend_string *av_replace_placeholders(const char *template, size_t length, av_field *field, av_property_info *prop_info);
 
 // Error message generation
-static zend_string *generate_type_name(const zend_type type);
 zend_string *build_union_type_string(zend_type property_type);
-static zend_string *get_custom_error_template(av_error_type type, av_property_info *property);
-static zend_string *get_property_full_path(av_field *field);
 
 // Value conversion
 zend_string *av_value_to_string(zval *value);
@@ -68,8 +65,6 @@ zend_string *av_value_to_string(zval *value);
 zend_string *av_values_to_list_string(zval *values);
 
 // Updates errors
-static zend_always_inline void add_field_error_to_array(zval *errors_array, const char *error_message, size_t length);
-static zend_always_inline void add_field_error(zval *errors, zend_string *field_name, const char *error_message, size_t length);
 void av_add_field_error_with_prefix(av_error_type type, av_field *field, av_property_info *property, zval *errors);
 
 // Frees the per-property error template cache (request shutdown)

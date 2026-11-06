@@ -29,7 +29,4 @@ static const zend_function_entry class_AV_Exceptions_ValidationException_methods
 void av_register_all_exception_classes(void);
 void av_throw_validation_exception(zval *errors);
 
-static void register_BaseException_class(void);
-static void register_ValidationException_class(void);
-
 #endif /* AV_EXCEPTION_H */
