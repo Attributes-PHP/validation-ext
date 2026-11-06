@@ -46,6 +46,13 @@ ZEND_METHOD(AV_Fields_Constraints_StartsWith, __construct)
     zval_ptr_dtor(&member);
 }
 
+zend_always_inline static void add_invalid_starts_with_error_message(zval *prefixes, av_field *field, av_property_info *property, zval *errors)
+{
+    zend_string *expected = av_values_to_list_string(prefixes);
+    av_add_field_error_with_expected(AV_ERROR_STARTS_WITH, field, property, errors, expected);
+    av_string_release(expected);
+}
+
 /*
  * #[StartsWith(...values)]: the string value must start with one of the
  * declared values (numeric values match by their string
@@ -56,24 +63,24 @@ bool av_validate_StartsWith_constraint(zval *constraint, av_field *field, av_pro
     zval *prefixes = zend_read_property(Z_OBJCE_P(constraint), Z_OBJ_P(constraint), "values", sizeof("values") - 1, false, NULL);
 
     zval *value = field->value;
-    if (Z_TYPE_P(value) == IS_STRING) {
-        zval *prefix;
-        ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(prefixes), prefix)
-        {
-            zend_string *prefix_str = zval_get_string(prefix);
-            bool matches = ZSTR_LEN(prefix_str) <= Z_STRLEN_P(value) && memcmp(Z_STRVAL_P(value), ZSTR_VAL(prefix_str), ZSTR_LEN(prefix_str)) == 0;
-            zend_string_release(prefix_str);
-
-            if (matches) {
-                return true;
-            }
-        }
-        ZEND_HASH_FOREACH_END();
+    if (Z_TYPE_P(value) != IS_STRING) {
+        add_invalid_starts_with_error_message(prefixes, field, property, errors);
+        return false;
     }
 
-    zend_string *expected = av_values_to_list_string(prefixes);
-    av_add_field_error_with_expected(AV_ERROR_STARTS_WITH, field, property, errors, expected);
-    av_string_release(expected);
+    zval *prefix;
+    ZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(prefixes), prefix)
+    {
+        zend_string *prefix_str = zval_get_string(prefix);
+        const bool matches = ZSTR_LEN(prefix_str) <= Z_STRLEN_P(value) && memcmp(Z_STRVAL_P(value), ZSTR_VAL(prefix_str), ZSTR_LEN(prefix_str)) == 0;
+        zend_string_release(prefix_str);
+
+        if (matches)
+            return true;
+    }
+    ZEND_HASH_FOREACH_END();
+
+    add_invalid_starts_with_error_message(prefixes, field, property, errors);
     return false;
 }
 
