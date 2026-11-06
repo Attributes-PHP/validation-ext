@@ -21,6 +21,7 @@ void av_register_Constraint_interface(void)
 }
 
 static void av_set_model_configs_if_aware(zval *constraint, av_property_info *property);
+static void add_invalid_custom_error_message(zval *constraint, av_field *field, av_property_info *property, zval *errors);
 
 /*
  * ConfigAwareConstraint constraints receive the owning model's resolved configs
@@ -47,6 +48,30 @@ static void av_set_model_configs_if_aware(zval *constraint, av_property_info *pr
 
     zend_call_known_instance_method_with_1_params(set_model_configs, Z_OBJ_P(constraint), NULL, &configs);
     zval_ptr_dtor(&configs);
+}
+
+static void add_invalid_custom_error_message(zval *constraint, av_field *field, av_property_info *property, zval *errors)
+{
+    zend_class_entry *ce = Z_OBJCE_P(constraint);
+    zend_function *message = zend_hash_str_find_ptr(&ce->function_table, "message", sizeof("message") - 1);
+    ZEND_ASSERT(message != NULL);
+
+    zval message_value;
+    ZVAL_UNDEF(&message_value);
+    zend_call_known_instance_method_with_0_params(message, Z_OBJ_P(constraint), &message_value);
+    if (EG(exception) != NULL) {
+        if (Z_TYPE(message_value) != IS_UNDEF) {
+            zval_ptr_dtor(&message_value);
+        }
+        return;
+    }
+
+    ZEND_ASSERT(Z_TYPE(message_value) == IS_STRING);
+    zend_string *rendered = av_replace_placeholders(Z_STRVAL(message_value), Z_STRLEN(message_value), field, property);
+    zval_ptr_dtor(&message_value);
+
+    av_add_field_message(rendered, field, errors);
+    zend_string_release(rendered);
 }
 
 /*
@@ -81,28 +106,10 @@ bool av_validate_userland_constraint(zval *constraint, av_field *field, av_prope
         return false;
     }
 
-    if (valid) {
-        return true;
-    }
-
-    zend_function *message = zend_hash_str_find_ptr(&ce->function_table, "message", sizeof("message") - 1);
-    ZEND_ASSERT(message != NULL);
-
-    zval message_value;
-    ZVAL_UNDEF(&message_value);
-    zend_call_known_instance_method_with_0_params(message, Z_OBJ_P(constraint), &message_value);
-    if (EG(exception) != NULL) {
-        if (Z_TYPE(message_value) != IS_UNDEF) {
-            zval_ptr_dtor(&message_value);
-        }
+    if (!valid) {
+        add_invalid_custom_error_message(constraint, field, property, errors);
         return false;
     }
 
-    ZEND_ASSERT(Z_TYPE(message_value) == IS_STRING);
-    zend_string *rendered = av_replace_placeholders(Z_STRVAL(message_value), Z_STRLEN(message_value), field, property);
-    zval_ptr_dtor(&message_value);
-
-    av_add_field_message(rendered, field, errors);
-    zend_string_release(rendered);
-    return false;
+    return true;
 }
