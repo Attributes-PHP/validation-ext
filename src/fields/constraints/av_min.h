@@ -21,5 +21,6 @@ bool av_validate_Min_constraint(zval *constraint, av_field *field, av_property_i
 
 /* Registration function */
 void av_register_Min_class(void);
+zend_always_inline static void add_invalid_min_error_message(zval *bound, av_field *field, av_property_info *property, zval *errors);
 
 #endif /* AV_Fields_Constraints_Min_H */
