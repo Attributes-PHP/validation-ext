@@ -47,12 +47,7 @@ static bool build_timezone_from_name(zval *result, zval *name)
     object_init_ex(result, tz_ce);
 
     zend_function *constructor = zend_hash_str_find_ptr(&tz_ce->function_table, "__construct", sizeof("__construct") - 1);
-    zval retval;
-    ZVAL_UNDEF(&retval);
-    zend_call_known_instance_method_with_1_params(constructor, Z_OBJ_P(result), &retval, name);
-    if (Z_TYPE(retval) != IS_UNDEF) {
-        zval_ptr_dtor(&retval);
-    }
+    zend_call_known_instance_method_with_1_params(constructor, Z_OBJ_P(result), NULL, name);
 
     if (EG(exception) != NULL) {
         zval_ptr_dtor(result);
