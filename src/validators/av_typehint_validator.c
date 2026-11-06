@@ -130,6 +130,7 @@ static bool is_datetime_class(zend_class_entry *ce)
 static bool coerce_datetime(zval *value, zend_class_entry *target_ce, av_model_configs_properties *properties)
 {
     ZEND_ASSERT(Z_TYPE_P(value) == IS_STRING);
+    ZEND_ASSERT(av_datetime_format != NULL && av_date_create_from_format_fn != NULL);
 
     const zend_string *str = Z_STR_P(value);
     if (ZSTR_LEN(str) <= 12) {
