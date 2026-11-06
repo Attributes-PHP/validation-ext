@@ -51,7 +51,8 @@ pie install attributes-php/validation
 ## Running this documentation locally
 
 ```bash
-npx @docmd/core dev
+pip install zensical
+zensical serve
 ```
 
-The site serves at `http://localhost:3000` and reloads as you edit the Markdown under `docs/`.
+The site serves at `http://localhost:8000` and reloads as you edit the Markdown under `docs/`.

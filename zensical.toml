@@ -1,0 +1,38 @@
+[project]
+site_name = "Attributes Validation"
+site_url = "https://validation.attributes-php.com"
+site_description = "Pydantic-inspired PHP extension that validates data via type hints at native speed."
+copyright = "© 2026 Attributes Validation."
+docs_dir = "docs"
+site_dir = "site"
+
+nav = [
+  { "Overview" = "index.md" },
+  { "validate()" = "validate.md" },
+  { "Constraints" = "constraints.md" },
+  { "call()" = "call.md" },
+]
+
+[project.theme]
+features = [
+  "navigation.tracking",
+  "navigation.top",
+  "navigation.footer",
+  "content.code.copy",
+]
+
+# Light mode, following the system preference
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "pink"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to dark mode"
+
+# Dark mode
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "pink"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to light mode"

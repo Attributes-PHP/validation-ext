@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
-      - 'docmd.config.json'
+      - 'zensical.toml'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -29,19 +29,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          node-version: 22
+          python-version: '3.13'
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Build docs
-        run: npx --yes @docmd/core build
+      - name: Install Zensical
+        run: pip install zensical
 
-      - name: Apply custom domain
-        run: cp docs/CNAME site/CNAME
+      - name: Build docs
+        run: zensical build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
